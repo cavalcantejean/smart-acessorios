@@ -1,4 +1,4 @@
-import type { Accessory } from './types';
+import type { Accessory, Coupon } from './types';
 
 const accessories: Accessory[] = [
   {
@@ -11,7 +11,8 @@ const accessories: Accessory[] = [
     affiliateLink: '#',
     price: '$29.99',
     category: 'Chargers',
-    aiSummary: 'A fast, 15W wireless charging stand with an ergonomic design for Qi-enabled devices, allowing portrait or landscape use during charging.'
+    aiSummary: 'A fast, 15W wireless charging stand with an ergonomic design for Qi-enabled devices, allowing portrait or landscape use during charging.',
+    isDeal: true,
   },
   {
     id: '2',
@@ -35,6 +36,7 @@ const accessories: Accessory[] = [
     affiliateLink: '#',
     price: '$12.99',
     category: 'Cases',
+    isDeal: true,
     aiSummary: 'A slim, durable silicone case offering drop/scratch protection, comfortable grip, and easy port access.'
   },
   {
@@ -48,6 +50,32 @@ const accessories: Accessory[] = [
     price: '$22.00',
     category: 'Power Banks',
     aiSummary: 'A compact 10000mAh power bank with dual USB ports and LED indicator for on-the-go charging.'
+  },
+];
+
+const coupons: Coupon[] = [
+  {
+    id: 'coupon1',
+    code: 'SUMMER20',
+    description: 'Get 20% off on all summer accessories.',
+    discount: '20% OFF',
+    expiryDate: '2024-08-31',
+    store: 'AccessoryStore'
+  },
+  {
+    id: 'coupon2',
+    code: 'AUDIOFUN',
+    description: '15% discount on headphones and speakers.',
+    discount: '15% OFF',
+    expiryDate: '2024-09-15',
+    store: 'SoundGoodies'
+  },
+  {
+    id: 'coupon3',
+    code: 'FREESHIP',
+    description: 'Free shipping on orders over $50.',
+    discount: 'Free Shipping',
+    store: 'GadgetHub'
   },
 ];
 
@@ -67,4 +95,14 @@ export function getUniqueCategories(): string[] {
     }
   });
   return Array.from(categories).sort();
+}
+
+export function getDailyDeals(): Accessory[] {
+  // For now, return accessories marked as deals, or first 2 items if none are marked.
+  const deals = accessories.filter(acc => acc.isDeal);
+  return deals.length > 0 ? deals : accessories.slice(0, 2);
+}
+
+export function getCoupons(): Coupon[] {
+  return coupons;
 }
