@@ -1,5 +1,6 @@
+
 import Link from 'next/link';
-import { Package2, Heart, List } from 'lucide-react';
+import { Package2, Heart, List, LogIn, UserPlus, Shield } from 'lucide-react';
 
 export default function Header() {
   return (
@@ -9,14 +10,29 @@ export default function Header() {
           <Package2 className="h-6 w-6" />
           <span className="font-headline text-xl">SmartAccessoryLink</span>
         </Link>
-        <nav className="flex items-center gap-4 text-sm lg:gap-6">
-          <Link href="/" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80">
+        <nav className="flex items-center gap-2 text-xs sm:text-sm lg:gap-4">
+          <Link href="/" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <List className="h-4 w-4" />
-            All Accessories
+            <span className="hidden sm:inline">Acessórios</span>
+            <span className="sm:hidden">Todos</span>
           </Link>
-          <Link href="/favorites" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80">
+          <Link href="/favorites" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <Heart className="h-4 w-4" />
-            Favorites
+            <span className="hidden sm:inline">Favoritos</span>
+             <span className="sm:hidden">Favs</span>
+          </Link>
+          <Link href="/login" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+            <LogIn className="h-4 w-4" />
+            Login
+          </Link>
+          <Link href="/register" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+            <UserPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Cadastrar</span>
+            <span className="sm:hidden">SignUp</span>
+          </Link>
+          <Link href="/admin/login" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+            <Shield className="h-4 w-4" />
+            Admin
           </Link>
         </nav>
       </div>
