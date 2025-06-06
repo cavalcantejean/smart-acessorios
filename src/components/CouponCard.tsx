@@ -28,7 +28,7 @@ export default function CouponCard({ coupon }: CouponCardProps) {
         setTimeout(() => setCopied(false), 2000); // Reset icon after 2 seconds
       })
       .catch(err => {
-        console.error('Failed to copy code: ', err);
+        console.error('Falha ao copiar código: ', err);
         toast({
           title: 'Erro ao Copiar',
           description: 'Não foi possível copiar o código. Tente manualmente.',
@@ -60,7 +60,7 @@ export default function CouponCard({ coupon }: CouponCardProps) {
         <CardFooter className="text-xs text-muted-foreground pt-0 pb-3">
           <div className="flex items-center gap-1">
             <CalendarDays className="h-3 w-3" />
-            <span>Válido até: {new Date(coupon.expiryDate).toLocaleDateString()}</span>
+            <span>Válido até: {new Date(coupon.expiryDate).toLocaleDateString('pt-BR')}</span>
           </div>
         </CardFooter>
       )}

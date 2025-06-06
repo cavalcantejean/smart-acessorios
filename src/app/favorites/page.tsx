@@ -22,7 +22,7 @@ export default function FavoritesPage() {
       <section>
         <div className="flex items-center justify-center gap-2 mb-6">
           <Heart className="h-8 w-8 text-destructive" />
-          <h1 className="text-3xl font-bold text-center font-headline">Your Favorites</h1>
+          <h1 className="text-3xl font-bold text-center font-headline">Seus Favoritos</h1>
         </div>
         {favoritedAccessories.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -32,7 +32,7 @@ export default function FavoritesPage() {
           </div>
         ) : (
           <p className="text-center text-muted-foreground py-10">
-            You haven&apos;t favorited any accessories yet. Browse accessories and click the heart icon to save them here!
+            Você ainda não favoritou nenhum acessório. Navegue pelos acessórios e clique no ícone de coração para salvá-los aqui!
           </p>
         )}
       </section>

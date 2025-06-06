@@ -41,7 +41,7 @@ export default function AccessoryCard({ accessory }: AccessoryCardProps) {
       </CardContent>
       <CardFooter className="p-4 flex justify-between items-center border-t">
         <Button asChild variant="outline" size="sm">
-          <Link href={`/accessory/${accessory.id}`}>View Details</Link>
+          <Link href={`/accessory/${accessory.id}`}>Ver Detalhes</Link>
         </Button>
         <FavoriteButton
           isFavorite={favoriteStatus}

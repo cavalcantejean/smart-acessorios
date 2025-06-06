@@ -36,7 +36,7 @@ export default function Header() {
           <Link href="/register" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <UserPlus className="h-4 w-4" />
             <span className="hidden sm:inline">Cadastrar</span>
-            <span className="sm:hidden">SignUp</span>
+            <span className="sm:hidden">Criar Conta</span>
           </Link>
           <Link href="/admin/login" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <Shield className="h-4 w-4" />

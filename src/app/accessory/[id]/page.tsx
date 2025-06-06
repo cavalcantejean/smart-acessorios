@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const accessory = getAccessoryById(params.id);
   if (!accessory) {
     return {
-      title: 'Accessory Not Found',
+      title: 'Acessório Não Encontrado',
     };
   }
   return {
@@ -27,15 +27,15 @@ export default async function AccessoryDetailPage({ params }: { params: { id:str
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">
           <CardHeader>
-            <CardTitle className="text-2xl font-headline">Accessory Not Found</CardTitle>
+            <CardTitle className="text-2xl font-headline">Acessório Não Encontrado</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-6">
-              We couldn&apos;t find the accessory you were looking for.
+              Não conseguimos encontrar o acessório que você estava procurando.
             </p>
             <Button asChild>
               <Link href="/">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Homepage
+                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para a Página Inicial
               </Link>
             </Button>
           </CardContent>

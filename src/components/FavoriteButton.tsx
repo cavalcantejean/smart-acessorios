@@ -20,7 +20,7 @@ export default function FavoriteButton({ isFavorite, onClick, className }: Favor
         onClick();
       }}
       className={cn("rounded-full hover:bg-destructive/10", className)}
-      aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+      aria-label={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
     >
       <Heart className={cn("h-5 w-5", isFavorite ? "fill-destructive text-destructive" : "text-muted-foreground")} />
     </Button>

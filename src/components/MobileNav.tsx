@@ -42,7 +42,7 @@ export default function MobileNav() {
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="text-primary-foreground hover:text-primary-foreground/80 md:hidden">
           <Menu className="h-6 w-6" />
-          <span className="sr-only">Open menu</span>
+          <span className="sr-only">Abrir menu</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 flex flex-col bg-card">
