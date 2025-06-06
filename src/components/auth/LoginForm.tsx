@@ -18,12 +18,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState } from "react"; // Changed import
+import { useEffect, useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
-  password: z.string().min(1, { message: "A senha é obrigatória." }), // Min 1 for login
+  password: z.string().min(1, { message: "A senha é obrigatória." }),
 });
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
@@ -63,8 +64,9 @@ function SubmitButton({ text }: { text: string }) {
 }
 
 export default function LoginForm({ formAction, title, description, submitButtonText, linkToRegister }: LoginFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState); // Changed hook name
+  const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
+  const { login: mockAuthLogin } = useAuth(); // Obter a função de login simulado
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -82,13 +84,15 @@ export default function LoginForm({ formAction, title, description, submitButton
           description: state.message,
         });
         form.reset();
+        if (formAction.name === 'loginUserAction') { // Chamar apenas para login de usuário comum
+             mockAuthLogin(); // Chamar login simulado em caso de sucesso
+        }
       } else {
         toast({
           title: "Erro de Login",
           description: state.message || "Verifique os dados e tente novamente.",
           variant: "destructive",
         });
-        // Set form errors if provided by the server action
         if (state.issues) {
           for (const [fieldName, errors] of Object.entries(state.issues)) {
             if (errors && errors.length > 0) {
@@ -98,7 +102,7 @@ export default function LoginForm({ formAction, title, description, submitButton
         }
       }
     }
-  }, [state, toast, form]);
+  }, [state, toast, form, mockAuthLogin, formAction]);
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl">
@@ -111,7 +115,7 @@ export default function LoginForm({ formAction, title, description, submitButton
           <form
             action={dispatch}
             className="space-y-6"
-            onSubmit={form.handleSubmit(() => { // Ensure client-side validation runs
+            onSubmit={form.handleSubmit(() => {
                 const formData = new FormData();
                 const values = form.getValues();
                 formData.append('email', values.email);

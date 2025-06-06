@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -10,6 +11,7 @@ import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft } from 'luci
 import { summarizeAccessoryDescriptionAction } from '../actions';
 import FavoriteButton from '@/components/FavoriteButton';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
 
 interface AccessoryDetailsClientProps {
   accessory: Accessory;
@@ -22,12 +24,21 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isFavorite, setIsFavorite] = useState(isFavoriteInitial);
   const { toast } = useToast();
+  const { isAuthenticated, isLoading: isLoadingAuth } = useAuth(); // Obter estado de autenticação
 
   useEffect(() => {
     setIsFavorite(isFavoriteInitial);
   }, [isFavoriteInitial]);
 
   const handleToggleFavorite = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login Necessário",
+        description: "Você precisa estar logado para favoritar acessórios.",
+        variant: "destructive",
+      });
+      return;
+    }
     onToggleFavorite(accessory.id);
     setIsFavorite(!isFavorite);
     toast({
@@ -77,9 +88,11 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
             data-ai-hint={accessory.imageHint || "accessory details"}
           />
         </div>
-        <div className="absolute top-4 right-4">
-          <FavoriteButton isFavorite={isFavorite} onClick={handleToggleFavorite} className="bg-background/70 hover:bg-background" />
-        </div>
+        {!isLoadingAuth && isAuthenticated && ( // Mostrar botão apenas se autenticado e não carregando
+          <div className="absolute top-4 right-4">
+            <FavoriteButton isFavorite={isFavorite} onClick={handleToggleFavorite} className="bg-background/70 hover:bg-background" />
+          </div>
+        )}
          <div className="absolute top-4 left-4">
           <Button variant="outline" size="icon" asChild className="bg-background/70 hover:bg-background">
             <Link href="/">

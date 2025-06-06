@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -7,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import FavoriteButton from './FavoriteButton';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
 
 interface AccessoryCardProps {
   accessory: Accessory;
@@ -14,6 +16,7 @@ interface AccessoryCardProps {
 
 export default function AccessoryCard({ accessory }: AccessoryCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isAuthenticated, isLoading: isLoadingAuth } = useAuth(); // Obter estado de autenticação
   const favoriteStatus = isFavorite(accessory.id);
 
   return (
@@ -43,10 +46,12 @@ export default function AccessoryCard({ accessory }: AccessoryCardProps) {
         <Button asChild variant="outline" size="sm">
           <Link href={`/accessory/${accessory.id}`}>Ver Detalhes</Link>
         </Button>
-        <FavoriteButton
-          isFavorite={favoriteStatus}
-          onClick={() => toggleFavorite(accessory.id)}
-        />
+        {!isLoadingAuth && isAuthenticated && ( // Mostrar botão apenas se autenticado e não carregando
+          <FavoriteButton
+            isFavorite={favoriteStatus}
+            onClick={() => toggleFavorite(accessory.id)}
+          />
+        )}
       </CardFooter>
     </Card>
   );

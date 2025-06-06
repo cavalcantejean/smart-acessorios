@@ -3,26 +3,34 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, Package2, List, Heart, LogIn, UserPlus, Shield, ChevronRight } from 'lucide-react';
+import { Menu, Package2, List, Heart, LogIn, UserPlus, Shield, ChevronRight, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { getUniqueCategories } from '@/lib/data';
 import { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
 
 export default function MobileNav() {
   const [categories, setCategories] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { isAuthenticated, logout, isLoading: isLoadingAuth } = useAuth(); // Obter estado de autenticação
 
   useEffect(() => {
     setCategories(getUniqueCategories());
   }, []);
 
   useEffect(() => {
-    setIsOpen(false);
+    setIsOpen(false); // Fechar menu ao mudar de rota
   }, [pathname]);
+
+  const handleLinkClick = () => setIsOpen(false);
+  const handleLogoutClick = () => {
+    logout();
+    setIsOpen(false);
+  }
 
   const navLinkClasses = (href: string) => 
     cn("flex items-center justify-between w-full text-left p-3 rounded-md hover:bg-muted transition-colors",
@@ -31,11 +39,18 @@ export default function MobileNav() {
   
   const categoryLinkClasses = (category: string) => {
     const categoryQuery = `/?category=${encodeURIComponent(category)}`;
+    // Verifica se a query string está presente e corresponde
+    const currentPathWithQuery = pathname + (typeof window !== 'undefined' ? window.location.search : '');
     return cn("flex items-center justify-between w-full text-left p-3 rounded-md hover:bg-muted transition-colors",
-       pathname + (typeof window !== 'undefined' ? window.location.search : '') === categoryQuery ? "bg-muted font-semibold" : ""
+       currentPathWithQuery === categoryQuery ? "bg-muted font-semibold" : ""
     );
   }
 
+  if (isLoadingAuth) { // Não renderizar o trigger do menu até sabermos o estado de auth para evitar piscar
+      return  <Button variant="ghost" size="icon" className="text-primary-foreground hover:text-primary-foreground/80 md:hidden animate-pulse">
+                <Menu className="h-6 w-6" />
+              </Button>;
+  }
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -47,24 +62,27 @@ export default function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 flex flex-col bg-card">
         <SheetHeader className="p-4 border-b">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold" onClick={() => setIsOpen(false)}>
+          <Link href="/" className="flex items-center gap-2 text-lg font-semibold" onClick={handleLinkClick}>
             <Package2 className="h-6 w-6 text-primary" />
             <span className="font-headline text-xl text-primary">SmartAccessoryLink</span>
           </Link>
         </SheetHeader>
         <div className="flex-grow overflow-y-auto p-4 space-y-1">
-          <Link href="/" className={navLinkClasses("/")} onClick={() => setIsOpen(false)}>
+          <Link href="/" className={navLinkClasses("/")} onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
               <List className="h-5 w-5" /> Todos Acessórios
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
-          <Link href="/favorites" className={navLinkClasses("/favorites")} onClick={() => setIsOpen(false)}>
-            <div className="flex items-center gap-2">
-              <Heart className="h-5 w-5" /> Favoritos
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
+
+          {isAuthenticated && (
+            <Link href="/favorites" className={navLinkClasses("/favorites")} onClick={handleLinkClick}>
+              <div className="flex items-center gap-2">
+                <Heart className="h-5 w-5" /> Favoritos
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </Link>
+          )}
           
           {categories.length > 0 && (
             <>
@@ -75,7 +93,7 @@ export default function MobileNav() {
                   key={category} 
                   href={`/?category=${encodeURIComponent(category)}`} 
                   className={categoryLinkClasses(category)}
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleLinkClick}
                 >
                   {category}
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -84,19 +102,30 @@ export default function MobileNav() {
             </>
           )}
           <Separator className="my-3" />
-           <Link href="/login" className={navLinkClasses("/login")} onClick={() => setIsOpen(false)}>
-            <div className="flex items-center gap-2">
-              <LogIn className="h-5 w-5" /> Login
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
-          <Link href="/register" className={navLinkClasses("/register")} onClick={() => setIsOpen(false)}>
-            <div className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" /> Cadastrar
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
-          <Link href="/admin/login" className={navLinkClasses("/admin/login")} onClick={() => setIsOpen(false)}>
+          {!isAuthenticated ? (
+            <>
+              <Link href="/login" className={navLinkClasses("/login")} onClick={handleLinkClick}>
+                <div className="flex items-center gap-2">
+                  <LogIn className="h-5 w-5" /> Login
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              <Link href="/register" className={navLinkClasses("/register")} onClick={handleLinkClick}>
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-5 w-5" /> Cadastrar
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            </>
+          ) : (
+             <button onClick={handleLogoutClick} className={navLinkClasses("/logout-action")}> {/* Use button for actions */}
+                <div className="flex items-center gap-2">
+                  <LogOut className="h-5 w-5" /> Logout
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+          )}
+          <Link href="/admin/login" className={navLinkClasses("/admin/login")} onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5" /> Admin
             </div>
