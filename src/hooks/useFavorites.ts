@@ -1,3 +1,4 @@
+
 "use client";
 import type {Accessory} from '@/lib/types';
 import { useState, useEffect, useCallback } from 'react';
@@ -51,7 +52,12 @@ export function useFavorites() {
 
     const handleFavoritesUpdated = (event: Event) => {
       if ((event as CustomEvent).detail) {
-        setFavoriteIds((event as CustomEvent).detail as string[]);
+        const newIds = (event as CustomEvent).detail as string[];
+        // Defer this state update to run after the current JavaScript task,
+        // preventing updates during another component's render phase.
+        setTimeout(() => {
+          setFavoriteIds(newIds);
+        }, 0);
       }
     };
 
