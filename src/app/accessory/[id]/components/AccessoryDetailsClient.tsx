@@ -109,7 +109,7 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
           <p className="text-sm text-muted-foreground">Categoria: {accessory.category}</p>
         )}
         {accessory.price && (
-          <p className="text-2xl font-semibold text-primary">{accessory.price}</p>
+          <p className="text-2xl font-semibold text-primary">{accessory.price.replace('$', 'R$')}</p>
         )}
 
         <div className="space-y-2">

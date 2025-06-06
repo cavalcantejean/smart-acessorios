@@ -40,7 +40,7 @@ export default function AccessoryCard({ accessory }: AccessoryCardProps) {
           <CardTitle className="text-lg font-headline mb-1 hover:text-primary transition-colors">{accessory.name}</CardTitle>
         </Link>
         <CardDescription className="text-sm text-muted-foreground mb-2 line-clamp-2">{accessory.shortDescription}</CardDescription>
-        {accessory.price && <p className="text-base font-semibold text-primary">{accessory.price}</p>}
+        {accessory.price && <p className="text-base font-semibold text-primary">{accessory.price.replace('$', 'R$')}</p>}
       </CardContent>
       <CardFooter className="p-4 flex justify-between items-center border-t">
         <Button asChild variant="outline" size="sm">
