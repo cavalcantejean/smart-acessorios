@@ -18,8 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useEffect, useActionState } from "react"; // Changed import
+import { useFormStatus } from "react-dom";
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -68,7 +68,7 @@ function SubmitButton({ text }: { text: string }) {
 }
 
 export default function RegisterForm({ formAction, title, description, submitButtonText, linkToLogin }: RegisterFormProps) {
-  const [state, dispatch] = useFormState(formAction, initialState);
+  const [state, dispatch] = useActionState(formAction, initialState); // Changed hook name
   const { toast } = useToast();
 
   const form = useForm<RegisterFormValues>({

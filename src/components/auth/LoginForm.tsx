@@ -18,8 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
-import { useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useEffect, useActionState } from "react"; // Changed import
+import { useFormStatus } from "react-dom";
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
@@ -63,7 +63,7 @@ function SubmitButton({ text }: { text: string }) {
 }
 
 export default function LoginForm({ formAction, title, description, submitButtonText, linkToRegister }: LoginFormProps) {
-  const [state, dispatch] = useFormState(formAction, initialState);
+  const [state, dispatch] = useActionState(formAction, initialState); // Changed hook name
   const { toast } = useToast();
 
   const form = useForm<LoginFormValues>({
