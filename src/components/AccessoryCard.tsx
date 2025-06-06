@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import FavoriteButton from './FavoriteButton';
 import { useFavorites } from '@/hooks/useFavorites';
-import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
+import { useAuth } from '@/hooks/useAuth'; 
 
 interface AccessoryCardProps {
   accessory: Accessory;
@@ -16,7 +16,7 @@ interface AccessoryCardProps {
 
 export default function AccessoryCard({ accessory }: AccessoryCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { isAuthenticated, isLoading: isLoadingAuth } = useAuth(); // Obter estado de autenticação
+  const { isAuthenticated, isLoading: isLoadingAuth } = useAuth(); 
   const favoriteStatus = isFavorite(accessory.id);
 
   return (
@@ -40,13 +40,13 @@ export default function AccessoryCard({ accessory }: AccessoryCardProps) {
           <CardTitle className="text-lg font-headline mb-1 hover:text-primary transition-colors">{accessory.name}</CardTitle>
         </Link>
         <CardDescription className="text-sm text-muted-foreground mb-2 line-clamp-2">{accessory.shortDescription}</CardDescription>
-        {accessory.price && <p className="text-base font-semibold text-primary">{accessory.price.replace('$', 'R$')}</p>}
+        {accessory.price && <p className="text-base font-semibold text-primary">R${accessory.price.replace('.', ',')}</p>}
       </CardContent>
       <CardFooter className="p-4 flex justify-between items-center border-t">
         <Button asChild variant="outline" size="sm">
           <Link href={`/accessory/${accessory.id}`}>Ver Detalhes</Link>
         </Button>
-        {!isLoadingAuth && isAuthenticated && ( // Mostrar botão apenas se autenticado e não carregando
+        {!isLoadingAuth && isAuthenticated && ( 
           <FavoriteButton
             isFavorite={favoriteStatus}
             onClick={() => toggleFavorite(accessory.id)}

@@ -11,7 +11,7 @@ import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft } from 'luci
 import { summarizeAccessoryDescriptionAction } from '../actions';
 import FavoriteButton from '@/components/FavoriteButton';
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
+import { useAuth } from '@/hooks/useAuth'; 
 
 interface AccessoryDetailsClientProps {
   accessory: Accessory;
@@ -24,7 +24,7 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isFavorite, setIsFavorite] = useState(isFavoriteInitial);
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: isLoadingAuth } = useAuth(); // Obter estado de autenticação
+  const { isAuthenticated, isLoading: isLoadingAuth } = useAuth(); 
 
   useEffect(() => {
     setIsFavorite(isFavoriteInitial);
@@ -88,7 +88,7 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
             data-ai-hint={accessory.imageHint || "accessory details"}
           />
         </div>
-        {!isLoadingAuth && isAuthenticated && ( // Mostrar botão apenas se autenticado e não carregando
+        {!isLoadingAuth && isAuthenticated && ( 
           <div className="absolute top-4 right-4">
             <FavoriteButton isFavorite={isFavorite} onClick={handleToggleFavorite} className="bg-background/70 hover:bg-background" />
           </div>
@@ -109,7 +109,7 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
           <p className="text-sm text-muted-foreground">Categoria: {accessory.category}</p>
         )}
         {accessory.price && (
-          <p className="text-2xl font-semibold text-primary">{accessory.price.replace('$', 'R$')}</p>
+          <p className="text-2xl font-semibold text-primary">R${accessory.price.replace('.', ',')}</p>
         )}
 
         <div className="space-y-2">

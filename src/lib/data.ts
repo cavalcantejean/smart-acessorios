@@ -9,7 +9,7 @@ const accessories: Accessory[] = [
     shortDescription: 'Fast wireless charging for your smartphone.',
     fullDescription: 'Experience the convenience of fast wireless charging with this sleek and modern charging stand. Compatible with all Qi-enabled devices, it offers up to 15W charging speed. Its ergonomic design allows you to use your phone in portrait or landscape mode while charging.',
     affiliateLink: '#',
-    price: 'R$29,99',
+    price: '29.99', // Alterado
     category: 'Chargers',
     aiSummary: 'A fast, 15W wireless charging stand with an ergonomic design for Qi-enabled devices, allowing portrait or landscape use during charging.',
     isDeal: true,
@@ -22,7 +22,7 @@ const accessories: Accessory[] = [
     shortDescription: 'Immersive sound with active noise cancellation.',
     fullDescription: 'Dive into a world of pure sound with these Bluetooth headphones featuring active noise cancellation. Enjoy crystal-clear audio, deep bass, and up to 30 hours of playtime on a single charge. Soft memory foam earcups provide all-day comfort.',
     affiliateLink: '#',
-    price: 'R$79,50',
+    price: '79.50', // Alterado
     category: 'Audio',
     aiSummary: 'Bluetooth headphones with active noise cancellation, 30-hour playtime, and comfortable memory foam earcups for immersive audio.'
   },
@@ -34,7 +34,7 @@ const accessories: Accessory[] = [
     shortDescription: 'Slim and durable protection for your device.',
     fullDescription: 'Keep your smartphone safe from drops and scratches with this slim yet durable silicone case. The soft-touch finish provides a comfortable grip, while precise cutouts ensure easy access to all ports and buttons. Available in multiple colors.',
     affiliateLink: '#',
-    price: 'R$12,99',
+    price: '12.99', // Alterado
     category: 'Cases',
     isDeal: true,
     aiSummary: 'A slim, durable silicone case offering drop/scratch protection, comfortable grip, and easy port access.'
@@ -47,7 +47,7 @@ const accessories: Accessory[] = [
     shortDescription: 'Compact power bank for charging on the go.',
     fullDescription: 'Never run out of battery with this compact 10000mAh portable power bank. It features dual USB ports for charging multiple devices simultaneously and an LED indicator to show remaining power. Small enough to fit in your pocket or bag.',
     affiliateLink: '#',
-    price: 'R$22,00',
+    price: '22.00', // Alterado
     category: 'Power Banks',
     aiSummary: 'A compact 10000mAh power bank with dual USB ports and LED indicator for on-the-go charging.'
   },
@@ -73,7 +73,7 @@ const coupons: Coupon[] = [
   {
     id: 'coupon3',
     code: 'FREESHIP',
-    description: 'Free shipping on orders over R$50.', // Updated description for consistency
+    description: 'Free shipping on orders over R$50.', 
     discount: 'Free Shipping',
     store: 'GadgetHub'
   },
