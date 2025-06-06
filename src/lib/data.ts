@@ -58,3 +58,13 @@ export function getAllAccessories(): Accessory[] {
 export function getAccessoryById(id: string): Accessory | undefined {
   return accessories.find(acc => acc.id === id);
 }
+
+export function getUniqueCategories(): string[] {
+  const categories = new Set<string>();
+  accessories.forEach(acc => {
+    if (acc.category) {
+      categories.add(acc.category);
+    }
+  });
+  return Array.from(categories).sort();
+}

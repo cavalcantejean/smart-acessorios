@@ -1,6 +1,7 @@
 
 import Link from 'next/link';
 import { Package2, Heart, List, LogIn, UserPlus, Shield } from 'lucide-react';
+import MobileNav from './MobileNav';
 
 export default function Header() {
   return (
@@ -10,7 +11,14 @@ export default function Header() {
           <Package2 className="h-6 w-6" />
           <span className="font-headline text-xl">SmartAccessoryLink</span>
         </Link>
-        <nav className="flex items-center gap-2 text-xs sm:text-sm lg:gap-4">
+        
+        {/* Mobile Navigation Trigger */}
+        <div className="md:hidden">
+          <MobileNav />
+        </div>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-2 text-xs sm:text-sm lg:gap-4">
           <Link href="/" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <List className="h-4 w-4" />
             <span className="hidden sm:inline">Acessórios</span>
