@@ -1,16 +1,20 @@
 
+"use client";
+import React from 'react'; // Import React
 import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials } from '@/lib/data';
 import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
 import TestimonialCard from '@/components/TestimonialCard';
 import type { Accessory, Coupon, Testimonial } from '@/lib/types';
-import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star } from 'lucide-react'; // Adicionado Star para Destaques
+import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import Autoplay from "embla-carousel-autoplay";
+
 
 export default function HomePage() {
   const allAccessories: Accessory[] = getAllAccessories();
@@ -18,38 +22,41 @@ export default function HomePage() {
   const promotionalCoupons: Coupon[] = getCoupons();
   const testimonials: Testimonial[] = getTestimonials();
 
-  // Usaremos dealsToShow para a GRADE de Ofertas do Dia.
-  // O carrossel de destaques usará dailyDeals diretamente ou um slice menor se necessário.
-  // Por ora, o carrossel também usará os mesmos 'dealsToShow' para consistência.
   const dealsToShow = dailyDeals.slice(0, 6); 
   const couponsToShow = promotionalCoupons.slice(0, 3);
   const accessoriesToShow = allAccessories.slice(0, 8);
   const testimonialsToShow = testimonials.slice(0, 3);
 
+  const autoplayPlugin = React.useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true, stopOnFocusIn: true })
+  );
+
 
   return (
     <div className="space-y-12">
-      {/* NOVA SEÇÃO: Carrossel de Destaques */}
       {dealsToShow.length > 0 && (
-        <section className="relative group"> {/* Added relative group */}
+        <section className="relative group">
           <div className="flex items-center justify-between gap-2 mb-6">
             <div className="flex items-center gap-2">
-              <Star className="h-7 w-7 text-accent" /> {/* Ícone de Destaque */}
+              <Star className="h-7 w-7 text-accent" />
               <h2 className="text-3xl font-bold font-headline">Destaques Imperdíveis</h2>
             </div>
           </div>
           <Carousel
             opts={{
               align: "start",
-              loop: dealsToShow.length > 1, // Loop se houver mais de 1 item
+              loop: dealsToShow.length > 1,
             }}
+            plugins={[autoplayPlugin.current]}
+            onMouseEnter={autoplayPlugin.current.stop}
+            onMouseLeave={autoplayPlugin.current.play}
             className="w-full"
           >
             <CarouselContent className="-ml-4">
               {dealsToShow.map((accessory) => (
-                <CarouselItem key={`carousel-${accessory.id}`} className="basis-full pl-4"> {/* Mostra 1 item por vez */}
-                  <div className="p-1 h-full"> {/* Wrapper para garantir altura */}
-                    <AccessoryCard accessory={accessory} />
+                <CarouselItem key={`carousel-${accessory.id}`} className="basis-full pl-4">
+                  <div className="p-1 h-full">
+                     <AccessoryCard accessory={accessory} />
                   </div>
                 </CarouselItem>
               ))}
@@ -70,16 +77,14 @@ export default function HomePage() {
         </section>
       )}
 
-      {dealsToShow.length > 0 && <Separator className="my-8" />} {/* Separador se o carrossel de destaques for mostrado */}
+      {dealsToShow.length > 0 && <Separator className="my-8" />}
 
-      {/* SEÇÃO ANTIGA: Ofertas do Dia (agora como grade) */}
       <section>
         <div className="flex items-center justify-between gap-2 mb-6">
           <div className="flex items-center gap-2">
             <Tag className="h-7 w-7 text-primary" />
             <h2 className="text-3xl font-bold font-headline">Mais Ofertas do Dia</h2>
           </div>
-          {/* Link para ver todas as ofertas se houver mais do que as mostradas na grade */}
           {dailyDeals.length > dealsToShow.length && (
             <Button variant="outline" asChild size="sm">
               <Link href="/deals">
@@ -89,7 +94,7 @@ export default function HomePage() {
           )}
         </div>
         {dealsToShow.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"> {/* Layout de grade */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {dealsToShow.map((accessory) => (
                <AccessoryCard key={`grid-${accessory.id}`} accessory={accessory} />
             ))}
