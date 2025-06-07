@@ -49,7 +49,7 @@ export default function HomePage() {
             className="w-full"
           >
             <CarouselContent className="-ml-4">
-              {dealsToShow.map((accessory) => (
+              {dealsToShow.map((accessory, index) => (
                 <CarouselItem key={accessory.id} className="basis-full pl-4 md:basis-1/2 lg:basis-1/3">
                   <div className="p-1 h-full">
                     <Link href={`/accessory/${accessory.id}`} className="block h-full">
@@ -64,6 +64,7 @@ export default function HomePage() {
                               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                               className="rounded-t-lg"
                               data-ai-hint={accessory.imageHint || "deal accessory"}
+                              priority={index < 2} // Prioritize the first few images in the carousel
                             />
                           </div>
                         </CardHeader>
@@ -78,7 +79,7 @@ export default function HomePage() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {dealsToShow.length > 1 && ( // Show controls only if more than one item
+            {dealsToShow.length > 1 && ( 
               <>
                 <CarouselPrevious className="hidden sm:flex" />
                 <CarouselNext className="hidden sm:flex" />
@@ -162,4 +163,3 @@ export default function HomePage() {
     </div>
   );
 }
-
