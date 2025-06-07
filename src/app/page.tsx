@@ -44,37 +44,18 @@ export default function HomePage() {
           <Carousel
             opts={{
               align: "start",
-              loop: dealsToShow.length > 3,
+              loop: dealsToShow.length > 3, // Enable loop only if there are more items than visible
             }}
             className="w-full"
           >
             <CarouselContent className="-ml-4">
               {dealsToShow.map((accessory, index) => (
                 <CarouselItem key={accessory.id} className="basis-full pl-4 md:basis-1/2 lg:basis-1/3">
-                  <div className="p-1 h-full">
-                    <Link href={`/accessory/${accessory.id}`} className="block h-full">
-                      <Card className="flex flex-col overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all h-full">
-                        <CardHeader className="p-0">
-                          <div className="aspect-video relative w-full">
-                            <Image
-                              src={accessory.imageUrl}
-                              alt={accessory.name}
-                              fill={true}
-                              style={{ objectFit: 'cover' }}
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                              className="rounded-t-lg"
-                              data-ai-hint={accessory.imageHint || "deal accessory"}
-                              priority={index < 2} // Prioritize the first few images in the carousel
-                            />
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-4 flex-grow flex flex-col">
-                          <CardTitle className="text-lg font-headline mb-1 hover:text-primary transition-colors">{accessory.name}</CardTitle>
-                          <CardDescription className="text-sm text-muted-foreground line-clamp-2 flex-grow">{accessory.shortDescription}</CardDescription>
-                           {accessory.price && <p className="text-base font-semibold text-primary mt-2">R${accessory.price.replace('.', ',')}</p>}
-                        </CardContent>
-                      </Card>
-                    </Link>
+                  {/* Simplified content for debugging */}
+                  <div className="p-1 h-full bg-yellow-300">
+                    <div className="h-64 bg-blue-200 border-2 border-red-500 flex items-center justify-center">
+                      <p>Item {index + 1}: {accessory.name}</p>
+                    </div>
                   </div>
                 </CarouselItem>
               ))}
