@@ -18,7 +18,7 @@ export default function HomePage() {
   const promotionalCoupons: Coupon[] = getCoupons();
   const testimonials: Testimonial[] = getTestimonials();
 
-  const dealsToShow = dailyDeals.slice(0, 6); // Mostrar até 6 ofertas no carrossel
+  const dealsToShow = dailyDeals.slice(0, 6);
   const couponsToShow = promotionalCoupons.slice(0, 3);
   const accessoriesToShow = allAccessories.slice(0, 8);
   const testimonialsToShow = testimonials.slice(0, 3);
@@ -26,31 +26,31 @@ export default function HomePage() {
 
   return (
     <div className="space-y-12">
-      {dealsToShow.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between gap-2 mb-6">
-            <div className="flex items-center gap-2">
-              <Tag className="h-7 w-7 text-primary" />
-              <h2 className="text-3xl font-bold font-headline">Ofertas do Dia</h2>
-            </div>
-            {dailyDeals.length > dealsToShow.length && ( // Show if more deals exist than shown in carousel
-              <Button variant="outline" asChild size="sm">
-                <Link href="/deals">
-                  Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            )}
+      <section>
+        <div className="flex items-center justify-between gap-2 mb-6">
+          <div className="flex items-center gap-2">
+            <Tag className="h-7 w-7 text-primary" />
+            <h2 className="text-3xl font-bold font-headline">Ofertas do Dia</h2>
           </div>
+          {dailyDeals.length > dealsToShow.length && (
+            <Button variant="outline" asChild size="sm">
+              <Link href="/deals">
+                Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
+        </div>
+        {dealsToShow.length > 0 ? (
           <Carousel
             opts={{
               align: "start",
-              loop: dealsToShow.length > 3, // Loop if more than 3 items
+              loop: dealsToShow.length > 3,
             }}
             className="w-full"
           >
             <CarouselContent className="-ml-4">
               {dealsToShow.map((accessory) => (
-                <CarouselItem key={accessory.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                <CarouselItem key={accessory.id} className="basis-full pl-4 md:basis-1/2 lg:basis-1/3"> {/* Adicionado basis-full */}
                   <div className="p-1 h-full">
                     <Link href={`/accessory/${accessory.id}`} className="block h-full">
                       <Card className="flex flex-col overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all h-full">
@@ -77,15 +77,17 @@ export default function HomePage() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {dealsToShow.length > 1 && ( // Show controls only if more than 1 item
+            {dealsToShow.length > 1 && (
               <>
                 <CarouselPrevious className="hidden sm:flex" />
                 <CarouselNext className="hidden sm:flex" />
               </>
             )}
           </Carousel>
-        </section>
-      )}
+        ) : (
+          <p className="text-center text-muted-foreground py-10">Nenhuma oferta do dia disponível no momento. Volte mais tarde!</p>
+        )}
+      </section>
 
       <Separator className="my-8" />
 
