@@ -20,3 +20,12 @@ export interface Coupon {
   expiryDate?: string;
   store?: string; // Optional: name of the store or brand
 }
+
+export interface Testimonial {
+  id: string;
+  name: string;
+  quote: string;
+  avatarUrl?: string;
+  avatarHint?: string;
+  role?: string;
+}
