@@ -4,7 +4,7 @@ import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
 import TestimonialCard from '@/components/TestimonialCard';
 import type { Accessory, Coupon, Testimonial } from '@/lib/types';
-import { Tag, Ticket, ShoppingBag, ArrowRight, Users } from 'lucide-react';
+import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star } from 'lucide-react'; // Adicionado Star para Destaques
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -18,7 +18,10 @@ export default function HomePage() {
   const promotionalCoupons: Coupon[] = getCoupons();
   const testimonials: Testimonial[] = getTestimonials();
 
-  const dealsToShow = dailyDeals.slice(0, 6);
+  // Usaremos dealsToShow para a GRADE de Ofertas do Dia.
+  // O carrossel de destaques usará dailyDeals diretamente ou um slice menor se necessário.
+  // Por ora, o carrossel também usará os mesmos 'dealsToShow' para consistência.
+  const dealsToShow = dailyDeals.slice(0, 6); 
   const couponsToShow = promotionalCoupons.slice(0, 3);
   const accessoriesToShow = allAccessories.slice(0, 8);
   const testimonialsToShow = testimonials.slice(0, 3);
@@ -26,32 +29,26 @@ export default function HomePage() {
 
   return (
     <div className="space-y-12">
-      <section>
-        <div className="flex items-center justify-between gap-2 mb-6">
-          <div className="flex items-center gap-2">
-            <Tag className="h-7 w-7 text-primary" />
-            <h2 className="text-3xl font-bold font-headline">Ofertas do Dia</h2>
+      {/* NOVA SEÇÃO: Carrossel de Destaques */}
+      {dealsToShow.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <Star className="h-7 w-7 text-accent" /> {/* Ícone de Destaque */}
+              <h2 className="text-3xl font-bold font-headline">Destaques Imperdíveis</h2>
+            </div>
           </div>
-          {dailyDeals.length > dealsToShow.length && (
-            <Button variant="outline" asChild size="sm">
-              <Link href="/deals">
-                Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          )}
-        </div>
-        {dealsToShow.length > 0 ? (
           <Carousel
             opts={{
               align: "start",
-              loop: dealsToShow.length > 3, // Enable loop only if there are more items than visible
+              loop: dealsToShow.length > 1, // Loop se houver mais de 1 item
             }}
             className="w-full"
           >
             <CarouselContent className="-ml-4">
               {dealsToShow.map((accessory) => (
-                <CarouselItem key={accessory.id} className="basis-full pl-4 md:basis-1/2 lg:basis-1/3">
-                  <div className="p-1 h-full"> {/* This wrapper provides height context */}
+                <CarouselItem key={`carousel-${accessory.id}`} className="basis-full pl-4"> {/* Mostra 1 item por vez */}
+                  <div className="p-1 h-full"> {/* Wrapper para garantir altura */}
                     <AccessoryCard accessory={accessory} />
                   </div>
                 </CarouselItem>
@@ -59,11 +56,38 @@ export default function HomePage() {
             </CarouselContent>
             {dealsToShow.length > 1 && ( 
               <>
-                <CarouselPrevious className="hidden sm:flex" />
+                <CarouselPrevious className="hidden sm:flex" /> {/* Setas padrão do ShadCN */}
                 <CarouselNext className="hidden sm:flex" />
               </>
             )}
           </Carousel>
+        </section>
+      )}
+
+      {dealsToShow.length > 0 && <Separator className="my-8" />} {/* Separador se o carrossel de destaques for mostrado */}
+
+      {/* SEÇÃO ANTIGA: Ofertas do Dia (agora como grade) */}
+      <section>
+        <div className="flex items-center justify-between gap-2 mb-6">
+          <div className="flex items-center gap-2">
+            <Tag className="h-7 w-7 text-primary" />
+            <h2 className="text-3xl font-bold font-headline">Mais Ofertas do Dia</h2>
+          </div>
+          {/* Link para ver todas as ofertas se houver mais do que as mostradas na grade */}
+          {dailyDeals.length > dealsToShow.length && (
+            <Button variant="outline" asChild size="sm">
+              <Link href="/deals">
+                Ver Todas as Ofertas <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
+        </div>
+        {dealsToShow.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"> {/* Layout de grade */}
+            {dealsToShow.map((accessory) => (
+               <AccessoryCard key={`grid-${accessory.id}`} accessory={accessory} />
+            ))}
+          </div>
         ) : (
           <p className="text-center text-muted-foreground py-10">Nenhuma oferta do dia disponível no momento. Volte mais tarde!</p>
         )}
