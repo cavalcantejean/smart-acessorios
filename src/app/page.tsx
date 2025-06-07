@@ -31,7 +31,7 @@ export default function HomePage() {
     <div className="space-y-12">
       {/* NOVA SEÇÃO: Carrossel de Destaques */}
       {dealsToShow.length > 0 && (
-        <section>
+        <section className="relative group"> {/* Added relative group */}
           <div className="flex items-center justify-between gap-2 mb-6">
             <div className="flex items-center gap-2">
               <Star className="h-7 w-7 text-accent" /> {/* Ícone de Destaque */}
@@ -56,8 +56,14 @@ export default function HomePage() {
             </CarouselContent>
             {dealsToShow.length > 1 && ( 
               <>
-                <CarouselPrevious className="hidden sm:flex" /> {/* Setas padrão do ShadCN */}
-                <CarouselNext className="hidden sm:flex" />
+                <CarouselPrevious
+                  variant="ghost"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/60 text-foreground hover:bg-background/90 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden sm:flex items-center justify-center shadow-md"
+                />
+                <CarouselNext
+                  variant="ghost"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/60 text-foreground hover:bg-background/90 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden sm:flex items-center justify-center shadow-md"
+                />
               </>
             )}
           </Carousel>
