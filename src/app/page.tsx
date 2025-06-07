@@ -1,7 +1,7 @@
 
 "use client";
-import React from 'react'; // Import React
-import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials } from '@/lib/data';
+import React, { useState, useEffect } from 'react'; // Import React, useState, useEffect
+import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories } from '@/lib/data';
 import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
 import TestimonialCard from '@/components/TestimonialCard';
@@ -11,26 +11,54 @@ import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Input } from "@/components/ui/input"; // Importar Input
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Autoplay from "embla-carousel-autoplay";
 
 
 export default function HomePage() {
-  const allAccessories: Accessory[] = getAllAccessories();
+  const allAccessoriesData: Accessory[] = getAllAccessories(); // Raw data
   const dailyDeals: Accessory[] = getDailyDeals();
   const promotionalCoupons: Coupon[] = getCoupons();
   const testimonials: Testimonial[] = getTestimonials();
 
   const dealsToShow = dailyDeals.slice(0, 6); 
   const couponsToShow = promotionalCoupons.slice(0, 3);
-  const accessoriesToShow = allAccessories.slice(0, 8);
+  // const accessoriesToShow = allAccessories.slice(0, 8); // Will be replaced by displayedAccessories
   const testimonialsToShow = testimonials.slice(0, 3);
 
   const autoplayPlugin = React.useRef(
     Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true, stopOnFocusIn: true })
   );
+
+  // State for "Mais Acessórios" filtering
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [categories, setCategories] = useState<string[]>([]);
+  const [displayedAccessories, setDisplayedAccessories] = useState<Accessory[]>([]);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    setCategories(getUniqueCategories());
+  }, []);
+
+  // Filter and slice accessories for "Mais Acessórios" section
+  useEffect(() => {
+    let filtered = allAccessoriesData;
+
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(acc => acc.category === selectedCategory);
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(acc => 
+        acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (acc.category && acc.category.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    setDisplayedAccessories(filtered.slice(0, 8));
+  }, [searchTerm, selectedCategory, allAccessoriesData]);
 
 
   return (
@@ -127,6 +155,7 @@ export default function HomePage() {
               type="search"
               placeholder="Buscar cupom por nome ou loja..."
               className="w-full md:w-1/2 lg:w-1/3"
+              // Adicionar funcionalidade de busca de cupons aqui se necessário
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -163,7 +192,7 @@ export default function HomePage() {
               <ShoppingBag className="h-7 w-7 text-primary" />
               <h2 className="text-3xl font-bold font-headline">Mais Acessórios</h2>
             </div>
-            {allAccessories.length > accessoriesToShow.length && (
+            {allAccessoriesData.length > displayedAccessories.length && ( // Compare with raw data length
               <Button variant="outline" asChild size="sm">
                 <Link href="/products">
                   Ver Todos <ArrowRight className="ml-2 h-4 w-4" />
@@ -171,21 +200,36 @@ export default function HomePage() {
               </Button>
             )}
           </div>
-          <div className="mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <Input
               type="search"
-              placeholder="Buscar acessório por nome ou categoria..."
-              className="w-full md:w-1/2 lg:w-1/3"
+              placeholder="Buscar por nome ou categoria..."
+              className="w-full sm:flex-grow"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-auto sm:min-w-[200px]">
+                <SelectValue placeholder="Filtrar por categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Categorias</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        {accessoriesToShow.length > 0 ? (
+        {displayedAccessories.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {accessoriesToShow.map(acc => (
+            {displayedAccessories.map(acc => (
               <AccessoryCard key={acc.id} accessory={acc} />
             ))}
           </div>
         ) : (
-          <p className="text-center text-muted-foreground">Nenhum acessório encontrado.</p>
+          <p className="text-center text-muted-foreground py-10">Nenhum acessório encontrado com os filtros atuais.</p>
         )}
       </section>
     </div>
