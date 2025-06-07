@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useEffect } from 'react'; // Import React, useState, useEffect
+import React, { useState, useEffect } from 'react';
 import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories } from '@/lib/data';
 import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
@@ -18,32 +18,34 @@ import Autoplay from "embla-carousel-autoplay";
 
 
 export default function HomePage() {
-  const allAccessoriesData: Accessory[] = getAllAccessories(); // Raw data
-  const dailyDeals: Accessory[] = getDailyDeals();
-  const promotionalCoupons: Coupon[] = getCoupons();
-  const testimonials: Testimonial[] = getTestimonials();
+  const allAccessoriesData: Accessory[] = getAllAccessories();
+  const dailyDealsData: Accessory[] = getDailyDeals();
+  const promotionalCouponsData: Coupon[] = getCoupons();
+  const testimonialsData: Testimonial[] = getTestimonials();
 
-  const dealsToShow = dailyDeals.slice(0, 6); 
-  const couponsToShow = promotionalCoupons.slice(0, 3);
-  // const accessoriesToShow = allAccessories.slice(0, 8); // Will be replaced by displayedAccessories
-  const testimonialsToShow = testimonials.slice(0, 3);
+  const dealsToShowInCarousel = dailyDealsData.slice(0, 6); 
+  const dealsToShowInGrid = dailyDealsData.slice(0, 4); // For the "Mais Ofertas do Dia" grid
+  const testimonialsToShow = testimonialsData.slice(0, 3);
+  const couponsOnHomepageLimit = 3;
 
   const autoplayPlugin = React.useRef(
     Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true, stopOnFocusIn: true })
   );
 
   // State for "Mais Acessórios" filtering
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTermAccessories, setSearchTermAccessories] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState<string[]>([]);
   const [displayedAccessories, setDisplayedAccessories] = useState<Accessory[]>([]);
 
-  // Fetch categories on mount
+  // State for "Cupons Promocionais" filtering
+  const [couponSearchTerm, setCouponSearchTerm] = useState('');
+  const [displayedCoupons, setDisplayedCoupons] = useState<Coupon[]>(promotionalCouponsData.slice(0, couponsOnHomepageLimit));
+
   useEffect(() => {
     setCategories(getUniqueCategories());
   }, []);
 
-  // Filter and slice accessories for "Mais Acessórios" section
   useEffect(() => {
     let filtered = allAccessoriesData;
 
@@ -51,19 +53,31 @@ export default function HomePage() {
       filtered = filtered.filter(acc => acc.category === selectedCategory);
     }
 
-    if (searchTerm) {
+    if (searchTermAccessories) {
       filtered = filtered.filter(acc => 
-        acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (acc.category && acc.category.toLowerCase().includes(searchTerm.toLowerCase()))
+        acc.name.toLowerCase().includes(searchTermAccessories.toLowerCase()) ||
+        (acc.category && acc.category.toLowerCase().includes(searchTermAccessories.toLowerCase()))
       );
     }
     setDisplayedAccessories(filtered.slice(0, 8));
-  }, [searchTerm, selectedCategory, allAccessoriesData]);
+  }, [searchTermAccessories, selectedCategory, allAccessoriesData]);
+
+  useEffect(() => {
+    let filtered = promotionalCouponsData;
+    if (couponSearchTerm) {
+      filtered = promotionalCouponsData.filter(coupon =>
+        coupon.code.toLowerCase().includes(couponSearchTerm.toLowerCase()) ||
+        coupon.description.toLowerCase().includes(couponSearchTerm.toLowerCase()) ||
+        (coupon.store && coupon.store.toLowerCase().includes(couponSearchTerm.toLowerCase()))
+      );
+    }
+    setDisplayedCoupons(filtered.slice(0, couponsOnHomepageLimit));
+  }, [couponSearchTerm, promotionalCouponsData]);
 
 
   return (
     <div className="space-y-12">
-      {dealsToShow.length > 0 && (
+      {dealsToShowInCarousel.length > 0 && (
         <section className="relative group">
           <div className="flex items-center justify-between gap-2 mb-6">
             <div className="flex items-center gap-2">
@@ -74,7 +88,7 @@ export default function HomePage() {
           <Carousel
             opts={{
               align: "start",
-              loop: dealsToShow.length > 1,
+              loop: dealsToShowInCarousel.length > 1,
             }}
             plugins={[autoplayPlugin.current]}
             onMouseEnter={autoplayPlugin.current.stop}
@@ -82,7 +96,7 @@ export default function HomePage() {
             className="w-full"
           >
             <CarouselContent className="-ml-4">
-              {dealsToShow.map((accessory) => (
+              {dealsToShowInCarousel.map((accessory) => (
                 <CarouselItem key={`carousel-${accessory.id}`} className="basis-full pl-4">
                   <div className="p-1 h-full">
                      <AccessoryCard accessory={accessory} priority={true} />
@@ -90,7 +104,7 @@ export default function HomePage() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {dealsToShow.length > 1 && ( 
+            {dealsToShowInCarousel.length > 1 && ( 
               <>
                 <CarouselPrevious
                   variant="ghost"
@@ -106,7 +120,7 @@ export default function HomePage() {
         </section>
       )}
 
-      {dealsToShow.length > 0 && <Separator className="my-8" />}
+      {dealsToShowInCarousel.length > 0 && <Separator className="my-8" />}
 
       <section>
         <div className="flex items-center justify-between gap-2 mb-6">
@@ -114,7 +128,7 @@ export default function HomePage() {
             <Tag className="h-7 w-7 text-primary" />
             <h2 className="text-3xl font-bold font-headline">Mais Ofertas do Dia</h2>
           </div>
-          {dailyDeals.length > dealsToShow.length && (
+          {dailyDealsData.length > dealsToShowInGrid.length && (
             <Button variant="outline" asChild size="sm">
               <Link href="/deals">
                 Ver Todas as Ofertas <ArrowRight className="ml-2 h-4 w-4" />
@@ -122,9 +136,9 @@ export default function HomePage() {
             </Button>
           )}
         </div>
-        {dealsToShow.length > 0 ? (
+        {dealsToShowInGrid.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {dealsToShow.map((accessory) => (
+            {dealsToShowInGrid.map((accessory) => (
                <AccessoryCard key={`grid-${accessory.id}`} accessory={accessory} />
             ))}
           </div>
@@ -135,14 +149,14 @@ export default function HomePage() {
 
       <Separator className="my-8" />
 
-      {couponsToShow.length > 0 && (
+      {promotionalCouponsData.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-2 mb-6">
              <div className="flex items-center gap-2">
                 <Ticket className="h-7 w-7 text-accent" />
                 <h2 className="text-3xl font-bold font-headline">Cupons Promocionais</h2>
               </div>
-            {promotionalCoupons.length > couponsToShow.length && (
+            {promotionalCouponsData.length > couponsOnHomepageLimit && (
                <Button variant="outline" asChild size="sm">
                 <Link href="/coupons">
                   Ver Todos <ArrowRight className="ml-2 h-4 w-4" />
@@ -155,14 +169,23 @@ export default function HomePage() {
               type="search"
               placeholder="Buscar cupom por nome ou loja..."
               className="w-full md:w-1/2 lg:w-1/3"
-              // Adicionar funcionalidade de busca de cupons aqui se necessário
+              value={couponSearchTerm}
+              onChange={(e) => setCouponSearchTerm(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {couponsToShow.map(coupon => (
-              <CouponCard key={coupon.id} coupon={coupon} />
-            ))}
-          </div>
+          {displayedCoupons.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayedCoupons.map(coupon => (
+                <CouponCard key={coupon.id} coupon={coupon} />
+              ))}
+            </div>
+          ) : (
+             <p className="text-center text-muted-foreground py-10">
+              {couponSearchTerm
+                ? "Nenhum cupom encontrado com os filtros atuais."
+                : "Nenhum cupom promocional disponível no momento."}
+            </p>
+          )}
         </section>
       )}
       
@@ -192,7 +215,7 @@ export default function HomePage() {
               <ShoppingBag className="h-7 w-7 text-primary" />
               <h2 className="text-3xl font-bold font-headline">Mais Acessórios</h2>
             </div>
-            {allAccessoriesData.length > displayedAccessories.length && ( // Compare with raw data length
+            {allAccessoriesData.length > displayedAccessories.length && ( 
               <Button variant="outline" asChild size="sm">
                 <Link href="/products">
                   Ver Todos <ArrowRight className="ml-2 h-4 w-4" />
@@ -205,8 +228,8 @@ export default function HomePage() {
               type="search"
               placeholder="Buscar por nome ou categoria..."
               className="w-full sm:flex-grow"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchTermAccessories}
+              onChange={(e) => setSearchTermAccessories(e.target.value)}
             />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-full sm:w-auto sm:min-w-[200px]">
