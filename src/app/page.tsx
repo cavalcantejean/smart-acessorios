@@ -7,7 +7,10 @@ import type { Accessory, Coupon, Testimonial } from '@/lib/types';
 import { Tag, Ticket, ShoppingBag, ArrowRight, Users } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function HomePage() {
   const allAccessories: Accessory[] = getAllAccessories();
@@ -15,16 +18,14 @@ export default function HomePage() {
   const promotionalCoupons: Coupon[] = getCoupons();
   const testimonials: Testimonial[] = getTestimonials();
 
-  // Limitar o número de itens exibidos na homepage
-  const dealsToShow = dailyDeals.slice(0, 4); // Mostrar até 4 ofertas
-  const couponsToShow = promotionalCoupons.slice(0, 3); // Mostrar até 3 cupons
-  const accessoriesToShow = allAccessories.slice(0, 8); // Mostrar até 8 produtos gerais
-  const testimonialsToShow = testimonials.slice(0, 3); // Mostrar até 3 testemunhos
+  const dealsToShow = dailyDeals.slice(0, 6); // Mostrar até 6 ofertas no carrossel
+  const couponsToShow = promotionalCoupons.slice(0, 3);
+  const accessoriesToShow = allAccessories.slice(0, 8);
+  const testimonialsToShow = testimonials.slice(0, 3);
 
 
   return (
     <div className="space-y-12">
-      {/* Daily Deals Section */}
       {dealsToShow.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-2 mb-6">
@@ -32,7 +33,7 @@ export default function HomePage() {
               <Tag className="h-7 w-7 text-primary" />
               <h2 className="text-3xl font-bold font-headline">Ofertas do Dia</h2>
             </div>
-            {dailyDeals.length > dealsToShow.length && (
+            {dailyDeals.length > dealsToShow.length && ( // Show if more deals exist than shown in carousel
               <Button variant="outline" asChild size="sm">
                 <Link href="/deals">
                   Ver Todas <ArrowRight className="ml-2 h-4 w-4" />
@@ -40,17 +41,54 @@ export default function HomePage() {
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {dealsToShow.map(acc => (
-              <AccessoryCard key={acc.id} accessory={acc} />
-            ))}
-          </div>
+          <Carousel
+            opts={{
+              align: "start",
+              loop: dealsToShow.length > 3, // Loop if more than 3 items
+            }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4">
+              {dealsToShow.map((accessory) => (
+                <CarouselItem key={accessory.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                  <div className="p-1 h-full">
+                    <Link href={`/accessory/${accessory.id}`} className="block h-full">
+                      <Card className="flex flex-col overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all h-full">
+                        <CardHeader className="p-0">
+                          <div className="aspect-video relative w-full">
+                            <Image
+                              src={accessory.imageUrl}
+                              alt={accessory.name}
+                              layout="fill"
+                              objectFit="cover"
+                              className="rounded-t-lg"
+                              data-ai-hint={accessory.imageHint || "deal accessory"}
+                            />
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-4 flex-grow flex flex-col">
+                          <CardTitle className="text-lg font-headline mb-1 hover:text-primary transition-colors">{accessory.name}</CardTitle>
+                          <CardDescription className="text-sm text-muted-foreground line-clamp-2 flex-grow">{accessory.shortDescription}</CardDescription>
+                           {accessory.price && <p className="text-base font-semibold text-primary mt-2">R${accessory.price.replace('.', ',')}</p>}
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            {dealsToShow.length > 1 && ( // Show controls only if more than 1 item
+              <>
+                <CarouselPrevious className="hidden sm:flex" />
+                <CarouselNext className="hidden sm:flex" />
+              </>
+            )}
+          </Carousel>
         </section>
       )}
 
       <Separator className="my-8" />
 
-      {/* Promotional Coupons Section */}
       {couponsToShow.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-2 mb-6">
@@ -76,7 +114,6 @@ export default function HomePage() {
       
       <Separator className="my-8" />
 
-      {/* Testimonials Section */}
       {testimonialsToShow.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-2 mb-6">
@@ -84,7 +121,6 @@ export default function HomePage() {
               <Users className="h-7 w-7 text-primary" />
               <h2 className="text-3xl font-bold font-headline">O Que Nossos Clientes Dizem</h2>
             </div>
-            {/* Poderia haver um link para uma página de todos os testemunhos aqui, se aplicável */}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {testimonialsToShow.map(testimonial => (
@@ -96,7 +132,6 @@ export default function HomePage() {
 
       <Separator className="my-8" />
 
-      {/* All Accessories Section */}
       <section>
          <div className="flex items-center justify-between gap-2 mb-6">
             <div className="flex items-center gap-2">
