@@ -50,7 +50,7 @@ export default function HomePage() {
           >
             <CarouselContent className="-ml-4">
               {dealsToShow.map((accessory) => (
-                <CarouselItem key={accessory.id} className="basis-full pl-4 md:basis-1/2 lg:basis-1/3"> {/* Adicionado basis-full */}
+                <CarouselItem key={accessory.id} className="basis-full pl-4 md:basis-1/2 lg:basis-1/3">
                   <div className="p-1 h-full">
                     <Link href={`/accessory/${accessory.id}`} className="block h-full">
                       <Card className="flex flex-col overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all h-full">
@@ -59,8 +59,9 @@ export default function HomePage() {
                             <Image
                               src={accessory.imageUrl}
                               alt={accessory.name}
-                              layout="fill"
-                              objectFit="cover"
+                              fill={true}
+                              style={{ objectFit: 'cover' }}
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                               className="rounded-t-lg"
                               data-ai-hint={accessory.imageHint || "deal accessory"}
                             />
@@ -77,7 +78,7 @@ export default function HomePage() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {dealsToShow.length > 1 && (
+            {dealsToShow.length > 1 && ( // Show controls only if more than one item
               <>
                 <CarouselPrevious className="hidden sm:flex" />
                 <CarouselNext className="hidden sm:flex" />
@@ -161,3 +162,4 @@ export default function HomePage() {
     </div>
   );
 }
+

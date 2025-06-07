@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Copy, CheckCircle, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface CouponCardProps {
   coupon: Coupon;
@@ -16,6 +16,14 @@ interface CouponCardProps {
 export default function CouponCard({ coupon }: CouponCardProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [formattedExpiryDate, setFormattedExpiryDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (coupon.expiryDate) {
+      // Formata a data apenas no cliente
+      setFormattedExpiryDate(new Date(coupon.expiryDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }));
+    }
+  }, [coupon.expiryDate]);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(coupon.code)
@@ -60,10 +68,11 @@ export default function CouponCard({ coupon }: CouponCardProps) {
         <CardFooter className="text-xs text-muted-foreground pt-0 pb-3">
           <div className="flex items-center gap-1">
             <CalendarDays className="h-3 w-3" />
-            <span>Válido até: {new Date(coupon.expiryDate).toLocaleDateString('pt-BR')}</span>
+            <span>Válido até: {formattedExpiryDate || '...'}</span>
           </div>
         </CardFooter>
       )}
     </Card>
   );
 }
+

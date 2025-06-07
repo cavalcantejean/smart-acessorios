@@ -83,8 +83,9 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
           <Image
             src={accessory.imageUrl}
             alt={accessory.name}
-            layout="fill"
-            objectFit="cover"
+            fill={true}
+            style={{ objectFit: 'cover' }}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             data-ai-hint={accessory.imageHint || "accessory details"}
           />
         </div>
@@ -145,3 +146,4 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
     </Card>
   );
 }
+

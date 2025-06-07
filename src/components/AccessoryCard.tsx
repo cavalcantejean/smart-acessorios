@@ -27,8 +27,9 @@ export default function AccessoryCard({ accessory }: AccessoryCardProps) {
             <Image
               src={accessory.imageUrl}
               alt={accessory.name}
-              layout="fill"
-              objectFit="cover"
+              fill={true}
+              style={{ objectFit: 'cover' }}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="rounded-t-lg"
               data-ai-hint={accessory.imageHint || "accessory product"}
             />
@@ -56,3 +57,4 @@ export default function AccessoryCard({ accessory }: AccessoryCardProps) {
     </Card>
   );
 }
+
