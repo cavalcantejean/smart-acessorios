@@ -2,7 +2,7 @@
 "use client"; // Add this directive
 
 import Link from 'next/link';
-import { Package2, Heart, List, LogIn, UserPlus, Shield, LogOut } from 'lucide-react';
+import { Package2, Heart, LogIn, UserPlus, Shield, LogOut, Tag, Ticket, ShoppingBag } from 'lucide-react';
 import MobileNav from './MobileNav';
 import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
 import { Button } from './ui/button'; // Para o botão de Logout
@@ -62,10 +62,18 @@ export default function Header() {
         </div>
 
         <nav className="hidden md:flex items-center gap-2 text-xs sm:text-sm lg:gap-4">
-          <Link href="/" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
-            <List className="h-4 w-4" />
-            <span className="hidden sm:inline">Acessórios</span>
+          <Link href="/products" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+            <ShoppingBag className="h-4 w-4" />
+            <span className="hidden sm:inline">Produtos</span>
             <span className="sm:hidden">Todos</span>
+          </Link>
+          <Link href="/deals" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+            <Tag className="h-4 w-4" />
+            <span className="hidden sm:inline">Ofertas</span>
+          </Link>
+          <Link href="/coupons" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+            <Ticket className="h-4 w-4" />
+            <span className="hidden sm:inline">Cupons</span>
           </Link>
           <AuthDependentLinks />
         </nav>

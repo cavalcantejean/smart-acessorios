@@ -3,7 +3,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, Package2, List, Heart, LogIn, UserPlus, Shield, ChevronRight, LogOut } from 'lucide-react';
+import { Menu, Package2, ShoppingBag, Heart, LogIn, UserPlus, Shield, ChevronRight, LogOut, Tag, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { getUniqueCategories } from '@/lib/data';
 import { useEffect, useState } from 'react';
@@ -38,7 +38,7 @@ export default function MobileNav() {
     );
   
   const categoryLinkClasses = (category: string) => {
-    const categoryQuery = `/?category=${encodeURIComponent(category)}`;
+    const categoryQuery = `/products?category=${encodeURIComponent(category)}`; // Changed to /products page
     // Verifica se a query string está presente e corresponde
     const currentPathWithQuery = pathname + (typeof window !== 'undefined' ? window.location.search : '');
     return cn("flex items-center justify-between w-full text-left p-3 rounded-md hover:bg-muted transition-colors",
@@ -68,9 +68,21 @@ export default function MobileNav() {
           </Link>
         </SheetHeader>
         <div className="flex-grow overflow-y-auto p-4 space-y-1">
-          <Link href="/" className={navLinkClasses("/")} onClick={handleLinkClick}>
+          <Link href="/products" className={navLinkClasses("/products")} onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
-              <List className="h-5 w-5" /> Todos Acessórios
+              <ShoppingBag className="h-5 w-5" /> Todos os Produtos
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+          <Link href="/deals" className={navLinkClasses("/deals")} onClick={handleLinkClick}>
+            <div className="flex items-center gap-2">
+              <Tag className="h-5 w-5" /> Ofertas do Dia
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+          <Link href="/coupons" className={navLinkClasses("/coupons")} onClick={handleLinkClick}>
+            <div className="flex items-center gap-2">
+              <Ticket className="h-5 w-5" /> Cupons Promocionais
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
@@ -91,7 +103,7 @@ export default function MobileNav() {
               {categories.map(category => (
                 <Link 
                   key={category} 
-                  href={`/?category=${encodeURIComponent(category)}`} 
+                  href={`/products?category=${encodeURIComponent(category)}`} // Changed to /products page
                   className={categoryLinkClasses(category)}
                   onClick={handleLinkClick}
                 >
