@@ -49,13 +49,10 @@ export default function HomePage() {
             className="w-full"
           >
             <CarouselContent className="-ml-4">
-              {dealsToShow.map((accessory, index) => (
+              {dealsToShow.map((accessory) => (
                 <CarouselItem key={accessory.id} className="basis-full pl-4 md:basis-1/2 lg:basis-1/3">
-                  {/* Simplified content for debugging */}
-                  <div className="p-1 h-full bg-yellow-300">
-                    <div className="h-64 bg-blue-200 border-2 border-red-500 flex items-center justify-center">
-                      <p>Item {index + 1}: {accessory.name}</p>
-                    </div>
+                  <div className="p-1 h-full"> {/* This wrapper provides height context */}
+                    <AccessoryCard accessory={accessory} />
                   </div>
                 </CarouselItem>
               ))}
