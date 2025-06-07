@@ -1,3 +1,4 @@
+
 import { getAccessoryById } from '@/lib/data';
 import type { Accessory } from '@/lib/types';
 import AccessoryDetailsClientWrapper from './components/AccessoryDetailsClientWrapper';
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     };
   }
   return {
-    title: `${accessory.name} | SmartAccessoryLink`,
+    title: `${accessory.name} | SmartAcessorios`,
     description: accessory.shortDescription,
   };
 }

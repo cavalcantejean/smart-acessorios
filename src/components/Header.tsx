@@ -54,7 +54,7 @@ export default function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 text-lg font-semibold md:text-base">
           <Package2 className="h-6 w-6" />
-          <span className="font-headline text-xl">SmartAccessoryLink</span>
+          <span className="font-headline text-xl">SmartAcessorios</span>
         </Link>
         
         <div className="md:hidden">

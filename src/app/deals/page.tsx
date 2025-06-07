@@ -6,7 +6,7 @@ import { Tag } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Ofertas do Dia | SmartAccessoryLink',
+  title: 'Ofertas do Dia | SmartAcessorios',
   description: 'Confira as melhores ofertas do dia em acessórios para smartphones.',
 };
 

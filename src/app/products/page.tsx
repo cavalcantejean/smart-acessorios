@@ -6,7 +6,7 @@ import { ShoppingBag } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Todos os Produtos | SmartAccessoryLink',
+  title: 'Todos os Produtos | SmartAcessorios',
   description: 'Navegue por todos os nossos acessórios para smartphones.',
 };
 

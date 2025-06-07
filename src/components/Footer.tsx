@@ -9,7 +9,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* About Section/Site Name */}
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">SmartAccessoryLink</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">SmartAcessorios</h3>
             <p className="text-sm">
               Sua loja completa para as melhores ofertas de acessórios para smartphones.
             </p>
@@ -45,7 +45,7 @@ export default function Footer() {
 
         <div className="border-t border-foreground/20 pt-6 text-center text-sm">
           <p>
-            &copy; {new Date().getFullYear()} SmartAccessoryLink. Todos os direitos reservados.
+            &copy; {new Date().getFullYear()} SmartAcessorios. Todos os direitos reservados.
           </p>
         </div>
       </div>

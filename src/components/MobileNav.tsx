@@ -64,7 +64,7 @@ export default function MobileNav() {
         <SheetHeader className="p-4 border-b">
           <Link href="/" className="flex items-center gap-2 text-lg font-semibold" onClick={handleLinkClick}>
             <Package2 className="h-6 w-6 text-primary" />
-            <span className="font-headline text-xl text-primary">SmartAccessoryLink</span>
+            <span className="font-headline text-xl text-primary">SmartAcessorios</span>
           </Link>
         </SheetHeader>
         <div className="flex-grow overflow-y-auto p-4 space-y-1">

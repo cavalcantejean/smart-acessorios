@@ -6,7 +6,7 @@ import { Ticket } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cupons Promocionais | SmartAccessoryLink',
+  title: 'Cupons Promocionais | SmartAcessorios',
   description: 'Encontre os melhores cupons de desconto para acessórios de smartphone.',
 };
 

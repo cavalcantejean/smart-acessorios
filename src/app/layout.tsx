@@ -10,7 +10,7 @@ import { AuthProvider } from '@/hooks/useAuth'; // Importar AuthProvider
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'SmartAccessoryLink',
+  title: 'SmartAcessorios',
   description: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
 };
 
