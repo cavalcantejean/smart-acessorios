@@ -2,7 +2,8 @@
 "use client"; // Add this directive
 
 import Link from 'next/link';
-import { Package2, Heart, LogIn, UserPlus, Shield, LogOut, Tag, Ticket, ShoppingBag } from 'lucide-react';
+import Image from 'next/image'; // Import next/image
+import { Heart, LogIn, UserPlus, Shield, LogOut, Tag, Ticket, ShoppingBag } from 'lucide-react';
 import MobileNav from './MobileNav';
 import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
 import { Button } from './ui/button'; // Para o botão de Logout
@@ -52,9 +53,15 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-primary text-primary-foreground shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 text-lg font-semibold md:text-base">
-          <Package2 className="h-6 w-6" />
-          <span className="font-headline text-xl">SmartAcessorios</span>
+        <Link href="/" className="flex items-center gap-2">
+          <Image
+            src="/logo.png"
+            alt="SmartAcessorios Logo"
+            width={191} 
+            height={32}
+            priority={true}
+            className="h-8 w-auto" 
+          />
         </Link>
         
         <div className="md:hidden">

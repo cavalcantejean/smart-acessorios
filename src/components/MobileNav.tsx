@@ -3,27 +3,32 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, Package2, ShoppingBag, Heart, LogIn, UserPlus, Shield, ChevronRight, LogOut, Tag, Ticket } from 'lucide-react';
+import { Menu, ShoppingBag, Heart, LogIn, UserPlus, Shield, ChevronRight, LogOut, Tag, Ticket } from 'lucide-react'; // Removido Package2
+import Image from 'next/image'; // Import next/image
 import Link from 'next/link';
 import { getUniqueCategories } from '@/lib/data';
 import { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
+import { useAuth } from '@/hooks/useAuth';
 
 export default function MobileNav() {
   const [categories, setCategories] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { isAuthenticated, logout, isLoading: isLoadingAuth } = useAuth(); // Obter estado de autenticação
+  const { isAuthenticated, logout, isLoading: isLoadingAuth } = useAuth();
 
   useEffect(() => {
     setCategories(getUniqueCategories());
   }, []);
 
   useEffect(() => {
-    setIsOpen(false); // Fechar menu ao mudar de rota
+    // Fechar menu ao mudar de rota, se já estiver aberto
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   const handleLinkClick = () => setIsOpen(false);
@@ -38,15 +43,14 @@ export default function MobileNav() {
     );
   
   const categoryLinkClasses = (category: string) => {
-    const categoryQuery = `/products?category=${encodeURIComponent(category)}`; // Changed to /products page
-    // Verifica se a query string está presente e corresponde
+    const categoryQuery = `/products?category=${encodeURIComponent(category)}`;
     const currentPathWithQuery = pathname + (typeof window !== 'undefined' ? window.location.search : '');
     return cn("flex items-center justify-between w-full text-left p-3 rounded-md hover:bg-muted transition-colors",
        currentPathWithQuery === categoryQuery ? "bg-muted font-semibold" : ""
     );
   }
 
-  if (isLoadingAuth) { // Não renderizar o trigger do menu até sabermos o estado de auth para evitar piscar
+  if (isLoadingAuth) {
       return  <Button variant="ghost" size="icon" className="text-primary-foreground hover:text-primary-foreground/80 md:hidden animate-pulse">
                 <Menu className="h-6 w-6" />
               </Button>;
@@ -62,9 +66,15 @@ export default function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 flex flex-col bg-card">
         <SheetHeader className="p-4 border-b">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold" onClick={handleLinkClick}>
-            <Package2 className="h-6 w-6 text-primary" />
-            <span className="font-headline text-xl text-primary">SmartAcessorios</span>
+          <Link href="/" className="flex items-center" onClick={handleLinkClick}> {/* Removido gap-2 para controle pela imagem */}
+            <Image
+              src="/logo.png" // Caminho para o logo na pasta public
+              alt="SmartAcessorios Logo"
+              width={239} // Largura original da imagem ou ajustada
+              height={40} // Altura original da imagem ou ajustada
+              priority={true}
+              className="h-10 w-auto" // Controla o tamanho renderizado
+            />
           </Link>
         </SheetHeader>
         <div className="flex-grow overflow-y-auto p-4 space-y-1">
@@ -103,7 +113,7 @@ export default function MobileNav() {
               {categories.map(category => (
                 <Link 
                   key={category} 
-                  href={`/products?category=${encodeURIComponent(category)}`} // Changed to /products page
+                  href={`/products?category=${encodeURIComponent(category)}`}
                   className={categoryLinkClasses(category)}
                   onClick={handleLinkClick}
                 >
@@ -130,7 +140,7 @@ export default function MobileNav() {
               </Link>
             </>
           ) : (
-             <button onClick={handleLogoutClick} className={navLinkClasses("/logout-action")}> {/* Use button for actions */}
+             <button onClick={handleLogoutClick} className={navLinkClasses("/logout-action")}>
                 <div className="flex items-center gap-2">
                   <LogOut className="h-5 w-5" /> Logout
                 </div>
