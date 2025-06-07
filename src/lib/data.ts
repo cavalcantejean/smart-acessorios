@@ -84,24 +84,18 @@ const testimonials: Testimonial[] = [
     id: 'testimonial1',
     name: 'Ana Silva',
     quote: 'Encontrei os melhores acessórios aqui! A seleção de ofertas do dia é incrível e os resumos de IA me ajudam a decidir rapidamente. Recomendo!',
-    avatarUrl: 'https://placehold.co/100x100.png',
-    avatarHint: 'woman smiling',
     role: 'Cliente Satisfeita'
   },
   {
     id: 'testimonial2',
     name: 'Carlos Pereira',
     quote: 'Os cupons promocionais são ótimos! Consegui um bom desconto na minha última compra de fones de ouvido. O site é fácil de navegar.',
-    avatarUrl: 'https://placehold.co/100x100.png',
-    avatarHint: 'man glasses',
     role: 'Entusiasta de Gadgets'
   },
   {
     id: 'testimonial3',
     name: 'Juliana Costa',
     quote: 'Adoro a variedade de produtos e a clareza das descrições. A funcionalidade de favoritar é muito útil para salvar itens que quero comprar depois.',
-    avatarUrl: 'https://placehold.co/100x100.png',
-    avatarHint: 'person nature',
     role: 'Compradora Online'
   }
 ];
