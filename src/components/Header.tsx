@@ -7,6 +7,7 @@ import { Heart, LogIn, UserPlus, Shield, LogOut, Tag, Ticket, ShoppingBag } from
 import MobileNav from './MobileNav';
 import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
 import { Button } from './ui/button'; // Para o botão de Logout
+import logoSrc from '@/img/logo.png'; // Importar o logo
 
 // Componente client-side wrapper para usar o hook useAuth
 function AuthDependentLinks() {
@@ -55,7 +56,7 @@ export default function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/logo.png"
+            src={logoSrc}
             alt="SmartAcessorios Logo"
             width={191} 
             height={32}

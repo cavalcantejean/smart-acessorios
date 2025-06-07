@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import logoSrc from '@/img/logo.png'; // Importar o logo
 
 export default function MobileNav() {
   const [categories, setCategories] = useState<string[]>([]);
@@ -68,12 +69,12 @@ export default function MobileNav() {
         <SheetHeader className="p-4 border-b">
           <Link href="/" className="flex items-center" onClick={handleLinkClick}> {/* Removido gap-2 para controle pela imagem */}
             <Image
-              src="/logo.png" // Caminho para o logo na pasta public
+              src={logoSrc} 
               alt="SmartAcessorios Logo"
-              width={239} // Largura original da imagem ou ajustada
-              height={40} // Altura original da imagem ou ajustada
+              width={239} 
+              height={40} 
               priority={true}
-              className="h-10 w-auto" // Controla o tamanho renderizado
+              className="h-10 w-auto" 
             />
           </Link>
         </SheetHeader>
