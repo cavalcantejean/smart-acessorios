@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
+import { Input } from "@/components/ui/input"; // Importar Input
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Autoplay from "embla-carousel-autoplay";
@@ -56,7 +57,7 @@ export default function HomePage() {
               {dealsToShow.map((accessory) => (
                 <CarouselItem key={`carousel-${accessory.id}`} className="basis-full pl-4">
                   <div className="p-1 h-full">
-                     <AccessoryCard accessory={accessory} />
+                     <AccessoryCard accessory={accessory} priority={true} />
                   </div>
                 </CarouselItem>
               ))}
@@ -121,6 +122,13 @@ export default function HomePage() {
               </Button>
             )}
           </div>
+          <div className="mb-6">
+            <Input
+              type="search"
+              placeholder="Buscar cupom por nome ou loja..."
+              className="w-full md:w-1/2 lg:w-1/3"
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {couponsToShow.map(coupon => (
               <CouponCard key={coupon.id} coupon={coupon} />
@@ -162,6 +170,13 @@ export default function HomePage() {
                 </Link>
               </Button>
             )}
+          </div>
+          <div className="mb-6">
+            <Input
+              type="search"
+              placeholder="Buscar acessório por nome ou categoria..."
+              className="w-full md:w-1/2 lg:w-1/3"
+            />
           </div>
         {accessoriesToShow.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
