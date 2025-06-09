@@ -15,5 +15,6 @@ interface AuthProviderClientComponentProps {
  */
 export function AuthProviderClientComponent({ children }: AuthProviderClientComponentProps) {
   const auth = useAuth();
-  return <>{children(auth)}</>;
+  return children(auth);
 }
+
