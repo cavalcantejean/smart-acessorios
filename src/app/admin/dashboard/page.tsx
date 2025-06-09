@@ -7,9 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText } from 'lucide-react'; // Added FileText
-// Metadata for client components is typically handled by parent layouts or a generateMetadata function if it were a server component.
-// For client pages, we can set document.title if needed.
+import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText } from 'lucide-react';
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
@@ -34,7 +32,6 @@ export default function AdminDashboardPage() {
   }
 
   if (!isAuthenticated || !isAdmin) {
-    // This state is mostly for the brief moment before redirection or if redirection fails.
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)] text-center">
         <ShieldAlert className="h-16 w-16 text-destructive mb-4" />
@@ -77,13 +74,13 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
-              <FileText className="h-6 w-6 text-purple-500" /> {/* Changed Icon */}
+              <FileText className="h-6 w-6 text-purple-500" />
               Gerenciar Posts do Blog
             </CardTitle>
             <CardDescription>Crie e edite artigos para o blog.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full" variant="outline"> {/* Enabled button */}
+            <Button asChild className="w-full" variant="outline">
               <Link href="/admin/blog-posts">Gerenciar Blog</Link>
             </Button>
           </CardContent>
