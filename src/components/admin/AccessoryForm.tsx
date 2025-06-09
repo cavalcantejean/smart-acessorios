@@ -18,19 +18,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save } from "lucide-react";
-import { useActionState, useEffect, startTransition, useRef } from "react";
+import { Loader2, Save, Upload } from "lucide-react";
+import { useActionState, useEffect, startTransition, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { Accessory } from "@/lib/types";
 import type { AccessoryActionResult } from "@/app/admin/accessories/actions";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface AccessoryFormProps {
   formAction: (prevState: AccessoryActionResult | null, formData: FormData) => Promise<AccessoryActionResult>;
-  initialData?: Partial<AccessoryFormValues>; // For edit form
+  initialData?: Partial<AccessoryFormValues>;
   submitButtonText?: string;
-  formTitle?: string;
-  formDescription?: string;
 }
 
 const initialState: AccessoryActionResult = { success: false };
@@ -48,6 +47,49 @@ function SubmitButton({ text, pending }: { text: string; pending: boolean }) {
   );
 }
 
+// Helper function to resize and compress image to JPEG data URI
+const processImageFile = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.7): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return reject(new Error('Could not get canvas context'));
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      if (event.target?.result) {
+        img.src = event.target.result as string;
+      } else {
+        reject(new Error('Failed to read image file.'));
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
+
 export default function AccessoryForm({
   formAction,
   initialData,
@@ -57,7 +99,11 @@ export default function AccessoryForm({
   const { toast } = useToast();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const { pending } = useFormStatus(); // This hook should be used in a component rendered by the form
+  const { pending } = useFormStatus();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+
 
   const form = useForm<AccessoryFormValues>({
     resolver: zodResolver(AccessoryFormSchema),
@@ -72,9 +118,16 @@ export default function AccessoryForm({
       category: "",
       isDeal: false,
       aiSummary: "",
-      embedHtml: "", // Novo campo
+      embedHtml: "",
     },
   });
+
+  useEffect(() => {
+    if (initialData?.imageUrl) {
+      setImagePreview(initialData.imageUrl);
+    }
+  }, [initialData?.imageUrl]);
+
 
   useEffect(() => {
     if (state?.message) {
@@ -83,10 +136,14 @@ export default function AccessoryForm({
           title: "Sucesso!",
           description: state.message,
         });
-        if (state.accessory && !initialData) { // Only redirect on create
+        if (state.accessory && !initialData) {
           router.push('/admin/accessories');
         }
-        if (!initialData) form.reset(); // Reset form on successful creation
+        if (!initialData) {
+           form.reset();
+           setImagePreview(null);
+           if(fileInputRef.current) fileInputRef.current.value = ""; // Clear file input
+        }
       } else {
         toast({
           title: "Erro",
@@ -103,12 +160,32 @@ export default function AccessoryForm({
     }
   }, [state, toast, form, router, initialData]);
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setIsProcessingImage(true);
+      try {
+        const compressedDataUrl = await processImageFile(file);
+        setImagePreview(compressedDataUrl);
+        form.setValue("imageUrl", compressedDataUrl, { shouldValidate: true });
+        toast({ title: "Imagem Carregada", description: "Pré-visualização da imagem atualizada."});
+      } catch (error) {
+        console.error("Error processing image:", error);
+        toast({ title: "Erro de Imagem", description: "Falha ao processar imagem.", variant: "destructive" });
+        setImagePreview(initialData?.imageUrl || null); // Revert to initial on error
+        form.setValue("imageUrl", initialData?.imageUrl || "", { shouldValidate: true });
+      } finally {
+        setIsProcessingImage(false);
+      }
+    }
+  };
+
   const processForm = (data: AccessoryFormValues) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         if (typeof value === 'boolean') {
-          formData.append(key, value ? 'on' : ''); // 'on' for true, empty for false (or not present for false)
+          formData.append(key, value ? 'on' : '');
         } else {
           formData.append(key, String(value));
         }
@@ -124,7 +201,7 @@ export default function AccessoryForm({
     <Form {...form}>
       <form
         ref={formRef}
-        action={dispatch} // For progressive enhancement if JS fails (less relevant with useActionState)
+        action={dispatch}
         onSubmit={form.handleSubmit(processForm)}
         className="space-y-8"
       >
@@ -180,6 +257,7 @@ export default function AccessoryForm({
                 <Textarea 
                   placeholder="Cole o código HTML de embed aqui (ex: vídeo do YouTube, mapa)" 
                   {...field} 
+                  value={field.value || ""}
                   rows={4} 
                 />
               </FormControl>
@@ -190,36 +268,86 @@ export default function AccessoryForm({
             </FormItem>
           )}
         />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <FormField
-            control={form.control}
-            name="imageUrl"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>URL da Imagem Principal</FormLabel>
-                <FormControl>
-                  <Input type="url" placeholder="https://exemplo.com/imagem.png" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+        
+        <div className="space-y-4">
+          <FormLabel>Imagem Principal</FormLabel>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+             <div className="space-y-2">
+                <FormItem>
+                  <FormLabel htmlFor="imageUpload" className="text-sm font-normal text-muted-foreground">Subir Imagem (Recomendado)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      id="imageUpload"
+                      type="file" 
+                      accept="image/*" 
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      className="cursor-pointer"
+                      disabled={isProcessingImage}
+                    />
+                  </FormControl>
+                  <FormDescription>Selecione um arquivo de imagem (ex: JPG, PNG). Ele será redimensionado e comprimido.</FormDescription>
+                  {isProcessingImage && <p className="text-sm text-muted-foreground flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Processando imagem...</p>}
+                  <FormMessage />
+                </FormItem>
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-normal text-muted-foreground">Ou Cole a URL da Imagem</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="url" 
+                          placeholder="https://exemplo.com/imagem.png" 
+                          {...field} 
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            setImagePreview(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+             </div>
+             {imagePreview && (
+              <div className="space-y-2">
+                <FormLabel className="text-sm font-normal text-muted-foreground">Pré-visualização</FormLabel>
+                <div className="relative aspect-video w-full max-w-sm border rounded-md overflow-hidden bg-muted">
+                  <Image
+                    src={imagePreview}
+                    alt="Pré-visualização da imagem do acessório"
+                    fill
+                    style={{ objectFit: 'contain' }}
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                </div>
+              </div>
             )}
-          />
-          <FormField
-            control={form.control}
-            name="imageHint"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dica para IA da Imagem (1-2 palavras)</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ex: fone ouvido" {...field} />
-                </FormControl>
-                <FormDescription>Usado para buscar imagens alternativas se necessário.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          </div>
+           <p className="text-xs text-muted-foreground">
+            Nota: As imagens enviadas são convertidas para um formato de dados (base64) e armazenadas nos dados mock. Para aplicações reais, use um serviço de armazenamento de arquivos.
+          </p>
         </div>
+
+
+        <FormField
+          control={form.control}
+          name="imageHint"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Dica para IA da Imagem (1-2 palavras)</FormLabel>
+              <FormControl>
+                <Input placeholder="Ex: fone ouvido" {...field} value={field.value || ""} />
+              </FormControl>
+              <FormDescription>Usado para buscar imagens alternativas se necessário.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <FormField
@@ -229,7 +357,7 @@ export default function AccessoryForm({
               <FormItem>
                 <FormLabel>Link de Afiliado</FormLabel>
                 <FormControl>
-                  <Input type="url" placeholder="https://loja.com/produto?tag=seu-id" {...field} />
+                  <Input type="url" placeholder="https://loja.com/produto?tag=seu-id" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -242,7 +370,7 @@ export default function AccessoryForm({
               <FormItem>
                 <FormLabel>Preço (Ex: 29,99 ou 29.99)</FormLabel>
                 <FormControl>
-                  <Input placeholder="29,99" {...field} />
+                  <Input placeholder="29,99" {...field} value={field.value || ""}/>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -258,7 +386,7 @@ export default function AccessoryForm({
               <FormItem>
                 <FormLabel>Categoria</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: Carregadores, Fones de Ouvido" {...field} />
+                  <Input placeholder="Ex: Carregadores, Fones de Ouvido" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -273,11 +401,14 @@ export default function AccessoryForm({
                 <FormControl>
                   <div className="flex items-center space-x-2 h-10">
                     <Switch
-                      id="isDeal"
+                      id="isDealSwitch"
                       checked={field.value}
                       onCheckedChange={field.onChange}
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
                     />
-                    <FormLabel htmlFor="isDeal" className="cursor-pointer">
+                    <FormLabel htmlFor="isDealSwitch" className="cursor-pointer">
                       {field.value ? "Sim, é uma oferta" : "Não é uma oferta"}
                     </FormLabel>
                   </div>
@@ -296,7 +427,7 @@ export default function AccessoryForm({
             <FormItem>
               <FormLabel>Resumo Gerado por IA (Opcional)</FormLabel>
               <FormControl>
-                <Textarea placeholder="Resumo conciso, pode ser gerado por IA depois." {...field} rows={3} />
+                <Textarea placeholder="Resumo conciso, pode ser gerado por IA depois." {...field} rows={3} value={field.value || ""} />
               </FormControl>
               <FormDescription>Se deixado em branco, o sistema pode tentar gerar um resumo automaticamente.</FormDescription>
               <FormMessage />
@@ -304,7 +435,7 @@ export default function AccessoryForm({
           )}
         />
         
-        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending} />
+        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending || isProcessingImage} />
 
          {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
            <p className="text-sm font-medium text-destructive">{state.error}</p>
@@ -313,3 +444,4 @@ export default function AccessoryForm({
     </Form>
   );
 }
+
