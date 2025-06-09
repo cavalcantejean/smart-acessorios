@@ -3,7 +3,7 @@
 import { summarizeProductDescription, type SummarizeProductDescriptionInput, type SummarizeProductDescriptionOutput } from '@/ai/flows/summarize-product-description';
 import { moderateComment, type ModerateCommentInput, type ModerateCommentOutput } from '@/ai/flows/moderate-comment-flow';
 import { z } from 'zod';
-import { addCommentToAccessoryData, toggleLikeOnAccessory as toggleLikeOnAccessoryData, getAccessoryById } from '@/lib/data';
+import { addCommentToAccessoryData, toggleLikeOnAccessory as toggleLikeOnAccessoryData, getAccessoryById, checkAndAwardBadges } from '@/lib/data';
 import type { Comment } from '@/lib/types';
 
 // --- Summarize Action ---
@@ -56,6 +56,9 @@ export async function toggleLikeAccessoryAction(formData: FormData): Promise<Lik
   if (!result || !accessory) {
     return { success: false, isLiked: false, likesCount: accessory?.likedBy.length || 0, message: "Falha ao curtir/descurtir." };
   }
+  
+  // Check for badges after liking/unliking (already handled in toggleLikeOnAccessoryData)
+  // checkAndAwardBadges(userId); // This call is now inside toggleLikeOnAccessoryData
 
   return {
     success: true,
@@ -112,7 +115,6 @@ export async function addCommentAccessoryAction(prevState: CommentActionResult |
     if (!moderationResult.isSafe) {
       commentStatus = 'pending_review';
       userMessage = "Seu comentário foi enviado para moderação e será publicado após aprovação.";
-      // Log the reason for internal review if needed
       console.log(`Comment by ${userName} on ${accessoryId} flagged as pending: ${moderationResult.reason}`);
     }
 
@@ -123,12 +125,16 @@ export async function addCommentAccessoryAction(prevState: CommentActionResult |
       return { success: false, error: "Falha ao adicionar comentário." };
     }
 
+    // Step 3: Check and award badges if comment is approved (already handled in addCommentToAccessoryData)
+    // if (commentStatus === 'approved') {
+    //   checkAndAwardBadges(userId); // This call is now inside addCommentToAccessoryData
+    // }
+
     return { success: true, comment: newComment, message: userMessage };
 
   } catch (error) {
     console.error("Error in addCommentAccessoryAction:", error);
-    // Differentiate between moderation error and other errors if necessary
-    if (error instanceof Error && error.message.includes("Moderation")) { // Example check
+    if (error instanceof Error && error.message.includes("Moderation")) { 
         return { success: false, error: "Falha no sistema de moderação. Tente novamente." };
     }
     return { success: false, error: "Erro no servidor ao adicionar comentário." };

@@ -1,5 +1,6 @@
 
-import type { Accessory, Coupon, Testimonial, User, Post, Comment } from './types';
+import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData } from './types';
+import { allBadges, generateBadgeCriteriaData } from './badges'; // Import badge definitions and criteria data generator
 
 let accessories: Accessory[] = [
   {
@@ -118,10 +119,10 @@ const testimonials: Testimonial[] = [
   }
 ];
 
-let mockUsers: User[] = [
-  { id: 'user-1', name: 'Usuário Comum', email: 'user@example.com', password: 'password123', isAdmin: false, followers: ['admin-1'], following: ['admin-1'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'user avatar', bio: 'Apenas um usuário comum explorando o mundo dos acessórios!' },
-  { id: 'admin-1', name: 'Administrador', email: 'admin@example.com', password: 'adminpassword', isAdmin: true, followers: ['user-1'], following: ['user-1', 'user-2'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'admin avatar', bio: 'Gerenciando a plataforma SmartAcessorios.' },
-  { id: 'user-2', name: 'Outro Usuário', email: 'existing@example.com', password: 'password456', isAdmin: false, followers: ['admin-1'], following: [], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'another user', bio: 'Entusiasta de tecnologia e gadgets.' },
+export let mockUsers: User[] = [
+  { id: 'user-1', name: 'Usuário Comum', email: 'user@example.com', password: 'password123', isAdmin: false, followers: ['admin-1'], following: ['admin-1'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'user avatar', bio: 'Apenas um usuário comum explorando o mundo dos acessórios!', badges: [] },
+  { id: 'admin-1', name: 'Administrador', email: 'admin@example.com', password: 'adminpassword', isAdmin: true, followers: ['user-1'], following: ['user-1', 'user-2'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'admin avatar', bio: 'Gerenciando a plataforma SmartAcessorios.', badges: [] },
+  { id: 'user-2', name: 'Outro Usuário', email: 'existing@example.com', password: 'password456', isAdmin: false, followers: ['admin-1'], following: [], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'another user', bio: 'Entusiasta de tecnologia e gadgets.', badges: [] },
 ];
 
 const mockPosts: Post[] = [
@@ -173,26 +174,46 @@ const mockPosts: Post[] = [
 ];
 
 export function getUserById(id: string): User | undefined {
-  return mockUsers.find(user => user.id === id);
+  const user = mockUsers.find(user => user.id === id);
+  if (user) {
+    return {
+      ...user,
+      badges: user.badges || [], // Ensure badges array exists
+    };
+  }
+  return undefined;
 }
 
 export function getUserByEmail(email: string): User | undefined {
-  return mockUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
+  const user = mockUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
+  if (user) {
+    return {
+      ...user,
+      badges: user.badges || [],
+    };
+  }
+  return undefined;
 }
 
 export function addUser(user: User): boolean {
   if (getUserByEmail(user.email)) {
     return false; // User already exists
   }
-  // In a real app, you'd save to a DB. Here we just simulate success if not duplicate.
-  // For this mock, we don't add to the array to keep it simple.
+  // For this mock, we add to the array.
+  // Ensure new users have empty arrays for followers, following, and badges.
+  const newUserWithDefaults = {
+    ...user,
+    followers: [],
+    following: [],
+    badges: [],
+  };
+  mockUsers.push(newUserWithDefaults);
   return true;
 }
 
 export function getAllAccessories(): Accessory[] {
   return accessories.map(acc => ({
     ...acc,
-    // Ensure comments is always an array
     comments: Array.isArray(acc.comments) ? acc.comments : [],
   }));
 }
@@ -214,6 +235,8 @@ export function toggleLikeOnAccessory(accessoryId: string, userId: string): { li
     return null;
   }
   const accessory = accessories[accessoryIndex];
+  // Ensure likedBy array exists
+  accessory.likedBy = accessory.likedBy || [];
   const userIndex = accessory.likedBy.indexOf(userId);
 
   if (userIndex > -1) {
@@ -222,6 +245,7 @@ export function toggleLikeOnAccessory(accessoryId: string, userId: string): { li
     accessory.likedBy.push(userId); // Like
   }
   accessories[accessoryIndex] = { ...accessory }; 
+  checkAndAwardBadges(userId); // Check for badges after liking/unliking
   return { likedBy: [...accessory.likedBy], likesCount: accessory.likedBy.length };
 }
 
@@ -237,7 +261,6 @@ export function addCommentToAccessoryData(
     return null;
   }
   
-  // Ensure comments array exists
   if (!Array.isArray(accessories[accessoryIndex].comments)) {
     accessories[accessoryIndex].comments = [];
   }
@@ -255,6 +278,9 @@ export function addCommentToAccessoryData(
     ...accessories[accessoryIndex],
     comments: [...accessories[accessoryIndex].comments]
   };
+  if (status === 'approved') { // Only award for approved comments
+    checkAndAwardBadges(userId);
+  }
   return newComment;
 }
 
@@ -301,13 +327,12 @@ export function toggleFollowUser(currentUserId: string, targetUserId: string): {
   const targetUserIndex = mockUsers.findIndex(u => u.id === targetUserId);
 
   if (currentUserIndex === -1 || targetUserIndex === -1 || currentUserId === targetUserId) {
-    return null; // Cannot follow self or users not found
+    return null;
   }
 
   const currentUser = mockUsers[currentUserIndex];
   const targetUser = mockUsers[targetUserIndex];
 
-  // Ensure arrays exist
   currentUser.following = currentUser.following || [];
   currentUser.followers = currentUser.followers || [];
   targetUser.following = targetUser.following || [];
@@ -316,21 +341,58 @@ export function toggleFollowUser(currentUserId: string, targetUserId: string): {
   const isCurrentlyFollowing = currentUser.following.includes(targetUserId);
 
   if (isCurrentlyFollowing) {
-    // Unfollow
     currentUser.following = currentUser.following.filter(id => id !== targetUserId);
     targetUser.followers = targetUser.followers.filter(id => id !== currentUserId);
   } else {
-    // Follow
     currentUser.following.push(targetUserId);
     targetUser.followers.push(currentUserId);
   }
 
-  // Update the main mockUsers array (important for mock data persistence across requests if server doesn't restart)
   mockUsers[currentUserIndex] = { ...currentUser };
   mockUsers[targetUserIndex] = { ...targetUser };
+  
+  // Check badges for both users after a follow/unfollow action
+  checkAndAwardBadges(currentUserId);
+  checkAndAwardBadges(targetUserId);
   
   return {
     isFollowing: !isCurrentlyFollowing,
     targetFollowersCount: targetUser.followers.length,
   };
+}
+
+// Badge Awarding Logic
+export function checkAndAwardBadges(userId: string): void {
+  const userIndex = mockUsers.findIndex(u => u.id === userId);
+  if (userIndex === -1) {
+    console.warn(`User with ID ${userId} not found for badge checking.`);
+    return;
+  }
+
+  let user = mockUsers[userIndex];
+  // Ensure user.badges is an array
+  user.badges = Array.isArray(user.badges) ? user.badges : [];
+
+  const criteriaData = generateBadgeCriteriaData(user);
+  let badgesUpdated = false;
+
+  allBadges.forEach(badge => {
+    if (!user.badges?.includes(badge.id) && badge.criteria(user, criteriaData)) {
+      user.badges?.push(badge.id);
+      badgesUpdated = true;
+      console.log(`User ${user.name} awarded badge: ${badge.name}`);
+    }
+  });
+
+  if (badgesUpdated) {
+    mockUsers[userIndex] = { ...user, badges: [...(user.badges || [])] }; // Ensure a new reference for state updates if needed
+  }
+}
+
+// Function to get all users (needed for some badge criteria or admin views)
+export function getAllUsers(): User[] {
+  return mockUsers.map(user => ({
+    ...user,
+    badges: user.badges || [],
+  }));
 }

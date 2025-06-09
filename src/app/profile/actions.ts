@@ -2,7 +2,7 @@
 "use server";
 
 import { z } from 'zod';
-import { toggleFollowUser as toggleFollowUserData, getUserById } from '@/lib/data';
+import { toggleFollowUser as toggleFollowUserData, getUserById, checkAndAwardBadges } from '@/lib/data';
 import type { User } from '@/lib/types';
 
 const ToggleFollowSchema = z.object({
@@ -45,16 +45,19 @@ export async function toggleFollowAction(
   try {
     const result = toggleFollowUserData(currentUserId, targetUserId);
     if (!result) {
-      // This might happen if a user ID is invalid, though schema validation should catch missing IDs
       return { success: false, error: "Falha ao seguir/deixar de seguir o usuário. Usuário não encontrado." };
     }
     
-    const targetUser = getUserById(targetUserId); // Re-fetch to get updated counts
+    const targetUser = getUserById(targetUserId); 
 
+    // Check for badges for both users (already handled in toggleFollowUserData)
+    // checkAndAwardBadges(currentUserId);
+    // checkAndAwardBadges(targetUserId);
+    
     return {
       success: true,
       isFollowing: result.isFollowing,
-      followersCount: targetUser?.followers.length ?? 0, // Use actual count from potentially updated user
+      followersCount: targetUser?.followers.length ?? 0, 
       message: result.isFollowing ? "Agora seguindo!" : "Deixou de seguir.",
     };
   } catch (error) {

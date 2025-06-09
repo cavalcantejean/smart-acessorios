@@ -53,6 +53,7 @@ export interface User {
   avatarUrl?: string; // Optional avatar URL
   avatarHint?: string;
   bio?: string; // Optional user bio
+  badges?: string[]; // Array of badge IDs
 }
 
 export interface AuthUser extends Omit<User, 'password'> {}
@@ -73,3 +74,20 @@ export interface Post {
   publishedAt: string; // ISO date string e.g., "2024-07-28T10:00:00Z"
 }
 
+// Badge System Types
+export interface BadgeCriteriaData {
+  userCommentsCount: number;
+  userLikesCount: number;
+  userFollowingCount: number;
+  userFollowersCount: number;
+  // Add more counts as needed, e.g., favoritesCount
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>; // Lucide icon component
+  color?: string; // Optional: Tailwind color class for the badge, e.g., "bg-blue-500 text-white"
+  criteria: (user: User, data: BadgeCriteriaData) => boolean;
+}
