@@ -5,6 +5,7 @@ export interface Comment {
   userName: string;
   text: string;
   createdAt: string; // ISO date string
+  status: 'approved' | 'pending_review' | 'rejected';
 }
 
 export interface Accessory {

@@ -1,12 +1,10 @@
 
 "use server";
 import { summarizeProductDescription, type SummarizeProductDescriptionInput, type SummarizeProductDescriptionOutput } from '@/ai/flows/summarize-product-description';
+import { moderateComment, type ModerateCommentInput, type ModerateCommentOutput } from '@/ai/flows/moderate-comment-flow';
 import { z } from 'zod';
 import { addCommentToAccessory as addCommentToAccessoryData, toggleLikeOnAccessory as toggleLikeOnAccessoryData, getAccessoryById } from '@/lib/data';
 import type { Comment } from '@/lib/types';
-// For server actions, we can't directly use useAuth. Authentication needs to be handled differently.
-// For this mock, we'll simulate getting a user or require userId to be passed if needed.
-// In a real app, you'd use your auth library's server-side utilities.
 
 // --- Summarize Action ---
 const SummarizeInputSchema = z.object({
@@ -31,7 +29,7 @@ export async function summarizeAccessoryDescriptionAction(input: SummarizeProduc
 // --- Like Action ---
 const LikeActionInputSchema = z.object({
   accessoryId: z.string(),
-  userId: z.string(), // Assuming userId is passed from client after auth check
+  userId: z.string(), 
 });
 
 interface LikeActionResult {
@@ -43,7 +41,7 @@ interface LikeActionResult {
 
 export async function toggleLikeAccessoryAction(formData: FormData): Promise<LikeActionResult> {
   const accessoryId = formData.get('accessoryId') as string;
-  const userId = formData.get('userId') as string; // Client ensures this is present for logged-in user
+  const userId = formData.get('userId') as string; 
 
   if (!userId) {
     return { success: false, isLiked: false, likesCount: 0, message: "Usuário não autenticado." };
@@ -53,7 +51,7 @@ export async function toggleLikeAccessoryAction(formData: FormData): Promise<Lik
   }
 
   const result = toggleLikeOnAccessoryData(accessoryId, userId);
-  const accessory = getAccessoryById(accessoryId); // Re-fetch to get the current state
+  const accessory = getAccessoryById(accessoryId); 
 
   if (!result || !accessory) {
     return { success: false, isLiked: false, likesCount: accessory?.likedBy.length || 0, message: "Falha ao curtir/descurtir." };
@@ -78,7 +76,7 @@ const CommentActionInputSchema = z.object({
 
 interface CommentActionResult {
   success: boolean;
-  comment?: Comment;
+  comment?: Comment; // This will now include the status
   message?: string;
   error?: string;
   errors?: Record<string, string[] | undefined>;
@@ -105,13 +103,34 @@ export async function addCommentAccessoryAction(prevState: CommentActionResult |
   const { accessoryId, commentText, userId, userName } = validatedFields.data;
 
   try {
-    const newComment = addCommentToAccessoryData(accessoryId, userId, userName, commentText);
+    // Step 1: Moderate the comment
+    const moderationResult = await moderateComment({ commentText });
+    
+    let commentStatus: 'approved' | 'pending_review' = 'approved';
+    let userMessage = "Comentário adicionado!";
+
+    if (!moderationResult.isSafe) {
+      commentStatus = 'pending_review';
+      userMessage = "Seu comentário foi enviado para moderação e será publicado após aprovação.";
+      // Log the reason for internal review if needed
+      console.log(`Comment by ${userName} on ${accessoryId} flagged as pending: ${moderationResult.reason}`);
+    }
+
+    // Step 2: Add comment to data store with its status
+    const newComment = addCommentToAccessoryData(accessoryId, userId, userName, commentText, commentStatus);
+    
     if (!newComment) {
       return { success: false, error: "Falha ao adicionar comentário." };
     }
-    return { success: true, comment: newComment, message: "Comentário adicionado!" };
+
+    return { success: true, comment: newComment, message: userMessage };
+
   } catch (error) {
     console.error("Error in addCommentAccessoryAction:", error);
+    // Differentiate between moderation error and other errors if necessary
+    if (error instanceof Error && error.message.includes("Moderation")) { // Example check
+        return { success: false, error: "Falha no sistema de moderação. Tente novamente." };
+    }
     return { success: false, error: "Erro no servidor ao adicionar comentário." };
   }
 }

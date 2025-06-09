@@ -10,8 +10,8 @@ import Link from 'next/link';
 import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft, ThumbsUp } from 'lucide-react';
 import { summarizeAccessoryDescriptionAction, toggleLikeAccessoryAction } from '../actions';
 import FavoriteButton from '@/components/FavoriteButton';
-import LikeButton from '@/components/LikeButton'; // New LikeButton
-import CommentsSection from '@/components/CommentsSection'; // New CommentsSection
+import LikeButton from '@/components/LikeButton'; 
+import CommentsSection from '@/components/CommentsSection'; 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
 
@@ -39,12 +39,10 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
 
-  // Like state
   const [likeState, handleLikeAction, isLikePending] = useActionState(toggleLikeAccessoryAction, initialLikeActionState);
   const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(false);
   const [currentLikesCount, setCurrentLikesCount] = useState(0);
   
-  // Comments state
   const [currentComments, setCurrentComments] = useState<Comment[]>([]);
 
   useEffect(() => {
@@ -53,14 +51,13 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     setIsFavorite(isFavoriteInitial);
     setCurrentLikesCount(initialAccessory.likedBy?.length || 0);
     setIsLikedByCurrentUser(isAuthenticated && user ? initialAccessory.likedBy?.includes(user.id) : false);
-    setCurrentComments(initialAccessory.comments || []);
+    // Initialize with only approved comments for display
+    setCurrentComments(initialAccessory.comments?.filter(c => c.status === 'approved') || []);
   }, [initialAccessory, isFavoriteInitial, isAuthenticated, user]);
 
   useEffect(() => {
     if (likeState?.message) {
       if (likeState.success) {
-        // Toast for like/unlike is optional, could be too noisy
-        // toast({ title: likeState.message });
         setIsLikedByCurrentUser(likeState.isLiked);
         setCurrentLikesCount(likeState.likesCount);
       } else {
@@ -98,13 +95,16 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     handleLikeAction(formData);
   };
   
+  // This callback is now only for *approved* comments added via CommentsSection
   const handleCommentAdded = (newComment: Comment) => {
-    setCurrentComments(prevComments => [...prevComments, newComment]);
-    // Potentially update the main accessory object if it's being passed around or re-fetched
-    setAccessory(prevAcc => ({
-        ...prevAcc,
-        comments: [...(prevAcc.comments || []), newComment]
-    }));
+    if (newComment.status === 'approved') {
+      setCurrentComments(prevComments => [...prevComments, newComment]);
+      // Update the main accessory object if it's re-fetched or passed around
+      // For now, we only update the local `currentComments` for display.
+      // The full accessory object in `initialAccessory` might become stale for comments
+      // if not re-fetched from server on subsequent visits.
+    }
+    // Pending comments are handled by CommentsSection's toast
   };
 
 
@@ -211,7 +211,7 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
 
         <CommentsSection
           accessoryId={accessory.id}
-          comments={currentComments}
+          comments={currentComments} // Pass only approved comments initially, will be updated by onCommentAdded for new approved ones
           onCommentAdded={handleCommentAdded}
         />
       </CardContent>

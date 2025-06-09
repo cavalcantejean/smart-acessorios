@@ -11,13 +11,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, MessageCircle } from "lucide-react";
 import { useActionState, useEffect, useRef } from "react";
-import { addCommentAccessoryAction } from "@/app/accessory/[id]/actions"; // Adjust path if needed
+import { addCommentAccessoryAction } from "@/app/accessory/[id]/actions";
 import { useToast } from "@/hooks/use-toast";
 
 interface CommentsSectionProps {
   accessoryId: string;
   comments: Comment[];
-  onCommentAdded: (newComment: Comment) => void; // Callback to update parent state
+  onCommentAdded: (newComment: Comment) => void; 
 }
 
 const commentFormSchema = z.object({
@@ -35,7 +35,7 @@ interface CommentActionResult {
 
 const initialActionState: CommentActionResult = { success: false };
 
-export default function CommentsSection({ accessoryId, comments, onCommentAdded }: CommentsSectionProps) {
+export default function CommentsSection({ accessoryId, comments: initialComments, onCommentAdded }: CommentsSectionProps) {
   const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
   const [state, formAction, isPending] = useActionState(addCommentAccessoryAction, initialActionState);
   const { toast } = useToast();
@@ -50,10 +50,18 @@ export default function CommentsSection({ accessoryId, comments, onCommentAdded 
 
   useEffect(() => {
     if (state?.success && state.comment) {
-      toast({ title: "Sucesso!", description: state.message || "Comentário adicionado." });
-      onCommentAdded(state.comment);
+      if (state.comment.status === 'approved') {
+        toast({ title: "Sucesso!", description: state.message || "Comentário adicionado." });
+        onCommentAdded(state.comment); // Add to visible list
+      } else if (state.comment.status === 'pending_review') {
+        toast({ 
+          title: "Moderação Pendente", 
+          description: state.message || "Seu comentário foi enviado para moderação e será publicado após aprovação.",
+          duration: 5000, // Longer duration for this message
+        });
+        // Do NOT call onCommentAdded for pending comments, as they shouldn't be visible yet.
+      }
       form.reset();
-      // formRef.current?.reset(); // Reset native form too if useActionState doesn't clear it reliably
     } else if (state && !state.success && (state.error || state.errors)) {
       toast({
         title: "Erro",
@@ -85,11 +93,13 @@ export default function CommentsSection({ accessoryId, comments, onCommentAdded 
     });
   };
 
+  const approvedComments = initialComments.filter(comment => comment.status === 'approved');
+
   return (
     <div className="space-y-6 pt-6 border-t mt-6">
       <h3 className="text-xl font-semibold flex items-center gap-2">
         <MessageCircle className="h-6 w-6 text-primary" />
-        Comentários ({comments.length})
+        Comentários ({approvedComments.length})
       </h3>
       {isAuthenticated ? (
         <Form {...form}>
@@ -103,7 +113,7 @@ export default function CommentsSection({ accessoryId, comments, onCommentAdded 
                   <FormControl>
                     <Textarea
                       id="commentText"
-                      placeholder="Deixe seu comentário..."
+                      placeholder="Deixe seu comentário construtivo..."
                       rows={3}
                       {...field}
                       className="bg-background"
@@ -113,7 +123,6 @@ export default function CommentsSection({ accessoryId, comments, onCommentAdded 
                 </FormItem>
               )}
             />
-            {/* Hidden fields for server action if needed, or passed directly in onSubmit */}
             <input type="hidden" name="accessoryId" value={accessoryId} />
             {user && <input type="hidden" name="userId" value={user.id} />}
             {user && <input type="hidden" name="userName" value={user.name} />}
@@ -134,8 +143,8 @@ export default function CommentsSection({ accessoryId, comments, onCommentAdded 
       )}
 
       <div className="space-y-4">
-        {comments.length > 0 ? (
-          comments.slice().reverse().map(comment => ( // Show newest comments first
+        {approvedComments.length > 0 ? (
+          approvedComments.slice().reverse().map(comment => ( 
             <div key={comment.id} className="p-4 border rounded-lg bg-card shadow-sm">
               <div className="flex items-center justify-between mb-1">
                 <p className="font-semibold text-sm text-primary">{comment.userName}</p>
@@ -145,7 +154,7 @@ export default function CommentsSection({ accessoryId, comments, onCommentAdded 
             </div>
           ))
         ) : (
-          <p className="text-muted-foreground text-sm">Nenhum comentário ainda. Seja o primeiro a comentar!</p>
+          <p className="text-muted-foreground text-sm">Nenhum comentário aprovado ainda. Seja o primeiro a comentar ou aguarde a moderação!</p>
         )}
       </div>
     </div>

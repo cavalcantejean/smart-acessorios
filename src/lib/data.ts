@@ -16,7 +16,7 @@ let accessories: Accessory[] = [
     isDeal: true,
     likedBy: [],
     comments: [
-      { id: 'comment-1-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Ótimo carregador, muito prático!', createdAt: new Date(Date.now() - 86400000).toISOString() },
+      { id: 'comment-1-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Ótimo carregador, muito prático!', createdAt: new Date(Date.now() - 86400000).toISOString(), status: 'approved' },
     ],
   },
   {
@@ -60,7 +60,7 @@ let accessories: Accessory[] = [
     aiSummary: 'A compact 10000mAh power bank with dual USB ports and LED indicator for on-the-go charging.',
     likedBy: ['user-1', 'admin-1'],
     comments: [
-       { id: 'comment-4-1', userId: 'admin-1', userName: 'Administrador', text: 'Excelente para viagens!', createdAt: new Date().toISOString() },
+       { id: 'comment-4-1', userId: 'admin-1', userName: 'Administrador', text: 'Excelente para viagens!', createdAt: new Date().toISOString(), status: 'approved' },
     ],
   },
 ];
@@ -173,17 +173,12 @@ export function addUser(user: User): boolean {
   if (getUserByEmail(user.email)) {
     return false;
   }
-  // In a real app, you'd save the user to a database here.
-  // For this mock, we'll just simulate it.
-  // const newUserForMock = { ...user }; // Store a copy if you were modifying the mockUsers array
-  // mockUsers.push(newUserForMock); // This line isn't strictly necessary if you don't re-fetch from mockUsers later in the same request flow
   return true;
 }
 
 export function getAllAccessories(): Accessory[] {
   return accessories.map(acc => ({
     ...acc,
-    // likedBy and comments are already part of the base data
   }));
 }
 
@@ -192,7 +187,6 @@ export function getAccessoryById(id: string): Accessory | undefined {
   if (accessory) {
     return {
       ...accessory,
-      // likedBy and comments are already part of the base data
     };
   }
   return undefined;
@@ -211,11 +205,17 @@ export function toggleLikeOnAccessory(accessoryId: string, userId: string): { li
   } else {
     accessory.likedBy.push(userId); // Like
   }
-  accessories[accessoryIndex] = { ...accessory }; // Ensure a new object reference for potential reactivity
+  accessories[accessoryIndex] = { ...accessory }; 
   return { likedBy: [...accessory.likedBy], likesCount: accessory.likedBy.length };
 }
 
-export function addCommentToAccessory(accessoryId: string, userId: string, userName: string, text: string): Comment | null {
+export function addCommentToAccessoryData(
+  accessoryId: string, 
+  userId: string, 
+  userName: string, 
+  text: string,
+  status: 'approved' | 'pending_review' | 'rejected' = 'approved' // Default to 'approved'
+): Comment | null {
   const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
   if (accessoryIndex === -1) {
     return null;
@@ -226,9 +226,10 @@ export function addCommentToAccessory(accessoryId: string, userId: string, userN
     userName,
     text,
     createdAt: new Date().toISOString(),
+    status, // Set the status
   };
   accessories[accessoryIndex].comments.push(newComment);
-  accessories[accessoryIndex] = { // Ensure a new object reference
+  accessories[accessoryIndex] = { 
     ...accessories[accessoryIndex],
     comments: [...accessories[accessoryIndex].comments]
   };
@@ -261,7 +262,6 @@ export function getTestimonials(): Testimonial[] {
   return testimonials;
 }
 
-// Blog/Post Functions
 export function getAllPosts(): Post[] {
   return mockPosts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 }
