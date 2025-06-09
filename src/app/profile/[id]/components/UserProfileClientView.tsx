@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, UserCircle, Users, UserCheck, Rss } from 'lucide-react';
 import FollowButton from '@/components/FollowButton';
-import { toggleFollowAction } from '../actions'; // Server action
+import { toggleFollowAction } from '../../actions'; // Corrected Server action path
 import { AuthProviderClientComponent } from '@/components/AuthProviderClientComponent';
 
 interface UserProfileClientViewProps {
