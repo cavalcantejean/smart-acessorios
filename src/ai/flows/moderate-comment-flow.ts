@@ -11,12 +11,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const ModerateCommentInputSchema = z.object({
+const ModerateCommentInputSchema = z.object({
   commentText: z.string().describe('The user comment text to be moderated.'),
 });
 export type ModerateCommentInput = z.infer<typeof ModerateCommentInputSchema>;
 
-export const ModerateCommentOutputSchema = z.object({
+const ModerateCommentOutputSchema = z.object({
   isSafe: z
     .boolean()
     .describe(
@@ -80,3 +80,4 @@ const moderateCommentFlow = ai.defineFlow(
     return output;
   }
 );
+
