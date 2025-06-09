@@ -51,9 +51,6 @@ export async function registerUserAction(
     };
   }
 
-  // Simulate adding user (in a real app, this would involve hashing password and DB insertion)
-  // For this mock, addUser function in data.ts can simulate this.
-  // New users are always non-admins.
   const newUser: AuthUser = {
     id: `user-${Date.now()}`, // mock ID
     name,
@@ -61,14 +58,9 @@ export async function registerUserAction(
     isAdmin: false, 
   };
 
-  // Simulate adding to our mock data store
-  // Note: addUser in data.ts currently doesn't modify the in-memory array for simplicity in this example.
-  // It mainly checks for existence. If it were to modify, that would be reflected if app was stateful across requests.
-  // For this server action, we'll assume addUser logic is sufficient.
-  const userAdded = addUser({ ...newUser, password }); // Pass password for the mock addUser if it needs it
+  const userAdded = addUser({ ...newUser, password }); 
 
-  if (!userAdded && email !== "existing@example.com") { // existing@example.com is handled by getUserByEmail check
-     // This case might not be hit if getUserByEmail is comprehensive, but as a fallback.
+  if (!userAdded && email !== "existing@example.com") { 
      return {
         message: "Não foi possível registrar o usuário. Tente novamente.",
         success: false,
@@ -77,11 +69,11 @@ export async function registerUserAction(
      }
   }
 
-
   console.log("User registration successful (mocked):", newUser);
   return { 
-    message: `Cadastro de ${name} realizado com sucesso! Você já pode fazer login.`, 
+    message: `Cadastro de ${name} realizado com sucesso! Um e-mail de confirmação foi enviado para ${email}. Por favor, verifique sua caixa de entrada e também a pasta de spam para validar seu cadastro.`, 
     success: true,
-    user: newUser, // Return the newly created user data (without password)
+    user: newUser, 
   };
 }
+
