@@ -22,6 +22,7 @@ export interface Accessory {
   isDeal?: boolean;
   likedBy: string[]; // Array of user IDs who liked this accessory
   comments: Comment[];
+  embedHtml?: string; // Novo campo
 }
 
 export interface Coupon {

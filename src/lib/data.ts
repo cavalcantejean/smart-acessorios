@@ -21,6 +21,7 @@ let accessories: Accessory[] = [
       { id: 'comment-1-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Precisa de moderação este comentário?', createdAt: new Date(Date.now() - 3600000).toISOString(), status: 'pending_review' },
       { id: 'comment-1-3', userId: 'admin-1', userName: 'Administrador', text: 'Concordo, excelente produto.', createdAt: new Date(Date.now() - 86400000).toISOString(), status: 'approved' },
     ],
+    embedHtml: '<iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>',
   },
   {
     id: '2',
@@ -38,6 +39,7 @@ let accessories: Accessory[] = [
         { id: 'comment-2-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Esse fone é muito bom mas será que meu comentário passa pela moderação?', createdAt: new Date(Date.now() - 7200000).toISOString(), status: 'pending_review' },
         { id: 'comment-2-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Cancelamento de ruído funciona bem.', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), status: 'approved' },
     ],
+    embedHtml: '',
   },
   {
     id: '3',
@@ -54,6 +56,7 @@ let accessories: Accessory[] = [
     comments: [
       { id: 'comment-3-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Capa bonita e protege bem.', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), status: 'approved' },
     ],
+    embedHtml: '',
   },
   {
     id: '4',
@@ -71,6 +74,7 @@ let accessories: Accessory[] = [
        { id: 'comment-4-1', userId: 'admin-1', userName: 'Administrador', text: 'Excelente para viagens!', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), status: 'approved' },
        { id: 'comment-4-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Bom custo-benefício.', createdAt: new Date(Date.now() - 3600000 * 5).toISOString(), status: 'approved' },
     ],
+    embedHtml: '',
   },
    {
     id: '5',
@@ -85,6 +89,7 @@ let accessories: Accessory[] = [
     aiSummary: 'High-precision gaming mouse with adjustable DPI, programmable buttons, and RGB lighting for performance and style.',
     likedBy: ['user-2'],
     comments: [],
+    embedHtml: '',
   },
   {
     id: '6',
@@ -101,6 +106,7 @@ let accessories: Accessory[] = [
     comments: [
        { id: 'comment-6-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Adorei o smartwatch, muito útil!', createdAt: new Date(Date.now() - 3600000 * 10).toISOString(), status: 'approved' },
     ],
+    embedHtml: '',
   }
 ];
 
@@ -607,6 +613,7 @@ export function addAccessory(accessoryData: Omit<Accessory, 'id' | 'likedBy' | '
     isDeal: accessoryData.isDeal ?? false,
     likedBy: [],
     comments: [],
+    embedHtml: accessoryData.embedHtml, // Adicionar novo campo
   };
   accessories.unshift(newAccessory);
   return newAccessory;
@@ -625,6 +632,7 @@ export function updateAccessory(accessoryId: string, accessoryData: Partial<Omit
   accessories[accessoryIndex] = {
     ...accessories[accessoryIndex],
     ...updatedAccessoryData,
+    embedHtml: accessoryData.embedHtml !== undefined ? accessoryData.embedHtml : accessories[accessoryIndex].embedHtml, // Manter o valor antigo se não fornecido
   };
   return accessories[accessoryIndex];
 }

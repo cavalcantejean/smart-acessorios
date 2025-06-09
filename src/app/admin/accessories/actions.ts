@@ -22,14 +22,15 @@ export async function createAccessoryAction(
 ): Promise<AccessoryActionResult> {
   const rawFormData = Object.fromEntries(formData.entries());
 
-  // Convert checkbox/switch value
+  // Convert checkbox/switch value and handle optional fields
   const dataToValidate = {
     ...rawFormData,
     isDeal: rawFormData.isDeal === 'on',
-    price: rawFormData.price || undefined, // Ensure price is undefined if empty string for optional validation
+    price: rawFormData.price || undefined,
     category: rawFormData.category || undefined,
     imageHint: rawFormData.imageHint || undefined,
     aiSummary: rawFormData.aiSummary || undefined,
+    embedHtml: rawFormData.embedHtml || undefined, // Handle new field
   };
 
   const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);
@@ -39,7 +40,7 @@ export async function createAccessoryAction(
     return {
       success: false,
       message: "Falha na validação. Verifique os campos.",
-      errors: validatedFields.error.errors, // Pass all ZodIssues
+      errors: validatedFields.error.errors,
       error: "Dados inválidos. Corrija os erros abaixo."
     };
   }
@@ -51,9 +52,6 @@ export async function createAccessoryAction(
       revalidatePath('/products');
       revalidatePath('/');
       revalidatePath('/deals');
-      // Instead of redirecting here, let the form component handle it based on success state
-      // This allows the success toast to be shown before redirection.
-      // redirect('/admin/accessories'); 
       return { 
         success: true, 
         message: `Acessório "${newAccessory.name}" criado com sucesso!`, 
@@ -83,6 +81,7 @@ export async function updateAccessoryAction(
     category: rawFormData.category || undefined,
     imageHint: rawFormData.imageHint || undefined,
     aiSummary: rawFormData.aiSummary || undefined,
+    embedHtml: rawFormData.embedHtml || undefined, // Handle new field
   };
 
   const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);

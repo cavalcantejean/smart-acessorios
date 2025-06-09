@@ -20,6 +20,7 @@ export const AccessoryFormSchema = z.object({
   category: z.string().optional(),
   isDeal: z.boolean().optional().default(false),
   aiSummary: z.string().optional(),
+  embedHtml: z.string().optional(), // Novo campo
 });
 
 export type AccessoryFormValues = z.infer<typeof AccessoryFormSchema>;

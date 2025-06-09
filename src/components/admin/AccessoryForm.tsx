@@ -72,6 +72,7 @@ export default function AccessoryForm({
       category: "",
       isDeal: false,
       aiSummary: "",
+      embedHtml: "", // Novo campo
     },
   });
 
@@ -164,6 +165,27 @@ export default function AccessoryForm({
               <FormControl>
                 <Textarea placeholder="Descrição detalhada do produto (aparece na página do acessório)" {...field} rows={5} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="embedHtml"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>HTML de Embed (Opcional)</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Cole o código HTML de embed aqui (ex: vídeo do YouTube, mapa)" 
+                  {...field} 
+                  rows={4} 
+                />
+              </FormControl>
+              <FormDescription>
+                Insira o código HTML completo para incorporar conteúdo externo (ex: iframes).
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -291,4 +313,3 @@ export default function AccessoryForm({
     </Form>
   );
 }
-
