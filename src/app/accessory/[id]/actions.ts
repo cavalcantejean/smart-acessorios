@@ -3,7 +3,7 @@
 import { summarizeProductDescription, type SummarizeProductDescriptionInput, type SummarizeProductDescriptionOutput } from '@/ai/flows/summarize-product-description';
 import { moderateComment, type ModerateCommentInput, type ModerateCommentOutput } from '@/ai/flows/moderate-comment-flow';
 import { z } from 'zod';
-import { addCommentToAccessory as addCommentToAccessoryData, toggleLikeOnAccessory as toggleLikeOnAccessoryData, getAccessoryById } from '@/lib/data';
+import { addCommentToAccessoryData, toggleLikeOnAccessory as toggleLikeOnAccessoryData, getAccessoryById } from '@/lib/data';
 import type { Comment } from '@/lib/types';
 
 // --- Summarize Action ---
