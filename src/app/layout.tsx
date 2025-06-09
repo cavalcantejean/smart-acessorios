@@ -1,18 +1,26 @@
 
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth'; // Importar AuthProvider
+import { getSiteSettings } from '@/lib/data'; // Import getSiteSettings
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-export const metadata: Metadata = {
-  title: 'SmartAcessorios',
-  description: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-};
+// Dynamically generate metadata using site settings
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = getSiteSettings(); // Fetch settings
+  return {
+    title: {
+      default: settings.siteTitle || 'SmartAcessorios', // Fallback title
+      template: `%s | ${settings.siteTitle || 'SmartAcessorios'}`,
+    },
+    description: settings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.', // Fallback description
+  };
+}
 
 export default function RootLayout({
   children,

@@ -1,6 +1,9 @@
 
-import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData } from './types';
+import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges'; // Import badge definitions and criteria data generator
+import { Facebook, Instagram, Twitter, Film, MessageSquare, Send, MessageCircle, Ghost, AtSign, Mail, Youtube, PlaySquare } from 'lucide-react';
+import PinterestIcon from '@/components/icons/PinterestIcon';
+
 
 let accessories: Accessory[] = [
   {
@@ -219,6 +222,88 @@ let mockPosts: Post[] = [
     embedHtml: '',
   }
 ];
+
+// --- Site Settings Data ---
+let siteSettings: SiteSettings = {
+  siteTitle: 'SmartAcessorios',
+  siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
+  socialLinks: [
+    { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", IconComponent: Facebook, placeholderUrl: "https://facebook.com/seu_usuario" },
+    { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", IconComponent: Instagram, placeholderUrl: "https://instagram.com/seu_usuario" },
+    { platform: "Twitter", label: "X (Twitter)", url: "https://x.com/Smart_acessorio", IconComponent: Twitter, placeholderUrl: "https://x.com/seu_usuario" },
+    { platform: "TikTok", label: "TikTok", url: "https://tiktok.com/@smartacessorio", IconComponent: Film, placeholderUrl: "https://tiktok.com/@seu_usuario" },
+    { platform: "WhatsApp", label: "WhatsApp", url: "https://whatsapp.com/channel/0029VbAKxmx5PO18KEZQkJ2V", IconComponent: MessageSquare, placeholderUrl: "https://wa.me/seu_numero_ou_link_canal" },
+    { platform: "Pinterest", label: "Pinterest", url: "https://pinterest.com/smartacessorios", IconComponent: PinterestIcon, placeholderUrl: "https://pinterest.com/seu_usuario" },
+    { platform: "Telegram", label: "Telegram", url: "https://t.me/smartacessorios", IconComponent: Send, placeholderUrl: "https://t.me/seu_canal" },
+    { platform: "Discord", label: "Discord", url: "https://discord.gg/89bwDJWh3y", IconComponent: MessageCircle, placeholderUrl: "https://discord.gg/seu_servidor" },
+    { platform: "Snapchat", label: "Snapchat", url: "https://snapchat.com/add/smartacessorios", IconComponent: Ghost, placeholderUrl: "https://snapchat.com/add/seu_usuario" },
+    { platform: "Threads", label: "Threads", url: "https://threads.net/@smart.acessorios", IconComponent: AtSign, placeholderUrl: "https://threads.net/@seu_usuario" },
+    { platform: "Email", label: "Email", url: "mailto:smartacessori@gmail.com", IconComponent: Mail, placeholderUrl: "mailto:seu_email@example.com" },
+    { platform: "YouTube", label: "YouTube", url: "https://youtube.com/@smart.acessorios", IconComponent: Youtube, placeholderUrl: "https://youtube.com/@seu_canal" },
+    { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", IconComponent: PlaySquare, placeholderUrl: "https://k.kwai.com/u/@seu_usuario" }
+  ]
+};
+
+export function getSiteSettings(): SiteSettings {
+  // Return a deep copy to prevent direct modification of the mock data
+  return JSON.parse(JSON.stringify({
+    ...siteSettings,
+    // We can't stringify IconComponent, so we re-add it after parsing
+    socialLinks: siteSettings.socialLinks.map(link => ({
+      platform: link.platform,
+      label: link.label,
+      url: link.url,
+      placeholderUrl: link.placeholderUrl
+      // IconComponent will be added back in components that use it, or managed differently
+    }))
+  }));
+}
+
+// Helper to get the original social link definitions with IconComponents
+export function getBaseSocialLinkSettings(): SocialLinkSetting[] {
+    return [
+        { platform: "Facebook", label: "Facebook", url: "", IconComponent: Facebook, placeholderUrl: "https://facebook.com/seu_usuario" },
+        { platform: "Instagram", label: "Instagram", url: "", IconComponent: Instagram, placeholderUrl: "https://instagram.com/seu_usuario" },
+        { platform: "Twitter", label: "X (Twitter)", url: "", IconComponent: Twitter, placeholderUrl: "https://x.com/seu_usuario" },
+        { platform: "TikTok", label: "TikTok", url: "", IconComponent: Film, placeholderUrl: "https://tiktok.com/@seu_usuario" },
+        { platform: "WhatsApp", label: "WhatsApp", url: "", IconComponent: MessageSquare, placeholderUrl: "https://wa.me/seu_numero_ou_link_canal" },
+        { platform: "Pinterest", label: "Pinterest", url: "", IconComponent: PinterestIcon, placeholderUrl: "https://pinterest.com/seu_usuario" },
+        { platform: "Telegram", label: "Telegram", url: "", IconComponent: Send, placeholderUrl: "https://t.me/seu_canal" },
+        { platform: "Discord", label: "Discord", url: "", IconComponent: MessageCircle, placeholderUrl: "https://discord.gg/seu_servidor" },
+        { platform: "Snapchat", label: "Snapchat", url: "", IconComponent: Ghost, placeholderUrl: "https://snapchat.com/add/seu_usuario" },
+        { platform: "Threads", label: "Threads", url: "", IconComponent: AtSign, placeholderUrl: "https://threads.net/@seu_usuario" },
+        { platform: "Email", label: "Email", url: "", IconComponent: Mail, placeholderUrl: "mailto:seu_email@example.com" },
+        { platform: "YouTube", label: "YouTube", url: "", IconComponent: Youtube, placeholderUrl: "https://youtube.com/@seu_canal" },
+        { platform: "Kwai", label: "Kwai", url: "", IconComponent: PlaySquare, placeholderUrl: "https://k.kwai.com/u/@seu_usuario" }
+    ].map(baseLink => {
+        const currentSetting = siteSettings.socialLinks.find(sl => sl.platform === baseLink.platform);
+        return currentSetting ? { ...baseLink, url: currentSetting.url } : baseLink;
+    });
+}
+
+
+export function updateSiteSettings(newSettings: Partial<SiteSettings>): SiteSettings {
+  if (newSettings.siteTitle !== undefined) {
+    siteSettings.siteTitle = newSettings.siteTitle;
+  }
+  if (newSettings.siteDescription !== undefined) {
+    siteSettings.siteDescription = newSettings.siteDescription;
+  }
+  if (newSettings.socialLinks) {
+    // When updating, we need to merge with the IconComponent from the base definition
+    const baseLinks = getBaseSocialLinkSettings();
+    siteSettings.socialLinks = baseLinks.map(baseLink => {
+        const updatedLink = newSettings.socialLinks?.find(ul => ul.platform === baseLink.platform);
+        return {
+            ...baseLink, // This includes the IconComponent
+            url: updatedLink ? updatedLink.url : baseLink.url, // Use updated URL if provided, else keep current
+        };
+    });
+  }
+  return getSiteSettings(); // Return a deep copy
+}
+// --- End Site Settings ---
+
 
 export function getUserById(id: string): User | undefined {
   const user = mockUsers.find(user => user.id === id);
@@ -692,4 +777,3 @@ export function deleteAccessory(accessoryId: string): boolean {
   accessories = accessories.filter(acc => acc.id !== accessoryId);
   return accessories.length < initialLength;
 }
-

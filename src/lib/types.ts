@@ -1,4 +1,6 @@
 
+import type { ComponentType } from 'react';
+
 export interface Comment {
   id: string;
   userId: string;
@@ -129,3 +131,17 @@ export interface AnalyticsData {
   recentComments: RecentCommentInfo[];
 }
 
+// Site Settings Types
+export interface SocialLinkSetting {
+  platform: string; // e.g., 'Facebook', 'Instagram' - used as key/id
+  label: string; // User-friendly label, e.g., "Facebook"
+  url: string;
+  IconComponent: ComponentType<{ className?: string }>; // Lucide icon component
+  placeholderUrl: string; // Placeholder for the input field
+}
+
+export interface SiteSettings {
+  siteTitle: string;
+  siteDescription: string;
+  socialLinks: SocialLinkSetting[];
+}

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText, Settings } from 'lucide-react'; // Added Settings icon
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
@@ -134,16 +134,15 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
-              <LayoutDashboard className="h-6 w-6 text-pink-500" />
+              <Settings className="h-6 w-6 text-pink-500" /> {/* Changed icon */}
               Configurações do Site
             </CardTitle>
             <CardDescription>Ajustes gerais e configurações da plataforma.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full" variant="outline" disabled>
+            <Button asChild className="w-full" variant="outline">
               <Link href="/admin/settings">Acessar Configurações</Link>
             </Button>
-            <p className="text-xs text-center mt-2 text-muted-foreground">Em breve</p>
           </CardContent>
         </Card>
 
