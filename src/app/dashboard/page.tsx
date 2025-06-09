@@ -7,9 +7,12 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { User, Heart, Settings, LogOut, Loader2, Users, UserCheck, ExternalLink } from 'lucide-react';
-import { getUserById } from '@/lib/data'; // To fetch full user data if needed
-import type { User as FullUserType } from '@/lib/types';
+import { User, Heart, Settings, LogOut, Loader2, Users, UserCheck, ExternalLink, Award } from 'lucide-react';
+import { getUserById } from '@/lib/data'; 
+import type { User as FullUserType, Badge as BadgeType } from '@/lib/types';
+import { getBadgeById } from '@/lib/badges';
+import { Badge as ShadBadge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 export default function DashboardPage() {
@@ -17,6 +20,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [fullUser, setFullUser] = useState<FullUserType | null>(null);
   const [isLoadingFullUser, setIsLoadingFullUser] = useState(true);
+  const [earnedBadges, setEarnedBadges] = useState<BadgeType[]>([]);
 
   useEffect(() => {
     if (!isLoadingAuth && !isAuthenticated) {
@@ -29,13 +33,17 @@ export default function DashboardPage() {
       const fetchedUser = getUserById(authUser.id);
       if (fetchedUser) {
         setFullUser(fetchedUser);
+        const userBadges = (fetchedUser.badges || [])
+          .map(badgeId => getBadgeById(badgeId))
+          .filter(badge => badge !== undefined) as BadgeType[];
+        setEarnedBadges(userBadges);
       }
       setIsLoadingFullUser(false);
       if (typeof window !== 'undefined') {
         document.title = `${authUser.name} - Painel | SmartAcessorios`;
       }
     } else if (!isLoadingAuth && !isAuthenticated) {
-      setIsLoadingFullUser(false); // Not authenticated, no user to load
+      setIsLoadingFullUser(false); 
     }
   }, [authUser, isAuthenticated, isLoadingAuth]);
 
@@ -50,7 +58,6 @@ export default function DashboardPage() {
   }
 
   if (!isAuthenticated || !authUser || !fullUser) {
-    // This case should ideally be covered by the redirect, but as a fallback.
     return (
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
             <p className="text-muted-foreground">Usuário não encontrado. Redirecionando para login...</p>
@@ -102,6 +109,41 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {earnedBadges.length > 0 && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-6 w-6 text-yellow-500" />
+              Minhas Conquistas
+            </CardTitle>
+            <CardDescription>Seus badges e reconhecimentos na plataforma.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TooltipProvider>
+              <div className="flex flex-wrap gap-3">
+                {earnedBadges.map(badge => (
+                  <Tooltip key={badge.id}>
+                    <TooltipTrigger asChild>
+                      <ShadBadge 
+                        variant="outline" 
+                        className={`cursor-default border-2 p-2 text-sm ${badge.color || 'border-primary/50'} hover:opacity-90 flex items-center gap-1.5`}
+                      >
+                        <badge.icon className="h-4 w-4" />
+                        {badge.name}
+                      </ShadBadge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm font-semibold">{badge.name}</p>
+                      <p className="text-xs text-muted-foreground">{badge.description}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </TooltipProvider>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
@@ -137,3 +179,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

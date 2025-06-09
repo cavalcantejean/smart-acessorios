@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { User } from '@/lib/types';
+import type { User, Badge as BadgeType } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +10,8 @@ import { ArrowLeft, UserCircle, Users, UserCheck, Rss, Award } from 'lucide-reac
 import FollowButton from '@/components/FollowButton';
 import { toggleFollowAction } from '../../actions';
 import { AuthProviderClientComponent } from '@/components/AuthProviderClientComponent';
-import { allBadges, getBadgeById } from '@/lib/badges'; // Import badge definitions
-import { Badge as ShadBadge } from '@/components/ui/badge'; // Shadcn Badge
+import { getBadgeById } from '@/lib/badges'; 
+import { Badge as ShadBadge } from '@/components/ui/badge'; 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface UserProfileClientViewProps {
@@ -24,7 +24,7 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
 
   const earnedBadges = (profileUser.badges || [])
     .map(badgeId => getBadgeById(badgeId))
-    .filter(badge => badge !== undefined) as import('@/lib/types').Badge[];
+    .filter(badge => badge !== undefined) as BadgeType[]; // Cast to BadgeType[]
 
   return (
     <AuthProviderClientComponent>
@@ -86,24 +86,27 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <Award className="h-5 w-5 text-yellow-500"/> Conquistas ({earnedBadges.length})
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    <TooltipProvider>
-                      {earnedBadges.map(badge => (
-                        <Tooltip key={badge.id}>
-                          <TooltipTrigger asChild>
-                            <ShadBadge variant="outline" className={`cursor-default border-2 ${badge.color || 'border-primary/50'} hover:opacity-90`}>
-                              <badge.icon className="h-4 w-4 mr-1.5" />
-                              {badge.name}
-                            </ShadBadge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-sm font-semibold">{badge.name}</p>
-                            <p className="text-xs text-muted-foreground">{badge.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </TooltipProvider>
-                  </div>
+                  <TooltipProvider>
+                    <div className="flex flex-wrap gap-2">
+                        {earnedBadges.map(badge => (
+                          <Tooltip key={badge.id}>
+                            <TooltipTrigger asChild>
+                              <ShadBadge 
+                                variant="outline" 
+                                className={`cursor-default border-2 p-1.5 text-xs ${badge.color || 'border-primary/50'} hover:opacity-90 flex items-center gap-1`}
+                              >
+                                <badge.icon className="h-3.5 w-3.5" />
+                                {badge.name}
+                              </ShadBadge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="text-sm font-semibold">{badge.name}</p>
+                              <p className="text-xs text-muted-foreground">{badge.description}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                    </div>
+                  </TooltipProvider>
                 </div>
               )}
               
@@ -130,3 +133,5 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
     </AuthProviderClientComponent>
   );
 }
+
+    
