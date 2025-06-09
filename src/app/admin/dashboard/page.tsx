@@ -83,10 +83,9 @@ export default function AdminDashboardPage() {
             <CardDescription>Revise comentários e outros conteúdos gerados por usuários.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full" variant="outline" disabled>
+            <Button asChild className="w-full" variant="outline">
               <Link href="/admin/moderation">Acessar Moderação</Link>
             </Button>
-            <p className="text-xs text-center mt-2 text-muted-foreground">Em breve</p>
           </CardContent>
         </Card>
 

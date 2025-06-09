@@ -1,5 +1,5 @@
 
-import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData } from './types';
+import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges'; // Import badge definitions and criteria data generator
 
 let accessories: Accessory[] = [
@@ -18,6 +18,7 @@ let accessories: Accessory[] = [
     likedBy: [],
     comments: [
       { id: 'comment-1-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Ótimo carregador, muito prático!', createdAt: new Date(Date.now() - 86400000).toISOString(), status: 'approved' },
+      { id: 'comment-1-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Precisa de moderação este comentário?', createdAt: new Date(Date.now() - 3600000).toISOString(), status: 'pending_review' },
     ],
   },
   {
@@ -32,7 +33,9 @@ let accessories: Accessory[] = [
     category: 'Audio',
     aiSummary: 'Bluetooth headphones with active noise cancellation, 30-hour playtime, and comfortable memory foam earcups for immersive audio.',
     likedBy: ['user-1'],
-    comments: [],
+    comments: [
+        { id: 'comment-2-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Esse fone é muito bom mas será que meu comentário passa pela moderação?', createdAt: new Date(Date.now() - 7200000).toISOString(), status: 'pending_review' },
+    ],
   },
   {
     id: '3',
@@ -407,4 +410,63 @@ export function toggleUserAdminStatus(userId: string): User | null {
   // Create a new object reference for the updated user to help with state updates if necessary
   mockUsers[userIndex] = { ...mockUsers[userIndex] };
   return mockUsers[userIndex];
+}
+
+// --- Content Moderation Data Functions ---
+
+export function getPendingComments(): PendingCommentDisplay[] {
+  const pending: PendingCommentDisplay[] = [];
+  accessories.forEach(acc => {
+    (acc.comments || []).forEach(comment => {
+      if (comment.status === 'pending_review') {
+        pending.push({
+          comment: { ...comment }, // Create a new object reference
+          accessoryId: acc.id,
+          accessoryName: acc.name,
+        });
+      }
+    });
+  });
+  return pending;
+}
+
+export function updateCommentStatus(
+  accessoryId: string,
+  commentId: string,
+  newStatus: 'approved' | 'rejected'
+): Comment | null {
+  const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
+  if (accessoryIndex === -1) {
+    console.error(`Accessory with ID ${accessoryId} not found.`);
+    return null;
+  }
+
+  const accessory = accessories[accessoryIndex];
+  if (!accessory.comments) {
+    console.error(`Accessory ${accessoryId} has no comments array.`);
+    return null;
+  }
+
+  const commentIndex = accessory.comments.findIndex(c => c.id === commentId);
+  if (commentIndex === -1) {
+    console.error(`Comment with ID ${commentId} not found in accessory ${accessoryId}.`);
+    return null;
+  }
+
+  // Update status
+  accessory.comments[commentIndex].status = newStatus;
+  const updatedComment = { ...accessory.comments[commentIndex] };
+
+  // Ensure changes are reflected in the main 'accessories' array by creating new references
+  // This is important if other parts of the app rely on referential equality for updates.
+  const updatedComments = [...accessory.comments];
+  updatedComments[commentIndex] = updatedComment;
+  accessories[accessoryIndex] = { ...accessory, comments: updatedComments };
+
+  if (newStatus === 'approved') {
+    checkAndAwardBadges(updatedComment.userId);
+  }
+  
+  console.log(`Comment ${commentId} in accessory ${accessoryId} status updated to ${newStatus}. User: ${updatedComment.userId}`);
+  return updatedComment;
 }

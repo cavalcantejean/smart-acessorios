@@ -91,3 +91,10 @@ export interface Badge {
   color?: string; // Optional: Tailwind color class for the badge, e.g., "bg-blue-500 text-white"
   criteria: (user: User, data: BadgeCriteriaData) => boolean;
 }
+
+// Type for displaying pending comments in admin moderation
+export interface PendingCommentDisplay {
+  comment: Comment;
+  accessoryId: string;
+  accessoryName: string;
+}
