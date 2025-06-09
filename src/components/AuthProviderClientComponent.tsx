@@ -1,9 +1,8 @@
 
 "use client";
 
-import { useAuth } from '@/hooks/useAuth';
-import type { AuthContextType } from '@/hooks/useAuth'; // Assuming AuthContextType is exported
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react'; // Ensure React is imported for JSX
+import { useAuth, type AuthContextType } from '@/hooks/useAuth';
 
 interface AuthProviderClientComponentProps {
   children: (auth: AuthContextType) => ReactNode;
@@ -11,10 +10,13 @@ interface AuthProviderClientComponentProps {
 
 /**
  * A client component wrapper to easily access AuthContext values
- * within Server Components by passing them as children props.
+ * by passing them as children props. This allows Server Components
+ * to effectively use auth state by rendering this client component.
  */
 export function AuthProviderClientComponent({ children }: AuthProviderClientComponentProps) {
   const auth = useAuth();
-  return children(auth);
+  // Call the render prop function to get the actual content
+  const content = children(auth);
+  // Wrap the content in a fragment, which is a common and safe practice
+  return <>{content}</>;
 }
-
