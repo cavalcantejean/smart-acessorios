@@ -2,34 +2,17 @@
 "use server";
 
 import { z } from 'zod';
+import { AccessoryFormSchema, type AccessoryFormValues } from '@/lib/schemas/accessory-schema';
 import { addAccessory, updateAccessory, deleteAccessory as deleteAccessoryData, getAccessoryById } from '@/lib/data';
 import type { Accessory } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-// Schema for validating accessory form data
-export const AccessoryFormSchema = z.object({
-  name: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
-  shortDescription: z.string().min(10, "A descrição curta deve ter pelo menos 10 caracteres."),
-  fullDescription: z.string().min(20, "A descrição completa deve ter pelo menos 20 caracteres."),
-  imageUrl: z.string().url("URL da imagem inválida.").min(1, "URL da imagem é obrigatória."),
-  imageHint: z.string().optional(),
-  affiliateLink: z.string().url("Link de afiliado inválido.").min(1, "Link de afiliado é obrigatório."),
-  price: z.string().optional().refine(val => !val || /^\d+(,\d{1,2})?$/.test(val) || /^\d+(\.\d{1,2})?$/.test(val), {
-    message: "Preço inválido. Use formato como 12,99 ou 12.99"
-  }),
-  category: z.string().optional(),
-  isDeal: z.boolean().optional().default(false),
-  aiSummary: z.string().optional(),
-});
-export type AccessoryFormValues = z.infer<typeof AccessoryFormSchema>;
-
-
 export interface AccessoryActionResult {
   success: boolean;
   message?: string;
   error?: string;
-  errors?: z.ZodIssue[];
+  errors?: z.ZodIssue[]; 
   accessory?: Accessory;
 }
 
