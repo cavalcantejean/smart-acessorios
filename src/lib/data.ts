@@ -244,15 +244,15 @@ export function toggleLikeOnAccessory(accessoryId: string, userId: string): { li
   } else {
     accessory.likedBy.push(userId); // Like
   }
-  accessories[accessoryIndex] = { ...accessory }; 
+  accessories[accessoryIndex] = { ...accessory };
   checkAndAwardBadges(userId); // Check for badges after liking/unliking
   return { likedBy: [...accessory.likedBy], likesCount: accessory.likedBy.length };
 }
 
 export function addCommentToAccessoryData(
-  accessoryId: string, 
-  userId: string, 
-  userName: string, 
+  accessoryId: string,
+  userId: string,
+  userName: string,
   text: string,
   status: 'approved' | 'pending_review' | 'rejected' = 'approved'
 ): Comment | null {
@@ -260,7 +260,7 @@ export function addCommentToAccessoryData(
   if (accessoryIndex === -1) {
     return null;
   }
-  
+
   if (!Array.isArray(accessories[accessoryIndex].comments)) {
     accessories[accessoryIndex].comments = [];
   }
@@ -274,7 +274,7 @@ export function addCommentToAccessoryData(
     status,
   };
   accessories[accessoryIndex].comments.push(newComment);
-  accessories[accessoryIndex] = { 
+  accessories[accessoryIndex] = {
     ...accessories[accessoryIndex],
     comments: [...accessories[accessoryIndex].comments]
   };
@@ -350,11 +350,11 @@ export function toggleFollowUser(currentUserId: string, targetUserId: string): {
 
   mockUsers[currentUserIndex] = { ...currentUser };
   mockUsers[targetUserIndex] = { ...targetUser };
-  
+
   // Check badges for both users after a follow/unfollow action
   checkAndAwardBadges(currentUserId);
   checkAndAwardBadges(targetUserId);
-  
+
   return {
     isFollowing: !isCurrentlyFollowing,
     targetFollowersCount: targetUser.followers.length,
@@ -395,4 +395,16 @@ export function getAllUsers(): User[] {
     ...user,
     badges: user.badges || [],
   }));
+}
+
+// Function to toggle admin status for a user
+export function toggleUserAdminStatus(userId: string): User | null {
+  const userIndex = mockUsers.findIndex(u => u.id === userId);
+  if (userIndex === -1) {
+    return null;
+  }
+  mockUsers[userIndex].isAdmin = !mockUsers[userIndex].isAdmin;
+  // Create a new object reference for the updated user to help with state updates if necessary
+  mockUsers[userIndex] = { ...mockUsers[userIndex] };
+  return mockUsers[userIndex];
 }

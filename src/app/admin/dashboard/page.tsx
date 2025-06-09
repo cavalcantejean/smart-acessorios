@@ -8,8 +8,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert } from 'lucide-react';
-import type { Metadata } from 'next';
-
 // Metadata for client components is typically handled by parent layouts or a generateMetadata function if it were a server component.
 // For client pages, we can set document.title if needed.
 
@@ -70,10 +68,9 @@ export default function AdminDashboardPage() {
             <CardDescription>Visualize e gerencie contas de usuários.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full" variant="outline" disabled>
+            <Button asChild className="w-full" variant="outline">
               <Link href="/admin/users">Acessar Gerenciamento de Usuários</Link>
             </Button>
-            <p className="text-xs text-center mt-2 text-muted-foreground">Em breve</p>
           </CardContent>
         </Card>
 
