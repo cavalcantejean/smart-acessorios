@@ -1,5 +1,5 @@
 
-import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay } from './types';
+import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges'; // Import badge definitions and criteria data generator
 
 let accessories: Accessory[] = [
@@ -15,10 +15,11 @@ let accessories: Accessory[] = [
     category: 'Chargers',
     aiSummary: 'A fast, 15W wireless charging stand with an ergonomic design for Qi-enabled devices, allowing portrait or landscape use during charging.',
     isDeal: true,
-    likedBy: [],
+    likedBy: ['user-1', 'admin-1', 'user-2'],
     comments: [
-      { id: 'comment-1-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Ótimo carregador, muito prático!', createdAt: new Date(Date.now() - 86400000).toISOString(), status: 'approved' },
+      { id: 'comment-1-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Ótimo carregador, muito prático!', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), status: 'approved' },
       { id: 'comment-1-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Precisa de moderação este comentário?', createdAt: new Date(Date.now() - 3600000).toISOString(), status: 'pending_review' },
+      { id: 'comment-1-3', userId: 'admin-1', userName: 'Administrador', text: 'Concordo, excelente produto.', createdAt: new Date(Date.now() - 86400000).toISOString(), status: 'approved' },
     ],
   },
   {
@@ -35,6 +36,7 @@ let accessories: Accessory[] = [
     likedBy: ['user-1'],
     comments: [
         { id: 'comment-2-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Esse fone é muito bom mas será que meu comentário passa pela moderação?', createdAt: new Date(Date.now() - 7200000).toISOString(), status: 'pending_review' },
+        { id: 'comment-2-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Cancelamento de ruído funciona bem.', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), status: 'approved' },
     ],
   },
   {
@@ -48,8 +50,10 @@ let accessories: Accessory[] = [
     price: '12.99',
     category: 'Cases',
     isDeal: true,
-    likedBy: [],
-    comments: [],
+    likedBy: ['admin-1'],
+    comments: [
+      { id: 'comment-3-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Capa bonita e protege bem.', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), status: 'approved' },
+    ],
   },
   {
     id: '4',
@@ -64,9 +68,40 @@ let accessories: Accessory[] = [
     aiSummary: 'A compact 10000mAh power bank with dual USB ports and LED indicator for on-the-go charging.',
     likedBy: ['user-1', 'admin-1'],
     comments: [
-       { id: 'comment-4-1', userId: 'admin-1', userName: 'Administrador', text: 'Excelente para viagens!', createdAt: new Date().toISOString(), status: 'approved' },
+       { id: 'comment-4-1', userId: 'admin-1', userName: 'Administrador', text: 'Excelente para viagens!', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), status: 'approved' },
+       { id: 'comment-4-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Bom custo-benefício.', createdAt: new Date(Date.now() - 3600000 * 5).toISOString(), status: 'approved' },
     ],
   },
+   {
+    id: '5',
+    name: 'Gaming Mouse RGB',
+    imageUrl: 'https://placehold.co/600x400.png',
+    imageHint: 'gaming mouse',
+    shortDescription: 'High-precision gaming mouse with customizable RGB lighting.',
+    fullDescription: 'Dominate your games with this high-precision gaming mouse. Featuring an adjustable DPI sensor, programmable buttons, and customizable RGB lighting, it offers both performance and style. Ergonomically designed for comfort during long gaming sessions.',
+    affiliateLink: '#',
+    price: '45.90',
+    category: 'Peripherals',
+    aiSummary: 'High-precision gaming mouse with adjustable DPI, programmable buttons, and RGB lighting for performance and style.',
+    likedBy: ['user-2'],
+    comments: [],
+  },
+  {
+    id: '6',
+    name: 'Smartwatch Fitness Tracker',
+    imageUrl: 'https://placehold.co/600x400.png',
+    imageHint: 'smartwatch fitness',
+    shortDescription: 'Track your fitness and receive notifications on your wrist.',
+    fullDescription: 'Stay on top of your health and connected with this smartwatch fitness tracker. Monitors heart rate, sleep, steps, and various workouts. Receive notifications for calls, messages, and apps directly on your wrist. Long-lasting battery and water-resistant design.',
+    affiliateLink: '#',
+    price: '59.99',
+    category: 'Wearables',
+    isDeal: true,
+    likedBy: ['user-1', 'user-2', 'admin-1'],
+    comments: [
+       { id: 'comment-6-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Adorei o smartwatch, muito útil!', createdAt: new Date(Date.now() - 3600000 * 10).toISOString(), status: 'approved' },
+    ],
+  }
 ];
 
 const coupons: Coupon[] = [
@@ -289,13 +324,13 @@ export function addCommentToAccessoryData(
 
 
 export function getUniqueCategories(): string[] {
-  const categories = new Set<string>();
+  const categoriesSet = new Set<string>();
   accessories.forEach(acc => {
     if (acc.category) {
-      categories.add(acc.category);
+      categoriesSet.add(acc.category);
     }
   });
-  return Array.from(categories).sort();
+  return Array.from(categoriesSet).sort();
 }
 
 export function getDailyDeals(): Accessory[] {
@@ -427,7 +462,7 @@ export function getPendingComments(): PendingCommentDisplay[] {
       }
     });
   });
-  return pending;
+  return pending.sort((a, b) => new Date(b.comment.createdAt).getTime() - new Date(a.comment.createdAt).getTime());
 }
 
 export function updateCommentStatus(
@@ -458,7 +493,6 @@ export function updateCommentStatus(
   const updatedComment = { ...accessory.comments[commentIndex] };
 
   // Ensure changes are reflected in the main 'accessories' array by creating new references
-  // This is important if other parts of the app rely on referential equality for updates.
   const updatedComments = [...accessory.comments];
   updatedComments[commentIndex] = updatedComment;
   accessories[accessoryIndex] = { ...accessory, comments: updatedComments };
@@ -469,4 +503,90 @@ export function updateCommentStatus(
   
   console.log(`Comment ${commentId} in accessory ${accessoryId} status updated to ${newStatus}. User: ${updatedComment.userId}`);
   return updatedComment;
+}
+
+// --- Analytics Data Functions ---
+export function getTotalUsersCount(): number {
+  return mockUsers.length;
+}
+
+export function getTotalAccessoriesCount(): number {
+  return accessories.length;
+}
+
+export function getTotalApprovedCommentsCount(): number {
+  let count = 0;
+  accessories.forEach(acc => {
+    count += (acc.comments || []).filter(c => c.status === 'approved').length;
+  });
+  return count;
+}
+
+export function getAccessoriesPerCategory(): CategoryCount[] {
+  const categoryMap: Record<string, number> = {};
+  accessories.forEach(acc => {
+    if (acc.category) {
+      categoryMap[acc.category] = (categoryMap[acc.category] || 0) + 1;
+    } else {
+      categoryMap['Sem Categoria'] = (categoryMap['Sem Categoria'] || 0) + 1;
+    }
+  });
+  return Object.entries(categoryMap).map(([category, count]) => ({ category, count })).sort((a,b) => b.count - a.count);
+}
+
+export function getMostLikedAccessories(limit: number = 5): TopAccessoryInfo[] {
+  return [...accessories]
+    .sort((a, b) => (b.likedBy?.length || 0) - (a.likedBy?.length || 0))
+    .slice(0, limit)
+    .map(acc => ({
+      id: acc.id,
+      name: acc.name,
+      count: acc.likedBy?.length || 0,
+      imageUrl: acc.imageUrl
+    }));
+}
+
+export function getMostCommentedAccessories(limit: number = 5): TopAccessoryInfo[] {
+  return [...accessories]
+    .map(acc => ({
+      ...acc,
+      approvedCommentsCount: (acc.comments || []).filter(c => c.status === 'approved').length
+    }))
+    .sort((a, b) => b.approvedCommentsCount - a.approvedCommentsCount)
+    .slice(0, limit)
+    .map(acc => ({
+      id: acc.id,
+      name: acc.name,
+      count: acc.approvedCommentsCount,
+      imageUrl: acc.imageUrl
+    }));
+}
+
+export function getRecentComments(limit: number = 5): RecentCommentInfo[] {
+  const allApprovedComments: RecentCommentInfo[] = [];
+  accessories.forEach(acc => {
+    (acc.comments || []).forEach(comment => {
+      if (comment.status === 'approved') {
+        allApprovedComments.push({
+          ...comment,
+          accessoryName: acc.name,
+          accessoryId: acc.id,
+        });
+      }
+    });
+  });
+  return allApprovedComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
+}
+
+export async function getAnalyticsData(): Promise<AnalyticsData> {
+  // Simulate async data fetching if needed, though current functions are sync
+  return {
+    totalUsers: getTotalUsersCount(),
+    totalAccessories: getTotalAccessoriesCount(),
+    totalApprovedComments: getTotalApprovedCommentsCount(),
+    accessoriesPerCategory: getAccessoriesPerCategory(),
+    mostLikedAccessories: getMostLikedAccessories(),
+    mostCommentedAccessories: getMostCommentedAccessories(),
+    recentComments: getRecentComments(),
+  };
 }

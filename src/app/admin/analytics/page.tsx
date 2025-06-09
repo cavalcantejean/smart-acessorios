@@ -1,57 +1,35 @@
 
-"use client";
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+import { getAnalyticsData, type AnalyticsData } from '@/lib/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, BarChart3, Loader2, ShieldAlert } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, BarChart3, Users, ShoppingBag, MessageSquare } from 'lucide-react';
+import type { Metadata } from 'next';
+import AnalyticsSummaryCards from './components/AnalyticsSummaryCards';
+import AccessoriesByCategoryChart from './components/AccessoriesByCategoryChart';
+import TopItemsList from './components/TopItemsList';
+import RecentCommentsList from './components/RecentCommentsList';
+import { Separator } from '@/components/ui/separator';
 
-export default function AnalyticsPage() {
-  const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (!isLoading && (!isAuthenticated || !isAdmin)) {
-      router.replace('/login?message=Admin%20access%20required');
-    }
-    if (!isLoading && isAuthenticated && isAdmin && user) {
-        document.title = `Analytics | Admin SmartAcessorios`;
-    }
-  }, [isLoading, isAuthenticated, isAdmin, router, user]);
+export const metadata: Metadata = {
+  title: 'Analytics | Admin SmartAcessorios',
+  description: 'Visualize estatísticas de uso e engajamento da plataforma.',
+};
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Verificando permissões...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !isAdmin) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)] text-center">
-        <ShieldAlert className="h-16 w-16 text-destructive mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Acesso Negado</h1>
-        <p className="text-muted-foreground mb-6">
-          Você não tem permissão para acessar esta página. Redirecionando...
-        </p>
-      </div>
-    );
-  }
+// This page is now a Server Component to fetch data
+export default async function AnalyticsPage() {
+  const analyticsData: AnalyticsData = await getAnalyticsData();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
             <BarChart3 className="h-8 w-8 text-primary" />
             Analytics do Site
           </h1>
-          <p className="text-muted-foreground">Visualize estatísticas de uso e engajamento.</p>
+          <p className="text-muted-foreground">Visão geral do desempenho e engajamento da plataforma.</p>
         </div>
         <Button variant="outline" asChild size="sm">
           <Link href="/admin/dashboard">
@@ -61,23 +39,54 @@ export default function AnalyticsPage() {
         </Button>
       </div>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Estatísticas Principais</CardTitle>
-          <CardDescription>
-            Esta seção exibirá gráficos e dados sobre o tráfego do site, usuários ativos, acessórios mais vistos, etc.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center py-12">
-          <BarChart3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <p className="text-xl font-semibold text-muted-foreground">
-            Funcionalidade de Analytics em Desenvolvimento
-          </p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Em breve, você poderá visualizar dados detalhados sobre o desempenho do seu site aqui.
-          </p>
-        </CardContent>
-      </Card>
+      <AnalyticsSummaryCards
+        totalUsers={analyticsData.totalUsers}
+        totalAccessories={analyticsData.totalAccessories}
+        totalComments={analyticsData.totalApprovedComments}
+      />
+
+      <Separator className="my-6" />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Acessórios por Categoria</CardTitle>
+            <CardDescription>Distribuição dos acessórios cadastrados nas diferentes categorias.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analyticsData.accessoriesPerCategory.length > 0 ? (
+              <AccessoriesByCategoryChart data={analyticsData.accessoriesPerCategory} />
+            ) : (
+              <p className="text-muted-foreground text-center py-8">Nenhum dado de categoria disponível.</p>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Comentários Recentes</CardTitle>
+            <CardDescription>Últimos comentários aprovados na plataforma.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RecentCommentsList comments={analyticsData.recentComments} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Separator className="my-6" />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TopItemsList
+          title="Acessórios Mais Curtidos"
+          items={analyticsData.mostLikedAccessories}
+          itemType="curtida"
+        />
+        <TopItemsList
+          title="Acessórios Mais Comentados"
+          items={analyticsData.mostCommentedAccessories}
+          itemType="comentário"
+        />
+      </div>
     </div>
   );
 }

@@ -98,3 +98,31 @@ export interface PendingCommentDisplay {
   accessoryId: string;
   accessoryName: string;
 }
+
+// Analytics Types
+export interface CategoryCount {
+  category: string;
+  count: number;
+}
+
+export interface TopAccessoryInfo {
+  id: string;
+  name: string;
+  count: number; // Could be likes or comments count
+  imageUrl?: string;
+}
+
+export interface RecentCommentInfo extends Comment {
+  accessoryName: string;
+  accessoryId: string;
+}
+
+export interface AnalyticsData {
+  totalUsers: number;
+  totalAccessories: number;
+  totalApprovedComments: number;
+  accessoriesPerCategory: CategoryCount[];
+  mostLikedAccessories: TopAccessoryInfo[];
+  mostCommentedAccessories: TopAccessoryInfo[];
+  recentComments: RecentCommentInfo[];
+}
