@@ -96,26 +96,32 @@ const testimonials: Testimonial[] = [
     id: 'testimonial1',
     name: 'Ana Silva',
     quote: 'Encontrei os melhores acessórios aqui! A seleção de ofertas do dia é incrível e os resumos de IA me ajudam a decidir rapidamente. Recomendo!',
-    role: 'Cliente Satisfeita'
+    role: 'Cliente Satisfeita',
+    avatarUrl: 'https://placehold.co/100x100.png',
+    avatarHint: 'woman portrait',
   },
   {
     id: 'testimonial2',
     name: 'Carlos Pereira',
     quote: 'Os cupons promocionais são ótimos! Consegui um bom desconto na minha última compra de fones de ouvido. O site é fácil de navegar.',
-    role: 'Entusiasta de Gadgets'
+    role: 'Entusiasta de Gadgets',
+    avatarUrl: 'https://placehold.co/100x100.png',
+    avatarHint: 'man portrait',
   },
   {
     id: 'testimonial3',
     name: 'Juliana Costa',
     quote: 'Adoro a variedade de produtos e a clareza das descrições. A funcionalidade de favoritar é muito útil para salvar itens que quero comprar depois.',
-    role: 'Compradora Online'
+    role: 'Compradora Online',
+    avatarUrl: 'https://placehold.co/100x100.png',
+    avatarHint: 'person smiling',
   }
 ];
 
-const mockUsers: User[] = [
-  { id: 'user-1', name: 'Usuário Comum', email: 'user@example.com', password: 'password123', isAdmin: false },
-  { id: 'admin-1', name: 'Administrador', email: 'admin@example.com', password: 'adminpassword', isAdmin: true },
-  { id: 'user-2', name: 'Outro Usuário', email: 'existing@example.com', password: 'password456', isAdmin: false },
+let mockUsers: User[] = [
+  { id: 'user-1', name: 'Usuário Comum', email: 'user@example.com', password: 'password123', isAdmin: false, followers: ['admin-1'], following: ['admin-1'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'user avatar', bio: 'Apenas um usuário comum explorando o mundo dos acessórios!' },
+  { id: 'admin-1', name: 'Administrador', email: 'admin@example.com', password: 'adminpassword', isAdmin: true, followers: ['user-1'], following: ['user-1', 'user-2'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'admin avatar', bio: 'Gerenciando a plataforma SmartAcessorios.' },
+  { id: 'user-2', name: 'Outro Usuário', email: 'existing@example.com', password: 'password456', isAdmin: false, followers: ['admin-1'], following: [], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'another user', bio: 'Entusiasta de tecnologia e gadgets.' },
 ];
 
 const mockPosts: Post[] = [
@@ -158,12 +164,17 @@ const mockPosts: Post[] = [
     imageUrl: 'https://placehold.co/800x450.png',
     imageHint: 'blog usb c cables',
     authorName: 'Dr. Conecta',
+    authorAvatarUrl: 'https://placehold.co/100x100.png',
+    authorAvatarHint: 'tech expert',
     category: 'Guias',
     tags: ['USB-C', 'cabos', 'tecnologia', 'guias', 'power delivery'],
     publishedAt: '2024-07-22T09:15:00Z',
   }
 ];
 
+export function getUserById(id: string): User | undefined {
+  return mockUsers.find(user => user.id === id);
+}
 
 export function getUserByEmail(email: string): User | undefined {
   return mockUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
@@ -171,14 +182,18 @@ export function getUserByEmail(email: string): User | undefined {
 
 export function addUser(user: User): boolean {
   if (getUserByEmail(user.email)) {
-    return false;
+    return false; // User already exists
   }
+  // In a real app, you'd save to a DB. Here we just simulate success if not duplicate.
+  // For this mock, we don't add to the array to keep it simple.
   return true;
 }
 
 export function getAllAccessories(): Accessory[] {
   return accessories.map(acc => ({
     ...acc,
+    // Ensure comments is always an array
+    comments: Array.isArray(acc.comments) ? acc.comments : [],
   }));
 }
 
@@ -187,6 +202,7 @@ export function getAccessoryById(id: string): Accessory | undefined {
   if (accessory) {
     return {
       ...accessory,
+      comments: Array.isArray(accessory.comments) ? accessory.comments : [],
     };
   }
   return undefined;
@@ -214,19 +230,25 @@ export function addCommentToAccessoryData(
   userId: string, 
   userName: string, 
   text: string,
-  status: 'approved' | 'pending_review' | 'rejected' = 'approved' // Default to 'approved'
+  status: 'approved' | 'pending_review' | 'rejected' = 'approved'
 ): Comment | null {
   const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
   if (accessoryIndex === -1) {
     return null;
   }
+  
+  // Ensure comments array exists
+  if (!Array.isArray(accessories[accessoryIndex].comments)) {
+    accessories[accessoryIndex].comments = [];
+  }
+
   const newComment: Comment = {
     id: `comment-${accessoryId}-${Date.now()}`,
     userId,
     userName,
     text,
     createdAt: new Date().toISOString(),
-    status, // Set the status
+    status,
   };
   accessories[accessoryIndex].comments.push(newComment);
   accessories[accessoryIndex] = { 
@@ -272,4 +294,43 @@ export function getPostBySlug(slug: string): Post | undefined {
 
 export function getLatestPosts(count: number): Post[] {
   return getAllPosts().slice(0, count);
+}
+
+export function toggleFollowUser(currentUserId: string, targetUserId: string): { isFollowing: boolean; targetFollowersCount: number } | null {
+  const currentUserIndex = mockUsers.findIndex(u => u.id === currentUserId);
+  const targetUserIndex = mockUsers.findIndex(u => u.id === targetUserId);
+
+  if (currentUserIndex === -1 || targetUserIndex === -1 || currentUserId === targetUserId) {
+    return null; // Cannot follow self or users not found
+  }
+
+  const currentUser = mockUsers[currentUserIndex];
+  const targetUser = mockUsers[targetUserIndex];
+
+  // Ensure arrays exist
+  currentUser.following = currentUser.following || [];
+  currentUser.followers = currentUser.followers || [];
+  targetUser.following = targetUser.following || [];
+  targetUser.followers = targetUser.followers || [];
+
+  const isCurrentlyFollowing = currentUser.following.includes(targetUserId);
+
+  if (isCurrentlyFollowing) {
+    // Unfollow
+    currentUser.following = currentUser.following.filter(id => id !== targetUserId);
+    targetUser.followers = targetUser.followers.filter(id => id !== currentUserId);
+  } else {
+    // Follow
+    currentUser.following.push(targetUserId);
+    targetUser.followers.push(currentUserId);
+  }
+
+  // Update the main mockUsers array (important for mock data persistence across requests if server doesn't restart)
+  mockUsers[currentUserIndex] = { ...currentUser };
+  mockUsers[targetUserIndex] = { ...targetUser };
+  
+  return {
+    isFollowing: !isCurrentlyFollowing,
+    targetFollowersCount: targetUser.followers.length,
+  };
 }

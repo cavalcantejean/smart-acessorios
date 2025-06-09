@@ -3,7 +3,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText, UserCircle } from 'lucide-react';
+import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText, UserCircle, Home } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getUniqueCategories } from '@/lib/data';
@@ -25,11 +25,7 @@ export default function MobileNav() {
   }, []);
 
   useEffect(() => {
-    if (isOpen) {
-      // Close sheet on navigation
-      // setIsOpen(false); // This was causing issues, handled by handleLinkClick
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // No need to close on pathname change if links handle it
   }, [pathname]);
 
   const handleLinkClick = () => setIsOpen(false);
@@ -44,9 +40,6 @@ export default function MobileNav() {
     );
   
   const categoryLinkClasses = (category: string) => {
-    // Constructing the category path for comparison.
-    // This assumes products page displays categories as query params.
-    // Adjust if your routing for categories is different (e.g., /products/category-name)
     const categoryPath = `/products?category=${encodeURIComponent(category)}`;
     let currentPathWithQuery = pathname;
     if (typeof window !== 'undefined') {
@@ -85,7 +78,13 @@ export default function MobileNav() {
             />
           </Link>
         </SheetHeader>
-        <div className="flex-grow overflow-y-auto p-4 space-y-1">
+        <div className="flex-grow overflow-y-auto p-4 space-y-1 text-sm">
+          <Link href="/" className={navLinkClasses("/")} onClick={handleLinkClick}>
+            <div className="flex items-center gap-2">
+              <Home className="h-5 w-5" /> Página Inicial
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
           <Link href="/products" className={navLinkClasses("/products")} onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
               <ShoppingBag className="h-5 w-5" /> Todos os Produtos
@@ -111,12 +110,18 @@ export default function MobileNav() {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
 
-          {isAuthenticated && (
+          {isAuthenticated && user && (
             <>
               <Separator className="my-3" />
-              <Link href="/dashboard" className={navLinkClasses("/dashboard")} onClick={handleLinkClick}>
+              <Link href={`/profile/${user.id}`} className={navLinkClasses(`/profile/${user.id}`)} onClick={handleLinkClick}>
                 <div className="flex items-center gap-2">
-                  <UserCircle className="h-5 w-5" /> Painel ({user?.name.split(' ')[0]})
+                  <UserCircle className="h-5 w-5" /> Meu Perfil ({user.name.split(' ')[0]})
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+               <Link href="/dashboard" className={navLinkClasses("/dashboard")} onClick={handleLinkClick}>
+                <div className="flex items-center gap-2">
+                  <LayoutDashboard className="h-5 w-5" /> Painel de Controle
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </Link>
@@ -136,7 +141,6 @@ export default function MobileNav() {
               {categories.map(category => (
                 <Link 
                   key={category} 
-                  // Ensure this link structure matches how categories are handled on the products page
                   href={`/products?category=${encodeURIComponent(category)}`}
                   className={categoryLinkClasses(category)}
                   onClick={handleLinkClick}
@@ -173,7 +177,7 @@ export default function MobileNav() {
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </Link>
               )}
-              <button onClick={handleLogoutClick} className={navLinkClasses("/logout-action")}>
+              <button onClick={handleLogoutClick} className={cn(navLinkClasses("/logout-action"), "w-full")}>
                 <div className="flex items-center gap-2">
                   <LogOut className="h-5 w-5" /> Logout
                 </div>

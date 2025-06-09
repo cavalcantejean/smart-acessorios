@@ -14,12 +14,12 @@ function AuthDependentLinks() {
 
   return (
     <>
-      {isAuthenticated && (
+      {isAuthenticated && user && ( // Ensure user object exists
         <>
-          <Link href="/dashboard" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+          <Link href={`/profile/${user.id}`} className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <UserCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">{user?.name.split(' ')[0] || 'Painel'}</span>
-            <span className="sm:hidden">Painel</span>
+            <span className="hidden sm:inline">{user.name.split(' ')[0]}</span>
+            <span className="sm:hidden">Perfil</span>
           </Link>
           <Link href="/favorites" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <Heart className="h-4 w-4" />
@@ -49,6 +49,11 @@ function AuthDependentLinks() {
               <span className="sm:hidden">Admin</span>
             </Link>
           )}
+           <Link href="/dashboard" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2" title="Painel de Controle">
+            <LayoutDashboard className="h-4 w-4" />
+            <span className="hidden sm:inline">Painel</span>
+            <span className="sm:hidden sr-only">Painel</span>
+          </Link>
           <Button onClick={logout} variant="ghost" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2 text-xs sm:text-sm h-auto">
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Logout</span>

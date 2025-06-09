@@ -13,6 +13,7 @@ import { Loader2, MessageCircle } from "lucide-react";
 import { useActionState, useEffect, useRef } from "react";
 import { addCommentAccessoryAction } from "@/app/accessory/[id]/actions";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 interface CommentsSectionProps {
   accessoryId: string;
@@ -52,14 +53,13 @@ export default function CommentsSection({ accessoryId, comments: initialComments
     if (state?.success && state.comment) {
       if (state.comment.status === 'approved') {
         toast({ title: "Sucesso!", description: state.message || "Comentário adicionado." });
-        onCommentAdded(state.comment); // Add to visible list
+        onCommentAdded(state.comment); 
       } else if (state.comment.status === 'pending_review') {
         toast({ 
           title: "Moderação Pendente", 
           description: state.message || "Seu comentário foi enviado para moderação e será publicado após aprovação.",
-          duration: 5000, // Longer duration for this message
+          duration: 5000, 
         });
-        // Do NOT call onCommentAdded for pending comments, as they shouldn't be visible yet.
       }
       form.reset();
     } else if (state && !state.success && (state.error || state.errors)) {
@@ -138,7 +138,7 @@ export default function CommentsSection({ accessoryId, comments: initialComments
         </Form>
       ) : (
         <p className="text-muted-foreground">
-          Você precisa estar <a href="/login" className="text-primary hover:underline">logado</a> para deixar um comentário.
+          Você precisa estar <Link href="/login" className="text-primary hover:underline">logado</Link> para deixar um comentário.
         </p>
       )}
 
@@ -147,7 +147,9 @@ export default function CommentsSection({ accessoryId, comments: initialComments
           approvedComments.slice().reverse().map(comment => ( 
             <div key={comment.id} className="p-4 border rounded-lg bg-card shadow-sm">
               <div className="flex items-center justify-between mb-1">
-                <p className="font-semibold text-sm text-primary">{comment.userName}</p>
+                <Link href={`/profile/${comment.userId}`} className="font-semibold text-sm text-primary hover:underline">
+                  {comment.userName}
+                </Link>
                 <p className="text-xs text-muted-foreground">{formatDate(comment.createdAt)}</p>
               </div>
               <p className="text-sm text-card-foreground whitespace-pre-line">{comment.text}</p>

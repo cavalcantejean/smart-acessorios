@@ -48,6 +48,11 @@ export interface User {
   email: string;
   password: string; // In a real app, this would be a hashed password
   isAdmin: boolean;
+  following: string[]; // IDs of users this user follows
+  followers: string[]; // IDs of users who follow this user
+  avatarUrl?: string; // Optional avatar URL
+  avatarHint?: string;
+  bio?: string; // Optional user bio
 }
 
 export interface AuthUser extends Omit<User, 'password'> {}
@@ -67,3 +72,4 @@ export interface Post {
   tags?: string[];
   publishedAt: string; // ISO date string e.g., "2024-07-28T10:00:00Z"
 }
+
