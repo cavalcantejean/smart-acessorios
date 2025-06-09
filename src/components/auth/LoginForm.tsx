@@ -34,11 +34,11 @@ export interface LoginFormState {
   message: string;
   success: boolean;
   issues?: Record<string, string[] | undefined>;
-  fields?: { // Only email, password is not typically pre-filled on error
+  fields?: {
     email?: string;
-    password?: string; // Kept for consistency, but usually cleared
+    password?: string;
   };
-  user?: AuthUser | null; // User data returned on successful login
+  user?: AuthUser | null;
 }
 
 const initialState: LoginFormState = {
@@ -78,7 +78,7 @@ export default function LoginForm({ formAction, title, description, submitButton
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
       email: state?.fields?.email || "",
-      password: "", // Password should always be cleared
+      password: "",
     },
   });
 
@@ -89,10 +89,8 @@ export default function LoginForm({ formAction, title, description, submitButton
           title: "Sucesso!",
           description: state.message,
         });
-        clientAuthLogin(state.user); // Update client-side auth context
-        form.reset({ email: '', password: ''}); // Clear form on success
-        // Redirection can be handled here or by useAuth based on user.isAdmin
-        // For example: router.push(state.user.isAdmin ? '/admin/dashboard' : '/');
+        clientAuthLogin(state.user);
+        form.reset({ email: '', password: ''});
       } else {
         toast({
           title: "Erro de Login",
@@ -106,7 +104,6 @@ export default function LoginForm({ formAction, title, description, submitButton
             }
           }
         }
-        // Ensure password field is cleared on error, email can be kept
         form.reset({ email: form.getValues('email'), password: '' });
       }
     }
@@ -122,7 +119,7 @@ export default function LoginForm({ formAction, title, description, submitButton
         <Form {...form}>
           <form
             action={dispatch}
-            className="space-y-6"
+            className="space-y-4" // Adjusted space-y
             onSubmit={form.handleSubmit(() => {
                 const formData = new FormData();
                 const values = form.getValues();
@@ -157,6 +154,11 @@ export default function LoginForm({ formAction, title, description, submitButton
                 </FormItem>
               )}
             />
+            <div className="text-sm text-right">
+                <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+                    Esqueceu a senha?
+                </Link>
+            </div>
             <SubmitButton text={submitButtonText} />
             {state && !state.success && state.message && Object.keys(form.formState.errors).length === 0 && (
                  <p className="text-sm font-medium text-destructive text-center">{state.message}</p>
