@@ -7,10 +7,10 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { User, Heart, Settings, LogOut, Loader2, Users, UserCheck, ExternalLink, Award } from 'lucide-react';
+import { User, Heart, Settings, LogOut, Loader2, Users, UserCheck, ExternalLink, Award, Lock } from 'lucide-react';
 import { getUserById } from '@/lib/data'; 
 import type { User as FullUserType, Badge as BadgeType } from '@/lib/types';
-import { getBadgeById } from '@/lib/badges';
+import { allBadges, getBadgeById } from '@/lib/badges'; // Import allBadges
 import { Badge as ShadBadge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [fullUser, setFullUser] = useState<FullUserType | null>(null);
   const [isLoadingFullUser, setIsLoadingFullUser] = useState(true);
-  const [earnedBadges, setEarnedBadges] = useState<BadgeType[]>([]);
+  const [earnedBadgeIds, setEarnedBadgeIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isLoadingAuth && !isAuthenticated) {
@@ -33,10 +33,7 @@ export default function DashboardPage() {
       const fetchedUser = getUserById(authUser.id);
       if (fetchedUser) {
         setFullUser(fetchedUser);
-        const userBadges = (fetchedUser.badges || [])
-          .map(badgeId => getBadgeById(badgeId))
-          .filter(badge => badge !== undefined) as BadgeType[];
-        setEarnedBadges(userBadges);
+        setEarnedBadgeIds(fetchedUser.badges || []);
       }
       setIsLoadingFullUser(false);
       if (typeof window !== 'undefined') {
@@ -109,40 +106,54 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {earnedBadges.length > 0 && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-6 w-6 text-yellow-500" />
-              Minhas Conquistas
-            </CardTitle>
-            <CardDescription>Seus badges e reconhecimentos na plataforma.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TooltipProvider>
-              <div className="flex flex-wrap gap-3">
-                {earnedBadges.map(badge => (
-                  <Tooltip key={badge.id}>
+      
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="h-6 w-6 text-yellow-500" />
+            Minhas Conquistas
+          </CardTitle>
+          <CardDescription>Seus badges e reconhecimentos na plataforma. Interaja para desbloquear todos!</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TooltipProvider>
+            <div className="flex flex-wrap gap-3">
+              {allBadges.map(badge => {
+                const isEarned = earnedBadgeIds.includes(badge.id);
+                return (
+                  <Tooltip key={badge.id} delayDuration={100}>
                     <TooltipTrigger asChild>
                       <ShadBadge 
                         variant="outline" 
-                        className={`cursor-default border-2 p-2 text-sm ${badge.color || 'border-primary/50'} hover:opacity-90 flex items-center gap-1.5`}
+                        className={`cursor-default border-2 p-2 text-sm flex items-center gap-1.5 transition-all duration-200 ease-in-out hover:shadow-md
+                                    ${isEarned ? `${badge.color || 'border-primary/70 text-foreground'} hover:opacity-90` 
+                                                : 'border-muted/50 text-muted-foreground opacity-60 hover:opacity-80'}`}
                       >
-                        <badge.icon className="h-4 w-4" />
-                        {badge.name}
+                        {isEarned ? <badge.icon className="h-4 w-4" /> : <Lock className="h-4 w-4 text-muted-foreground/70" />}
+                        <span className={!isEarned ? 'filter grayscale opacity-80' : ''}>{badge.name}</span>
                       </ShadBadge>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p className="text-sm font-semibold">{badge.name}</p>
+                    <TooltipContent className="max-w-xs bg-background border shadow-xl rounded-md p-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        {isEarned ? <badge.icon className={`h-5 w-5 ${badge.color ? '' : 'text-primary'}`} /> : <Lock className="h-5 w-5 text-muted-foreground" />}
+                        <p className="text-base font-semibold">{badge.name}</p>
+                      </div>
                       <p className="text-xs text-muted-foreground">{badge.description}</p>
+                      {!isEarned && (
+                        <p className="text-xs text-primary/80 mt-1.5">Continue interagindo para desbloquear!</p>
+                      )}
                     </TooltipContent>
                   </Tooltip>
-                ))}
-              </div>
-            </TooltipProvider>
-          </CardContent>
-        </Card>
-      )}
+                );
+              })}
+            </div>
+          </TooltipProvider>
+          {allBadges.length === 0 && (
+            <p className="text-muted-foreground">Nenhum badge configurado no sistema ainda.</p>
+          )}
+        </CardContent>
+      </Card>
+
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="shadow-md hover:shadow-lg transition-shadow">
@@ -178,6 +189,5 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
 
     
