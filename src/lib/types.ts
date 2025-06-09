@@ -1,4 +1,12 @@
 
+export interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  createdAt: string; // ISO date string
+}
+
 export interface Accessory {
   id: string;
   name: string;
@@ -10,7 +18,9 @@ export interface Accessory {
   price?: string;
   category?: string;
   aiSummary?: string;
-  isDeal?: boolean; // Optional: to mark accessories specifically for deals
+  isDeal?: boolean;
+  likedBy: string[]; // Array of user IDs who liked this accessory
+  comments: Comment[];
 }
 
 export interface Coupon {
@@ -46,7 +56,7 @@ export interface Post {
   slug: string;
   title: string;
   excerpt: string;
-  content: string; 
+  content: string;
   imageUrl: string;
   imageHint?: string;
   authorName: string;

@@ -1,7 +1,7 @@
 
-import type { Accessory, Coupon, Testimonial, User, Post } from './types';
+import type { Accessory, Coupon, Testimonial, User, Post, Comment } from './types';
 
-const accessories: Accessory[] = [
+let accessories: Accessory[] = [
   {
     id: '1',
     name: 'Wireless Charging Stand',
@@ -14,6 +14,10 @@ const accessories: Accessory[] = [
     category: 'Chargers',
     aiSummary: 'A fast, 15W wireless charging stand with an ergonomic design for Qi-enabled devices, allowing portrait or landscape use during charging.',
     isDeal: true,
+    likedBy: [],
+    comments: [
+      { id: 'comment-1-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Ótimo carregador, muito prático!', createdAt: new Date(Date.now() - 86400000).toISOString() },
+    ],
   },
   {
     id: '2',
@@ -25,7 +29,9 @@ const accessories: Accessory[] = [
     affiliateLink: '#',
     price: '79.50',
     category: 'Audio',
-    aiSummary: 'Bluetooth headphones with active noise cancellation, 30-hour playtime, and comfortable memory foam earcups for immersive audio.'
+    aiSummary: 'Bluetooth headphones with active noise cancellation, 30-hour playtime, and comfortable memory foam earcups for immersive audio.',
+    likedBy: ['user-1'],
+    comments: [],
   },
   {
     id: '3',
@@ -38,7 +44,8 @@ const accessories: Accessory[] = [
     price: '12.99',
     category: 'Cases',
     isDeal: true,
-    aiSummary: 'A slim, durable silicone case offering drop/scratch protection, comfortable grip, and easy port access.'
+    likedBy: [],
+    comments: [],
   },
   {
     id: '4',
@@ -50,7 +57,11 @@ const accessories: Accessory[] = [
     affiliateLink: '#',
     price: '22.00',
     category: 'Power Banks',
-    aiSummary: 'A compact 10000mAh power bank with dual USB ports and LED indicator for on-the-go charging.'
+    aiSummary: 'A compact 10000mAh power bank with dual USB ports and LED indicator for on-the-go charging.',
+    likedBy: ['user-1', 'admin-1'],
+    comments: [
+       { id: 'comment-4-1', userId: 'admin-1', userName: 'Administrador', text: 'Excelente para viagens!', createdAt: new Date().toISOString() },
+    ],
   },
 ];
 
@@ -74,7 +85,7 @@ const coupons: Coupon[] = [
   {
     id: 'coupon3',
     code: 'FREESHIP',
-    description: 'Free shipping on orders over R$50.', 
+    description: 'Free shipping on orders over R$50.',
     discount: 'Free Shipping',
     store: 'GadgetHub'
   },
@@ -160,18 +171,70 @@ export function getUserByEmail(email: string): User | undefined {
 
 export function addUser(user: User): boolean {
   if (getUserByEmail(user.email)) {
-    return false; 
+    return false;
   }
+  // In a real app, you'd save the user to a database here.
+  // For this mock, we'll just simulate it.
+  // const newUserForMock = { ...user }; // Store a copy if you were modifying the mockUsers array
+  // mockUsers.push(newUserForMock); // This line isn't strictly necessary if you don't re-fetch from mockUsers later in the same request flow
   return true;
 }
 
 export function getAllAccessories(): Accessory[] {
-  return accessories;
+  return accessories.map(acc => ({
+    ...acc,
+    // likedBy and comments are already part of the base data
+  }));
 }
 
 export function getAccessoryById(id: string): Accessory | undefined {
-  return accessories.find(acc => acc.id === id);
+  const accessory = accessories.find(acc => acc.id === id);
+  if (accessory) {
+    return {
+      ...accessory,
+      // likedBy and comments are already part of the base data
+    };
+  }
+  return undefined;
 }
+
+export function toggleLikeOnAccessory(accessoryId: string, userId: string): { likedBy: string[], likesCount: number } | null {
+  const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
+  if (accessoryIndex === -1) {
+    return null;
+  }
+  const accessory = accessories[accessoryIndex];
+  const userIndex = accessory.likedBy.indexOf(userId);
+
+  if (userIndex > -1) {
+    accessory.likedBy.splice(userIndex, 1); // Unlike
+  } else {
+    accessory.likedBy.push(userId); // Like
+  }
+  accessories[accessoryIndex] = { ...accessory }; // Ensure a new object reference for potential reactivity
+  return { likedBy: [...accessory.likedBy], likesCount: accessory.likedBy.length };
+}
+
+export function addCommentToAccessory(accessoryId: string, userId: string, userName: string, text: string): Comment | null {
+  const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
+  if (accessoryIndex === -1) {
+    return null;
+  }
+  const newComment: Comment = {
+    id: `comment-${accessoryId}-${Date.now()}`,
+    userId,
+    userName,
+    text,
+    createdAt: new Date().toISOString(),
+  };
+  accessories[accessoryIndex].comments.push(newComment);
+  accessories[accessoryIndex] = { // Ensure a new object reference
+    ...accessories[accessoryIndex],
+    comments: [...accessories[accessoryIndex].comments]
+  };
+  return newComment;
+}
+
 
 export function getUniqueCategories(): string[] {
   const categories = new Set<string>();
@@ -185,7 +248,9 @@ export function getUniqueCategories(): string[] {
 
 export function getDailyDeals(): Accessory[] {
   const deals = accessories.filter(acc => acc.isDeal);
-  return deals.length > 0 ? deals : accessories.slice(0, 2);
+  return deals.length > 0 ? deals : accessories.slice(0, 2).map(acc => ({
+    ...acc,
+  }));
 }
 
 export function getCoupons(): Coupon[] {

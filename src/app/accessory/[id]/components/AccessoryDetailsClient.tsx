@@ -1,17 +1,19 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
-import type { Accessory } from '@/lib/types';
+import { useState, useEffect, useActionState, useRef } from 'react';
+import type { Accessory, Comment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft } from 'lucide-react';
-import { summarizeAccessoryDescriptionAction } from '../actions';
+import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft, ThumbsUp } from 'lucide-react';
+import { summarizeAccessoryDescriptionAction, toggleLikeAccessoryAction } from '../actions';
 import FavoriteButton from '@/components/FavoriteButton';
+import LikeButton from '@/components/LikeButton'; // New LikeButton
+import CommentsSection from '@/components/CommentsSection'; // New CommentsSection
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from '@/hooks/useAuth'; 
+import { useAuth } from '@/hooks/useAuth';
 
 interface AccessoryDetailsClientProps {
   accessory: Accessory;
@@ -19,18 +21,56 @@ interface AccessoryDetailsClientProps {
   onToggleFavorite: (id: string) => void;
 }
 
-export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, onToggleFavorite }: AccessoryDetailsClientProps) {
+interface LikeActionResult {
+  success: boolean;
+  isLiked: boolean;
+  likesCount: number;
+  message?: string;
+}
+const initialLikeActionState: LikeActionResult = { success: false, isLiked: false, likesCount: 0 };
+
+
+export default function AccessoryDetailsClient({ accessory: initialAccessory, isFavoriteInitial, onToggleFavorite }: AccessoryDetailsClientProps) {
+  const [accessory, setAccessory] = useState<Accessory>(initialAccessory);
   const [currentSummary, setCurrentSummary] = useState<string | undefined>(accessory.aiSummary || accessory.shortDescription);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isFavorite, setIsFavorite] = useState(isFavoriteInitial);
+
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: isLoadingAuth } = useAuth(); 
+  const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
+
+  // Like state
+  const [likeState, handleLikeAction, isLikePending] = useActionState(toggleLikeAccessoryAction, initialLikeActionState);
+  const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(false);
+  const [currentLikesCount, setCurrentLikesCount] = useState(0);
+  
+  // Comments state
+  const [currentComments, setCurrentComments] = useState<Comment[]>([]);
 
   useEffect(() => {
+    setAccessory(initialAccessory);
+    setCurrentSummary(initialAccessory.aiSummary || initialAccessory.shortDescription);
     setIsFavorite(isFavoriteInitial);
-  }, [isFavoriteInitial]);
+    setCurrentLikesCount(initialAccessory.likedBy?.length || 0);
+    setIsLikedByCurrentUser(isAuthenticated && user ? initialAccessory.likedBy?.includes(user.id) : false);
+    setCurrentComments(initialAccessory.comments || []);
+  }, [initialAccessory, isFavoriteInitial, isAuthenticated, user]);
 
-  const handleToggleFavorite = () => {
+  useEffect(() => {
+    if (likeState?.message) {
+      if (likeState.success) {
+        // Toast for like/unlike is optional, could be too noisy
+        // toast({ title: likeState.message });
+        setIsLikedByCurrentUser(likeState.isLiked);
+        setCurrentLikesCount(likeState.likesCount);
+      } else {
+        toast({ title: "Erro", description: likeState.message || "Falha ao processar curtida.", variant: "destructive" });
+      }
+    }
+  }, [likeState, toast]);
+
+
+  const handleToggleFavoriteClient = () => {
     if (!isAuthenticated) {
       toast({
         title: "Login Necessário",
@@ -46,6 +86,27 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
       description: accessory.name,
     });
   };
+
+  const handleInternalLikeAction = () => {
+    if (!isAuthenticated || !user) {
+      toast({ title: "Login Necessário", description: "Você precisa estar logado para curtir.", variant: "destructive" });
+      return;
+    }
+    const formData = new FormData();
+    formData.append('accessoryId', accessory.id);
+    formData.append('userId', user.id);
+    handleLikeAction(formData);
+  };
+  
+  const handleCommentAdded = (newComment: Comment) => {
+    setCurrentComments(prevComments => [...prevComments, newComment]);
+    // Potentially update the main accessory object if it's being passed around or re-fetched
+    setAccessory(prevAcc => ({
+        ...prevAcc,
+        comments: [...(prevAcc.comments || []), newComment]
+    }));
+  };
+
 
   const handleGenerateSummary = async () => {
     if (!accessory.fullDescription) {
@@ -90,9 +151,9 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
             priority={true}
           />
         </div>
-        {!isLoadingAuth && isAuthenticated && ( 
-          <div className="absolute top-4 right-4">
-            <FavoriteButton isFavorite={isFavorite} onClick={handleToggleFavorite} className="bg-background/70 hover:bg-background" />
+        {!isLoadingAuth && isAuthenticated && (
+          <div className="absolute top-4 right-4 flex gap-2">
+            <FavoriteButton isFavorite={isFavorite} onClick={handleToggleFavoriteClient} className="bg-background/70 hover:bg-background" />
           </div>
         )}
          <div className="absolute top-4 left-4">
@@ -105,7 +166,18 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
         </div>
       </CardHeader>
       <CardContent className="p-6 space-y-4">
-        <CardTitle className="text-3xl font-headline">{accessory.name}</CardTitle>
+        <div className="flex justify-between items-start">
+            <CardTitle className="text-3xl font-headline">{accessory.name}</CardTitle>
+            {!isLoadingAuth && isAuthenticated && (
+                 <LikeButton
+                    isLiked={isLikedByCurrentUser}
+                    onClick={handleInternalLikeAction}
+                    disabled={isLikePending}
+                    likesCount={currentLikesCount}
+                    className="mt-1"
+                />
+            )}
+        </div>
         
         {accessory.category && (
           <p className="text-sm text-muted-foreground">Categoria: {accessory.category}</p>
@@ -136,6 +208,12 @@ export default function AccessoryDetailsClient({ accessory, isFavoriteInitial, o
             <p className="text-muted-foreground text-sm mt-2 leading-relaxed whitespace-pre-line">{accessory.fullDescription}</p>
           </details>
         )}
+
+        <CommentsSection
+          accessoryId={accessory.id}
+          comments={currentComments}
+          onCommentAdded={handleCommentAdded}
+        />
       </CardContent>
       <CardFooter className="p-6 bg-secondary/30">
         <Button asChild className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
