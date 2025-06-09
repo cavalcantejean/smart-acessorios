@@ -1,17 +1,16 @@
 
-"use client"; // Add this directive
+"use client"; 
 
 import Link from 'next/link';
-import Image from 'next/image'; // Import next/image
-import { Heart, LogIn, UserPlus, Shield, LogOut, Tag, Ticket, ShoppingBag } from 'lucide-react';
+import Image from 'next/image';
+import { Heart, LogIn, UserPlus, Shield, LogOut, Tag, Ticket, ShoppingBag, LayoutDashboard } from 'lucide-react'; // Added LayoutDashboard
 import MobileNav from './MobileNav';
-import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
-import { Button } from './ui/button'; // Para o botão de Logout
-import logoSrc from '@/img/logo.png'; // Importar o logo
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from './ui/button';
+import logoSrc from '@/img/logo.png';
 
-// Componente client-side wrapper para usar o hook useAuth
 function AuthDependentLinks() {
-  const { isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <>
@@ -35,16 +34,22 @@ function AuthDependentLinks() {
           </Link>
         </>
       ) : (
-        <Button onClick={logout} variant="ghost" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2 text-xs sm:text-sm h-auto">
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">Logout</span>
-           <span className="sm:hidden">Sair</span>
-        </Button>
+        <>
+          {isAdmin && (
+             <Link href="/admin/dashboard" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+              <LayoutDashboard className="h-4 w-4" /> {/* Using a more appropriate icon */}
+              <span className="hidden sm:inline">Admin</span>
+              <span className="sm:hidden">Admin</span>
+            </Link>
+          )}
+          <Button onClick={logout} variant="ghost" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2 text-xs sm:text-sm h-auto">
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Logout</span>
+            <span className="sm:hidden">Sair</span>
+          </Button>
+        </>
       )}
-      <Link href="/admin/login" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
-        <Shield className="h-4 w-4" />
-        Admin
-      </Link>
+      {/* The old separate Admin Login link is removed from here as login is unified */}
     </>
   );
 }

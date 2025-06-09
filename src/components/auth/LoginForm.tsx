@@ -20,7 +20,8 @@ import { Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { useAuth } from '@/hooks/useAuth'; // Importar useAuth
+import { useAuth } from '@/hooks/useAuth';
+import type { AuthUser } from "@/lib/types";
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
@@ -33,12 +34,17 @@ export interface LoginFormState {
   message: string;
   success: boolean;
   issues?: Record<string, string[] | undefined>;
-  fields?: Record<string, string>;
+  fields?: { // Only email, password is not typically pre-filled on error
+    email?: string;
+    password?: string; // Kept for consistency, but usually cleared
+  };
+  user?: AuthUser | null; // User data returned on successful login
 }
 
 const initialState: LoginFormState = {
   message: "",
   success: false,
+  user: null,
 };
 
 interface LoginFormProps {
@@ -66,27 +72,27 @@ function SubmitButton({ text }: { text: string }) {
 export default function LoginForm({ formAction, title, description, submitButtonText, linkToRegister }: LoginFormProps) {
   const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
-  const { login: mockAuthLogin } = useAuth(); // Obter a função de login simulado
+  const { login: clientAuthLogin } = useAuth();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
       email: state?.fields?.email || "",
-      password: state?.fields?.password || "",
+      password: "", // Password should always be cleared
     },
   });
 
   useEffect(() => {
     if (state.message) {
-      if (state.success) {
+      if (state.success && state.user) {
         toast({
           title: "Sucesso!",
           description: state.message,
         });
-        form.reset();
-        if (formAction.name === 'loginUserAction') { // Chamar apenas para login de usuário comum
-             mockAuthLogin(); // Chamar login simulado em caso de sucesso
-        }
+        clientAuthLogin(state.user); // Update client-side auth context
+        form.reset({ email: '', password: ''}); // Clear form on success
+        // Redirection can be handled here or by useAuth based on user.isAdmin
+        // For example: router.push(state.user.isAdmin ? '/admin/dashboard' : '/');
       } else {
         toast({
           title: "Erro de Login",
@@ -100,9 +106,11 @@ export default function LoginForm({ formAction, title, description, submitButton
             }
           }
         }
+        // Ensure password field is cleared on error, email can be kept
+        form.reset({ email: form.getValues('email'), password: '' });
       }
     }
-  }, [state, toast, form, mockAuthLogin, formAction]);
+  }, [state, toast, form, clientAuthLogin]);
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl">

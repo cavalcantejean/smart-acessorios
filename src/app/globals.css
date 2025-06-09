@@ -1,10 +1,14 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Removed:
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
+This was overriding the Tailwind font-body utility class for Inter font.
+*/
 
 @layer base {
   :root {
@@ -79,11 +83,6 @@ body {
 }
 
 @layer base {
-  /*  Removed:
-  * {
-    @apply border-border;
-  }
-  */
   body {
     @apply bg-background text-foreground;
   }

@@ -1,3 +1,4 @@
+
 export interface Accessory {
   id: string;
   name: string;
@@ -29,3 +30,15 @@ export interface Testimonial {
   avatarHint?: string;
   role?: string;
 }
+
+// New User interface
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  password: string; // In a real app, this would be a hashed password
+  isAdmin: boolean;
+}
+
+// User data subset for client-side auth context (without password)
+export interface AuthUser extends Omit<User, 'password'> {}

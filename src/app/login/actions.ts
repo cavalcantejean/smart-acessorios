@@ -3,6 +3,8 @@
 
 import type { LoginFormState } from '@/components/auth/LoginForm';
 import { z } from 'zod';
+import { getUserByEmail } from '@/lib/data'; // Assuming mock data for now
+import type { AuthUser } from '@/lib/types';
 
 const LoginSchema = z.object({
   email: z.string().email({ message: "E-mail inválido." }),
@@ -24,27 +26,36 @@ export async function loginUserAction(
       issues: validatedFields.error.flatten().fieldErrors,
       fields: {
         email: formData.get('email')?.toString() || '',
-        password: '',
-      }
+      },
+      user: null,
     };
   }
 
   const { email, password } = validatedFields.data;
 
-  // --- Mock Authentication Logic ---
-  console.log("Attempting User Login:", { email });
-  if (email === "user@example.com" && password === "password123") {
-    console.log("User login successful (mocked)");
-    // In a real app: create session, set cookie, redirect
-    // redirect('/dashboard'); 
-    return { message: `Login bem-sucedido para ${email}! (Simulado)`, success: true };
+  console.log("Attempting Unified Login:", { email });
+  const existingUser = getUserByEmail(email);
+
+  if (existingUser && existingUser.password === password) { // Password check (plain text for mock)
+    console.log(`Login successful for ${email}. Admin: ${existingUser.isAdmin}`);
+    const authUser: AuthUser = {
+      id: existingUser.id,
+      name: existingUser.name,
+      email: existingUser.email,
+      isAdmin: existingUser.isAdmin,
+    };
+    return { 
+      message: `Login bem-sucedido para ${existingUser.name}! ${existingUser.isAdmin ? '(Admin)' : ''}`, 
+      success: true,
+      user: authUser,
+    };
   } else {
-    console.log("User login failed (mocked)");
+    console.log("Login failed for:", { email });
     return { 
         message: "Credenciais inválidas.", 
         success: false,
-        fields: { email, password: '' }
+        fields: { email, password: '' },
+        user: null,
     };
   }
-  // --- End Mock Authentication Logic ---
 }

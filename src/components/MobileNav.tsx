@@ -3,8 +3,8 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, ShoppingBag, Heart, LogIn, UserPlus, Shield, ChevronRight, LogOut, Tag, Ticket } from 'lucide-react'; // Removido Package2
-import Image from 'next/image'; // Import next/image
+import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket } from 'lucide-react'; // Changed Shield to LayoutDashboard
+import Image from 'next/image';
 import Link from 'next/link';
 import { getUniqueCategories } from '@/lib/data';
 import { useEffect, useState } from 'react';
@@ -12,20 +12,19 @@ import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import logoSrc from '@/img/logo.png'; // Importar o logo
+import logoSrc from '@/img/logo.png';
 
 export default function MobileNav() {
   const [categories, setCategories] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { isAuthenticated, logout, isLoading: isLoadingAuth } = useAuth();
+  const { isAuthenticated, isAdmin, logout, isLoading: isLoadingAuth } = useAuth();
 
   useEffect(() => {
     setCategories(getUniqueCategories());
   }, []);
 
   useEffect(() => {
-    // Fechar menu ao mudar de rota, se já estiver aberto
     if (isOpen) {
       setIsOpen(false);
     }
@@ -45,7 +44,9 @@ export default function MobileNav() {
   
   const categoryLinkClasses = (category: string) => {
     const categoryQuery = `/products?category=${encodeURIComponent(category)}`;
-    const currentPathWithQuery = pathname + (typeof window !== 'undefined' ? window.location.search : '');
+    // Check if window is defined before accessing window.location
+    const currentQuery = typeof window !== 'undefined' ? window.location.search : '';
+    const currentPathWithQuery = pathname + currentQuery;
     return cn("flex items-center justify-between w-full text-left p-3 rounded-md hover:bg-muted transition-colors",
        currentPathWithQuery === categoryQuery ? "bg-muted font-semibold" : ""
     );
@@ -67,7 +68,7 @@ export default function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 flex flex-col bg-card">
         <SheetHeader className="p-4 border-b">
-          <Link href="/" className="flex items-center" onClick={handleLinkClick}> {/* Removido gap-2 para controle pela imagem */}
+          <Link href="/" className="flex items-center" onClick={handleLinkClick}>
             <Image
               src={logoSrc} 
               alt="SmartAcessorios Logo"
@@ -141,19 +142,25 @@ export default function MobileNav() {
               </Link>
             </>
           ) : (
-             <button onClick={handleLogoutClick} className={navLinkClasses("/logout-action")}>
+            <>
+              {isAdmin && (
+                <Link href="/admin/dashboard" className={navLinkClasses("/admin/dashboard")} onClick={handleLinkClick}>
+                  <div className="flex items-center gap-2">
+                    <LayoutDashboard className="h-5 w-5" /> Admin Dashboard
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              )}
+              <button onClick={handleLogoutClick} className={navLinkClasses("/logout-action")}>
                 <div className="flex items-center gap-2">
                   <LogOut className="h-5 w-5" /> Logout
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
+            </>
           )}
-          <Link href="/admin/login" className={navLinkClasses("/admin/login")} onClick={handleLinkClick}>
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5" /> Admin
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </Link>
+          {/* O link separado para /admin/login é removido, pois o login é unificado. 
+              O acesso ao dashboard de admin é condicional à autenticação e status de admin. */}
         </div>
       </SheetContent>
     </Sheet>

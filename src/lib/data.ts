@@ -1,4 +1,5 @@
-import type { Accessory, Coupon, Testimonial } from './types';
+
+import type { Accessory, Coupon, Testimonial, User } from './types';
 
 const accessories: Accessory[] = [
   {
@@ -100,6 +101,33 @@ const testimonials: Testimonial[] = [
   }
 ];
 
+// Mock Users Data
+// In a real application, passwords would be hashed.
+// For simplicity, we use plain text passwords here.
+const mockUsers: User[] = [
+  { id: 'user-1', name: 'Usuário Comum', email: 'user@example.com', password: 'password123', isAdmin: false },
+  { id: 'admin-1', name: 'Administrador', email: 'admin@example.com', password: 'adminpassword', isAdmin: true },
+  { id: 'user-2', name: 'Outro Usuário', email: 'existing@example.com', password: 'password456', isAdmin: false },
+];
+
+export function getUserByEmail(email: string): User | undefined {
+  return mockUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
+}
+
+// This function is for demonstration. In a real app, users would be persisted.
+// For this mock, we are not actually modifying the mockUsers array during runtime for simplicity.
+// Registration actions will simulate adding a user.
+export function addUser(user: User): boolean {
+  if (getUserByEmail(user.email)) {
+    return false; // User already exists
+  }
+  // In a real app, you would add the user to the database here.
+  // For this mock, we can log it.
+  // console.log("Simulating adding user:", user);
+  // mockUsers.push(user); // Uncomment if you want to modify the array in memory (for testing purposes)
+  return true;
+}
+
 export function getAllAccessories(): Accessory[] {
   return accessories;
 }
@@ -119,7 +147,6 @@ export function getUniqueCategories(): string[] {
 }
 
 export function getDailyDeals(): Accessory[] {
-  // For now, return accessories marked as deals, or first 2 items if none are marked.
   const deals = accessories.filter(acc => acc.isDeal);
   return deals.length > 0 ? deals : accessories.slice(0, 2);
 }

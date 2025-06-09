@@ -18,8 +18,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState } from "react"; // Changed import
+import { useEffect, useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import type { AuthUser } from "@/lib/types";
+// import { useAuth } from '@/hooks/useAuth'; // Uncomment if auto-login after register is desired
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -37,12 +39,17 @@ export interface RegisterFormState {
   message: string;
   success: boolean;
   issues?: Record<string, string[] | undefined>;
-  fields?: Record<string, string>;
+  fields?: {
+    name?: string;
+    email?: string;
+  };
+  user?: AuthUser | null; // To potentially hold created user data
 }
 
 const initialState: RegisterFormState = {
   message: "",
   success: false,
+  user: null,
 };
 
 interface RegisterFormProps {
@@ -68,8 +75,9 @@ function SubmitButton({ text }: { text: string }) {
 }
 
 export default function RegisterForm({ formAction, title, description, submitButtonText, linkToLogin }: RegisterFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState); // Changed hook name
+  const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
+  // const { login: clientAuthLogin } = useAuth(); // Uncomment for auto-login
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
@@ -89,6 +97,11 @@ export default function RegisterForm({ formAction, title, description, submitBut
           description: state.message,
         });
         form.reset();
+        // Optional: Auto-login the user
+        // if (state.user) {
+        //   clientAuthLogin(state.user);
+        //   // router.push('/'); // Redirect after auto-login
+        // }
       } else {
         toast({
           title: "Erro de Cadastro",
@@ -102,9 +115,15 @@ export default function RegisterForm({ formAction, title, description, submitBut
             }
           }
         }
+        form.reset({
+          name: form.getValues('name'),
+          email: form.getValues('email'),
+          password: '',
+          confirmPassword: '',
+        });
       }
     }
-  }, [state, toast, form]);
+  }, [state, toast, form /*, clientAuthLogin */]);
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl">
@@ -124,6 +143,10 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 formData.append('email', values.email);
                 formData.append('password', values.password);
                 formData.append('confirmPassword', values.confirmPassword);
+                // Add any other fields needed by the specific registration action
+                // For example, if an adminSecretKey was part of this form (it's not anymore)
+                // const adminSecretKeyInput = document.querySelector('input[name="adminSecretKey"]') as HTMLInputElement;
+                // if (adminSecretKeyInput) formData.append('adminSecretKey', adminSecretKeyInput.value);
                 dispatch(formData);
             })}
           >
@@ -179,6 +202,8 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 </FormItem>
               )}
             />
+            {/* Children prop can be used here if RegisterForm was designed to accept custom fields */}
+            {/* {children}  */}
             <SubmitButton text={submitButtonText} />
             {state && !state.success && state.message && Object.keys(form.formState.errors).length === 0 && (
                  <p className="text-sm font-medium text-destructive text-center">{state.message}</p>
@@ -197,3 +222,4 @@ export default function RegisterForm({ formAction, title, description, submitBut
     </Card>
   );
 }
+

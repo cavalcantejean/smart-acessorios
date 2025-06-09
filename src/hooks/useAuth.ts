@@ -1,60 +1,67 @@
 
 "use client";
 import React, { useState, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react';
+import type { AuthUser } from '@/lib/types'; // Using AuthUser which omits password
 
 // ESTE É UM HOOK E PROVEDOR DE AUTENTICAÇÃO SIMULADO
 // Em uma aplicação real, isso interagiria com seu provedor de autenticação.
 
 interface AuthContextType {
+  user: AuthUser | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
-  login: () => void; // Login simulado
-  logout: () => void; // Logout simulado
+  login: (userData: AuthUser) => void; // Login agora aceita dados do usuário
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const MOCK_AUTH_USER_KEY = 'mockAppAuthUser';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Começa carregando
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Simula a verificação do status de autenticação do localStorage ao montar
-    // Em um app real, seria uma chamada assíncrona para verificar sessão/token
     try {
-      const storedAuth = localStorage.getItem('mockAppIsAuthenticated');
-      if (storedAuth === 'true') {
-        setIsAuthenticated(true);
+      const storedUser = localStorage.getItem(MOCK_AUTH_USER_KEY);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.warn("Não foi possível acessar o localStorage para o status de autenticação simulado.", error);
-      setIsAuthenticated(false); // Garantir que o estado seja definido em caso de erro
+      console.warn("Não foi possível acessar o localStorage para os dados do usuário simulado.", error);
+      setUser(null);
     }
     setIsLoading(false);
   }, []);
 
-  const login = useCallback(() => {
+  const login = useCallback((userData: AuthUser) => {
     try {
-      localStorage.setItem('mockAppIsAuthenticated', 'true');
+      localStorage.setItem(MOCK_AUTH_USER_KEY, JSON.stringify(userData));
     } catch (error) {
-       console.warn("Não foi possível definir o status de autenticação simulado no localStorage.", error);
+       console.warn("Não foi possível definir os dados do usuário simulado no localStorage.", error);
     }
-    setIsAuthenticated(true);
+    setUser(userData);
   }, []);
 
   const logout = useCallback(() => {
     try {
-      localStorage.removeItem('mockAppIsAuthenticated');
-    } catch (error) {
-      console.warn("Não foi possível limpar o status de autenticação simulado no localStorage.", error);
+      localStorage.removeItem(MOCK_AUTH_USER_KEY);
+    } catch (error)
+ {
+      console.warn("Não foi possível limpar os dados do usuário simulado no localStorage.", error);
     }
-    setIsAuthenticated(false);
+    setUser(null);
   }, []);
 
-  // Usando React.createElement em vez de JSX para evitar erros de parsing em arquivo .ts
+  const isAuthenticated = !!user;
+  const isAdmin = user?.isAdmin ?? false;
+
   return React.createElement(
     AuthContext.Provider,
-    { value: { isAuthenticated, isLoading, login, logout } },
+    { value: { user, isAuthenticated, isAdmin, isLoading, login, logout } },
     children
   );
 }
