@@ -5,9 +5,9 @@ import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqu
 import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
 import TestimonialCard from '@/components/TestimonialCard';
-import BlogPostCard from '@/components/BlogPostCard'; // Import BlogPostCard
-import type { Accessory, Coupon, Testimonial, Post } from '@/lib/types'; // Import Post type
-import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star, BookOpenText } from 'lucide-react'; // Import BookOpenText
+import BlogPostCard from '@/components/BlogPostCard';
+import type { Accessory, Coupon, Testimonial, Post } from '@/lib/types';
+import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star, BookOpenText } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -19,57 +19,69 @@ import Autoplay from "embla-carousel-autoplay";
 
 
 export default function HomePage() {
-  const allAccessoriesData: Accessory[] = getAllAccessories();
-  const dailyDealsData: Accessory[] = getDailyDeals();
-  const promotionalCouponsData: Coupon[] = getCoupons();
-  const testimonialsData: Testimonial[] = getTestimonials();
-  const latestPostsData: Post[] = getLatestPosts(3); // Get latest 3 posts
+  // State for base data fetched once
+  const [baseAccessoriesData, setBaseAccessoriesData] = useState<Accessory[]>([]);
+  const [baseDailyDealsData, setBaseDailyDealsData] = useState<Accessory[]>([]);
+  const [basePromotionalCouponsData, setBasePromotionalCouponsData] = useState<Coupon[]>([]);
+  const [baseTestimonialsData, setBaseTestimonialsData] = useState<Testimonial[]>([]);
+  const [baseLatestPostsData, setBaseLatestPostsData] = useState<Post[]>([]);
 
-  const dealsToShowInCarousel = dailyDealsData.slice(0, 6); 
-  const dealsToShowInGrid = dailyDealsData.slice(0, 4); 
-  const testimonialsToShow = testimonialsData.slice(0, 3);
-  const couponsOnHomepageLimit = 3;
-
-  const autoplayPlugin = React.useRef(
-    Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true, stopOnFocusIn: true })
-  );
-
+  // Existing state variables
   const [searchTermAccessories, setSearchTermAccessories] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState<string[]>([]);
   const [displayedAccessories, setDisplayedAccessories] = useState<Accessory[]>([]);
   const [couponSearchTerm, setCouponSearchTerm] = useState('');
-  const [displayedCoupons, setDisplayedCoupons] = useState<Coupon[]>(promotionalCouponsData.slice(0, couponsOnHomepageLimit));
+  const [displayedCoupons, setDisplayedCoupons] = useState<Coupon[]>([]);
 
+  const autoplayPlugin = React.useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true, stopOnFocusIn: true })
+  );
+
+  // Fetch base data once on mount
   useEffect(() => {
+    setBaseAccessoriesData(getAllAccessories());
+    setBaseDailyDealsData(getDailyDeals());
+    setBasePromotionalCouponsData(getCoupons());
+    setBaseTestimonialsData(getTestimonials());
+    setBaseLatestPostsData(getLatestPosts(3));
     setCategories(getUniqueCategories());
   }, []);
 
+  // Update displayed accessories based on filters and base data
   useEffect(() => {
-    let filtered = allAccessoriesData;
+    let filtered = baseAccessoriesData;
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(acc => acc.category === selectedCategory);
     }
     if (searchTermAccessories) {
-      filtered = filtered.filter(acc => 
+      filtered = filtered.filter(acc =>
         acc.name.toLowerCase().includes(searchTermAccessories.toLowerCase()) ||
         (acc.category && acc.category.toLowerCase().includes(searchTermAccessories.toLowerCase()))
       );
     }
     setDisplayedAccessories(filtered.slice(0, 8));
-  }, [searchTermAccessories, selectedCategory, allAccessoriesData]);
+  }, [searchTermAccessories, selectedCategory, baseAccessoriesData]);
 
+  // Update displayed coupons based on search term and base data
   useEffect(() => {
-    let filtered = promotionalCouponsData;
+    let filtered = basePromotionalCouponsData;
     if (couponSearchTerm) {
-      filtered = promotionalCouponsData.filter(coupon =>
+      filtered = basePromotionalCouponsData.filter(coupon =>
         coupon.code.toLowerCase().includes(couponSearchTerm.toLowerCase()) ||
         coupon.description.toLowerCase().includes(couponSearchTerm.toLowerCase()) ||
         (coupon.store && coupon.store.toLowerCase().includes(couponSearchTerm.toLowerCase()))
       );
     }
+    // Apply limit after filtering
+    const couponsOnHomepageLimit = 3;
     setDisplayedCoupons(filtered.slice(0, couponsOnHomepageLimit));
-  }, [couponSearchTerm, promotionalCouponsData]);
+  }, [couponSearchTerm, basePromotionalCouponsData]);
+
+  // Derived data for rendering (now uses base data states)
+  const dealsToShowInCarousel = baseDailyDealsData.slice(0, 6);
+  const dealsToShowInGrid = baseDailyDealsData.slice(0, 4);
+  const testimonialsToShow = baseTestimonialsData.slice(0, 3);
 
 
   return (
@@ -101,7 +113,7 @@ export default function HomePage() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {dealsToShowInCarousel.length > 1 && ( 
+            {dealsToShowInCarousel.length > 1 && (
               <>
                 <CarouselPrevious
                   variant="ghost"
@@ -125,7 +137,7 @@ export default function HomePage() {
             <Tag className="h-7 w-7 text-primary" />
             <h2 className="text-3xl font-bold font-headline">Mais Ofertas do Dia</h2>
           </div>
-          {dailyDealsData.length > dealsToShowInGrid.length && (
+          {baseDailyDealsData.length > dealsToShowInGrid.length && (
             <Button variant="outline" asChild size="sm">
               <Link href="/deals">
                 Ver Todas as Ofertas <ArrowRight className="ml-2 h-4 w-4" />
@@ -146,7 +158,7 @@ export default function HomePage() {
 
       <Separator className="my-8" />
 
-      {latestPostsData.length > 0 && (
+      {baseLatestPostsData.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-2 mb-6">
             <div className="flex items-center gap-2">
@@ -160,23 +172,23 @@ export default function HomePage() {
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {latestPostsData.map(post => (
+            {baseLatestPostsData.map(post => (
               <BlogPostCard key={post.id} post={post} />
             ))}
           </div>
         </section>
       )}
-      
+
       <Separator className="my-8" />
 
-      {promotionalCouponsData.length > 0 && (
+      {basePromotionalCouponsData.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-2 mb-6">
              <div className="flex items-center gap-2">
                 <Ticket className="h-7 w-7 text-accent" />
                 <h2 className="text-3xl font-bold font-headline">Cupons Promocionais</h2>
               </div>
-            {promotionalCouponsData.length > couponsOnHomepageLimit && (
+            {basePromotionalCouponsData.length > displayedCoupons.length && basePromotionalCouponsData.length > 3 && ( // Check against original length for "Ver Todos"
                <Button variant="outline" asChild size="sm">
                 <Link href="/coupons">
                   Ver Todos <ArrowRight className="ml-2 h-4 w-4" />
@@ -208,7 +220,7 @@ export default function HomePage() {
           )}
         </section>
       )}
-      
+
       <Separator className="my-8" />
 
       {testimonialsToShow.length > 0 && (
@@ -235,7 +247,7 @@ export default function HomePage() {
               <ShoppingBag className="h-7 w-7 text-primary" />
               <h2 className="text-3xl font-bold font-headline">Mais Acessórios</h2>
             </div>
-            {allAccessoriesData.length > displayedAccessories.length && ( 
+            {baseAccessoriesData.length > displayedAccessories.length && (
               <Button variant="outline" asChild size="sm">
                 <Link href="/products">
                   Ver Todos <ArrowRight className="ml-2 h-4 w-4" />
@@ -277,4 +289,5 @@ export default function HomePage() {
       </section>
     </div>
   );
-}
+
+  
