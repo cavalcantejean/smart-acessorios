@@ -98,10 +98,9 @@ export default function AdminDashboardPage() {
             <CardDescription>Visualize estatísticas de uso e engajamento.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full" variant="outline" disabled>
+            <Button asChild className="w-full" variant="outline">
               <Link href="/admin/analytics">Ver Analytics</Link>
             </Button>
-             <p className="text-xs text-center mt-2 text-muted-foreground">Em breve</p>
           </CardContent>
         </Card>
         
