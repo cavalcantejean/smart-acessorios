@@ -11,8 +11,8 @@ import { redirect } from 'next/navigation';
 export interface AccessoryActionResult {
   success: boolean;
   message?: string;
-  error?: string;
-  errors?: z.ZodIssue[]; 
+  error?: string; // General error message
+  errors?: z.ZodIssue[]; // Specific field validation errors
   accessory?: Accessory;
 }
 
@@ -20,20 +20,52 @@ export async function createAccessoryAction(
   prevState: AccessoryActionResult | null,
   formData: FormData
 ): Promise<AccessoryActionResult> {
-  // This action will be fully implemented in the next step with the form.
-  // For now, it's a placeholder.
-  console.log("createAccessoryAction called with formData:", Object.fromEntries(formData.entries()));
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-  
-  // Placeholder: return success for now to allow navigation setup
-  // In reality, you would parse, validate, and call addAccessory here
-  // For a real implementation:
-  // const validatedFields = AccessoryFormSchema.safeParse(Object.fromEntries(formData.entries()));
-  // if (!validatedFields.success) { /* handle errors */ }
-  // const newAccessory = addAccessory(validatedFields.data);
-  // if (newAccessory) { revalidatePath('/admin/accessories'); return { success: true, message: 'Acessório criado!', accessory: newAccessory }; }
-  
-  return { success: false, error: "Criação de acessório ainda não implementada completamente." };
+  const rawFormData = Object.fromEntries(formData.entries());
+
+  // Convert checkbox/switch value
+  const dataToValidate = {
+    ...rawFormData,
+    isDeal: rawFormData.isDeal === 'on',
+    price: rawFormData.price || undefined, // Ensure price is undefined if empty string for optional validation
+    category: rawFormData.category || undefined,
+    imageHint: rawFormData.imageHint || undefined,
+    aiSummary: rawFormData.aiSummary || undefined,
+  };
+
+  const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);
+
+  if (!validatedFields.success) {
+    console.log("Validation errors:", validatedFields.error.flatten().fieldErrors);
+    return {
+      success: false,
+      message: "Falha na validação. Verifique os campos.",
+      errors: validatedFields.error.errors, // Pass all ZodIssues
+      error: "Dados inválidos. Corrija os erros abaixo."
+    };
+  }
+
+  try {
+    const newAccessory = addAccessory(validatedFields.data);
+    if (newAccessory) {
+      revalidatePath('/admin/accessories');
+      revalidatePath('/products');
+      revalidatePath('/');
+      revalidatePath('/deals');
+      // Instead of redirecting here, let the form component handle it based on success state
+      // This allows the success toast to be shown before redirection.
+      // redirect('/admin/accessories'); 
+      return { 
+        success: true, 
+        message: `Acessório "${newAccessory.name}" criado com sucesso!`, 
+        accessory: newAccessory 
+      };
+    } else {
+      return { success: false, error: "Falha ao criar o acessório no sistema." };
+    }
+  } catch (error) {
+    console.error("Error in createAccessoryAction:", error);
+    return { success: false, error: "Erro no servidor ao tentar criar o acessório." };
+  }
 }
 
 export async function updateAccessoryAction(
@@ -41,13 +73,50 @@ export async function updateAccessoryAction(
   prevState: AccessoryActionResult | null,
   formData: FormData
 ): Promise<AccessoryActionResult> {
-  // This action will be fully implemented in the next step with the form.
-  // For now, it's a placeholder.
   console.log(`updateAccessoryAction for ID ${accessoryId} called with formData:`, Object.fromEntries(formData.entries()));
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  const rawFormData = Object.fromEntries(formData.entries());
+  const dataToValidate = {
+    ...rawFormData,
+    isDeal: rawFormData.isDeal === 'on',
+    price: rawFormData.price || undefined,
+    category: rawFormData.category || undefined,
+    imageHint: rawFormData.imageHint || undefined,
+    aiSummary: rawFormData.aiSummary || undefined,
+  };
 
-  // Placeholder: return success for now to allow navigation setup
-  return { success: false, error: "Atualização de acessório ainda não implementada completamente." };
+  const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      message: "Falha na validação. Verifique os campos.",
+      errors: validatedFields.error.errors,
+      error: "Dados inválidos. Corrija os erros abaixo."
+    };
+  }
+
+  try {
+    const updatedAccessory = updateAccessory(accessoryId, validatedFields.data);
+    if (updatedAccessory) {
+      revalidatePath('/admin/accessories');
+      revalidatePath(`/admin/accessories/${accessoryId}/edit`);
+      revalidatePath(`/accessory/${accessoryId}`);
+      revalidatePath('/products');
+      revalidatePath('/');
+      revalidatePath('/deals');
+      return { 
+        success: true, 
+        message: `Acessório "${updatedAccessory.name}" atualizado com sucesso!`, 
+        accessory: updatedAccessory 
+      };
+    } else {
+      return { success: false, error: `Falha ao atualizar o acessório. ID ${accessoryId} não encontrado.` };
+    }
+  } catch (error) {
+    console.error("Error in updateAccessoryAction:", error);
+    return { success: false, error: "Erro no servidor ao tentar atualizar o acessório." };
+  }
 }
 
 export async function deleteAccessoryAction(
@@ -64,8 +133,9 @@ export async function deleteAccessoryAction(
     const deleted = deleteAccessoryData(accessoryId);
     if (deleted) {
       revalidatePath('/admin/accessories');
-      revalidatePath('/products'); // Revalidate public products page
-      revalidatePath('/'); // Revalidate homepage if deals/etc. might change
+      revalidatePath('/products'); 
+      revalidatePath('/'); 
+      revalidatePath('/deals');
       return { success: true, message: "Acessório excluído com sucesso." };
     } else {
       return { success: false, error: "Falha ao excluir acessório. Não encontrado." };
