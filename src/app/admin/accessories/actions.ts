@@ -7,6 +7,8 @@ import { addAccessory, updateAccessory, deleteAccessory as deleteAccessoryData, 
 import type { Accessory } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow';
+
 
 export interface AccessoryActionResult {
   success: boolean;
@@ -30,7 +32,7 @@ export async function createAccessoryAction(
     category: rawFormData.category || undefined,
     imageHint: rawFormData.imageHint || undefined,
     aiSummary: rawFormData.aiSummary || undefined,
-    embedHtml: rawFormData.embedHtml || undefined, // Handle new field
+    embedHtml: rawFormData.embedHtml || undefined, 
   };
 
   const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);
@@ -52,6 +54,7 @@ export async function createAccessoryAction(
       revalidatePath('/products');
       revalidatePath('/');
       revalidatePath('/deals');
+      // Do not redirect here, let the form handle it based on state
       return { 
         success: true, 
         message: `Acessório "${newAccessory.name}" criado com sucesso!`, 
@@ -81,7 +84,7 @@ export async function updateAccessoryAction(
     category: rawFormData.category || undefined,
     imageHint: rawFormData.imageHint || undefined,
     aiSummary: rawFormData.aiSummary || undefined,
-    embedHtml: rawFormData.embedHtml || undefined, // Handle new field
+    embedHtml: rawFormData.embedHtml || undefined,
   };
 
   const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);
@@ -144,3 +147,36 @@ export async function deleteAccessoryAction(
     return { success: false, error: "Erro no servidor ao excluir acessório." };
   }
 }
+
+// --- AI Helper Action ---
+const GenerateDescriptionAISchema = z.object({
+  productInfo: z.string().min(5, "Product information must be at least 5 characters."),
+});
+
+interface GenerateDescriptionAIResult {
+  success: boolean;
+  description?: string;
+  error?: string;
+}
+
+export async function generateDescriptionWithAIAction(
+  productInfo: string
+): Promise<GenerateDescriptionAIResult> {
+  const validationResult = GenerateDescriptionAISchema.safeParse({ productInfo });
+  if (!validationResult.success) {
+    return { success: false, error: validationResult.error.errors.map(e => e.message).join(', ') };
+  }
+
+  try {
+    const result: GenerateDescriptionOutput = await generateProductDescription({ productInfo: validationResult.data.productInfo });
+    if (result.generatedDescription) {
+      return { success: true, description: result.generatedDescription };
+    } else {
+      return { success: false, error: "AI não conseguiu gerar uma descrição." };
+    }
+  } catch (error) {
+    console.error("Error in generateDescriptionWithAIAction:", error);
+    return { success: false, error: "Falha ao gerar descrição com IA. Tente novamente." };
+  }
+}
+

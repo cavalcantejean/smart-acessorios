@@ -18,11 +18,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload } from "lucide-react";
+import { Loader2, Save, Upload, Sparkles } from "lucide-react"; // Added Sparkles
 import { useActionState, useEffect, startTransition, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { Accessory } from "@/lib/types";
 import type { AccessoryActionResult } from "@/app/admin/accessories/actions";
+import { generateDescriptionWithAIAction } from "@/app/admin/accessories/actions"; // Import new AI action
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -103,6 +104,9 @@ export default function AccessoryForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
 
 
   const form = useForm<AccessoryFormValues>({
@@ -136,12 +140,16 @@ export default function AccessoryForm({
           title: "Sucesso!",
           description: state.message,
         });
-        if (state.accessory && !initialData) {
-          router.push('/admin/accessories');
+        if (state.accessory && !initialData) { // Redirect only on successful creation
+          router.push('/admin/accessories'); 
+        } else if (state.accessory && initialData) { // For updates, could also redirect or just show success
+            // router.push(`/admin/accessories/\${state.accessory.id}/edit`); // Option to stay on edit
         }
-        if (!initialData) {
+        
+        if (!initialData) { // Reset form only on creation
            form.reset();
            setImagePreview(null);
+           setAiPrompt("");
            if(fileInputRef.current) fileInputRef.current.value = ""; // Clear file input
         }
       } else {
@@ -177,6 +185,27 @@ export default function AccessoryForm({
       } finally {
         setIsProcessingImage(false);
       }
+    }
+  };
+
+  const handleGenerateAIDescription = async () => {
+    if (!aiPrompt.trim()) {
+      toast({ title: "Entrada Inválida", description: "Por favor, forneça palavras-chave ou uma ideia para a IA.", variant: "destructive" });
+      return;
+    }
+    setIsGeneratingDescription(true);
+    try {
+      const result = await generateDescriptionWithAIAction(aiPrompt);
+      if (result.success && result.description) {
+        form.setValue("fullDescription", result.description, { shouldValidate: true });
+        toast({ title: "Descrição Gerada!", description: "A descrição completa foi preenchida com o texto da IA." });
+      } else {
+        toast({ title: "Falha na Geração", description: result.error || "Não foi possível gerar a descrição com IA.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Erro de IA", description: "Ocorreu um erro ao se comunicar com a IA.", variant: "destructive" });
+    } finally {
+      setIsGeneratingDescription(false);
     }
   };
 
@@ -232,6 +261,32 @@ export default function AccessoryForm({
             </FormItem>
           )}
         />
+
+        <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+                <FormLabel htmlFor="aiPromptForDescription" className="mb-0 sm:mb-2">Ideia para Descrição Completa (IA)</FormLabel>
+                <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleGenerateAIDescription} 
+                    disabled={isGeneratingDescription || !aiPrompt.trim()}
+                    className="w-full sm:w-auto"
+                >
+                {isGeneratingDescription ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                Gerar com IA
+                </Button>
+            </div>
+            <Input 
+                id="aiPromptForDescription"
+                placeholder="Ex: fone bluetooth cancelamento ruído, bateria longa, confortável" 
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+            />
+            <FormDescription>
+                Digite palavras-chave ou uma ideia básica e clique em "Gerar com IA" para preencher a Descrição Completa.
+            </FormDescription>
+        </div>
 
         <FormField
           control={form.control}
@@ -435,7 +490,7 @@ export default function AccessoryForm({
           )}
         />
         
-        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending || isProcessingImage} />
+        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending || isProcessingImage || isGeneratingDescription} />
 
          {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
            <p className="text-sm font-medium text-destructive">{state.error}</p>
@@ -444,4 +499,3 @@ export default function AccessoryForm({
     </Form>
   );
 }
-
