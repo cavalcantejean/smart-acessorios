@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag } from 'lucide-react';
 // Metadata for client components is typically handled by parent layouts or a generateMetadata function if it were a server component.
 // For client pages, we can set document.title if needed.
 
@@ -107,16 +107,15 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
-              <LayoutDashboard className="h-6 w-6 text-indigo-500" />
+              <ShoppingBag className="h-6 w-6 text-indigo-500" />
               Gerenciar Acessórios
             </CardTitle>
             <CardDescription>Adicione, edite ou remova acessórios e ofertas.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full" variant="outline" disabled>
+            <Button asChild className="w-full" variant="outline">
               <Link href="/admin/accessories">Gerenciar Acessórios</Link>
             </Button>
-             <p className="text-xs text-center mt-2 text-muted-foreground">Em breve</p>
           </CardContent>
         </Card>
 

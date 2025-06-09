@@ -590,3 +590,47 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     recentComments: getRecentComments(),
   };
 }
+
+// --- Accessory Management Data Functions ---
+export function addAccessory(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'isDeal'> & { isDeal?: boolean }): Accessory {
+  const newAccessory: Accessory = {
+    id: `acc-${Date.now()}`,
+    name: accessoryData.name,
+    imageUrl: accessoryData.imageUrl,
+    imageHint: accessoryData.imageHint,
+    shortDescription: accessoryData.shortDescription,
+    fullDescription: accessoryData.fullDescription,
+    affiliateLink: accessoryData.affiliateLink,
+    price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : undefined,
+    category: accessoryData.category,
+    aiSummary: accessoryData.aiSummary,
+    isDeal: accessoryData.isDeal ?? false,
+    likedBy: [],
+    comments: [],
+  };
+  accessories.unshift(newAccessory);
+  return newAccessory;
+}
+
+export function updateAccessory(accessoryId: string, accessoryData: Partial<Omit<Accessory, 'id' | 'likedBy' | 'comments'>>): Accessory | null {
+  const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
+  if (accessoryIndex === -1) {
+    return null;
+  }
+  const updatedAccessoryData = { ...accessoryData };
+  if (updatedAccessoryData.price) {
+    updatedAccessoryData.price = updatedAccessoryData.price.toString().replace(',', '.');
+  }
+
+  accessories[accessoryIndex] = {
+    ...accessories[accessoryIndex],
+    ...updatedAccessoryData,
+  };
+  return accessories[accessoryIndex];
+}
+
+export function deleteAccessory(accessoryId: string): boolean {
+  const initialLength = accessories.length;
+  accessories = accessories.filter(acc => acc.id !== accessoryId);
+  return accessories.length < initialLength;
+}
