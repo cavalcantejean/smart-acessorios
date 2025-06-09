@@ -169,7 +169,7 @@ export let mockUsers: User[] = [
   { id: 'user-2', name: 'Outro Usuário', email: 'existing@example.com', password: 'password456', isAdmin: false, followers: ['admin-1'], following: [], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'another user', bio: 'Entusiasta de tecnologia e gadgets.', badges: [] },
 ];
 
-const mockPosts: Post[] = [
+let mockPosts: Post[] = [
   {
     id: 'post-1',
     slug: 'guia-completo-para-carregadores-sem-fio',
@@ -354,8 +354,13 @@ export function getTestimonials(): Testimonial[] {
   return testimonials;
 }
 
+// --- Blog Post Data Functions ---
 export function getAllPosts(): Post[] {
   return mockPosts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+}
+
+export function getPostById(id: string): Post | undefined {
+  return mockPosts.find(post => post.id === id);
 }
 
 export function getPostBySlug(slug: string): Post | undefined {
@@ -365,6 +370,47 @@ export function getPostBySlug(slug: string): Post | undefined {
 export function getLatestPosts(count: number): Post[] {
   return getAllPosts().slice(0, count);
 }
+
+export function addPost(postData: Omit<Post, 'id'>): Post {
+  const newPost: Post = {
+    id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    ...postData,
+    // Ensure publishedAt is set, default to now if not provided or invalid
+    publishedAt: postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())
+                   ? new Date(postData.publishedAt).toISOString()
+                   : new Date().toISOString(),
+    tags: postData.tags || [], // Ensure tags is an array
+  };
+  mockPosts.unshift(newPost); // Add to the beginning of the array
+  return newPost;
+}
+
+export function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>): Post | null {
+  const postIndex = mockPosts.findIndex(p => p.id === postId);
+  if (postIndex === -1) {
+    return null;
+  }
+  const updatedPost = {
+    ...mockPosts[postIndex],
+    ...postData,
+  };
+  if (postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())) {
+    updatedPost.publishedAt = new Date(postData.publishedAt).toISOString();
+  } else if (postData.publishedAt) { // if invalid date string was passed, keep original
+    updatedPost.publishedAt = mockPosts[postIndex].publishedAt;
+  }
+
+  mockPosts[postIndex] = updatedPost;
+  return updatedPost;
+}
+
+export function deletePost(postId: string): boolean {
+  const initialLength = mockPosts.length;
+  mockPosts = mockPosts.filter(p => p.id !== postId);
+  return mockPosts.length < initialLength;
+}
+// --- End Blog Post Data Functions ---
+
 
 export function toggleFollowUser(currentUserId: string, targetUserId: string): { isFollowing: boolean; targetFollowersCount: number } | null {
   const currentUserIndex = mockUsers.findIndex(u => u.id === currentUserId);
@@ -613,7 +659,7 @@ export function addAccessory(accessoryData: Omit<Accessory, 'id' | 'likedBy' | '
     isDeal: accessoryData.isDeal ?? false,
     likedBy: [],
     comments: [],
-    embedHtml: accessoryData.embedHtml, // Adicionar novo campo
+    embedHtml: accessoryData.embedHtml, 
   };
   accessories.unshift(newAccessory);
   return newAccessory;

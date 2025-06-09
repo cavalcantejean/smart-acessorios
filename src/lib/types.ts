@@ -22,7 +22,7 @@ export interface Accessory {
   isDeal?: boolean;
   likedBy: string[]; // Array of user IDs who liked this accessory
   comments: Comment[];
-  embedHtml?: string; // Novo campo
+  embedHtml?: string; 
 }
 
 export interface Coupon {
@@ -64,14 +64,14 @@ export interface Post {
   slug: string;
   title: string;
   excerpt: string;
-  content: string;
+  content: string; // For now, simple text or basic HTML. Later, could be Markdown or structured content.
   imageUrl: string;
   imageHint?: string;
   authorName: string;
   authorAvatarUrl?: string;
   authorAvatarHint?: string;
   category?: string;
-  tags?: string[];
+  tags?: string[]; // Array of tags
   publishedAt: string; // ISO date string e.g., "2024-07-28T10:00:00Z"
 }
 
