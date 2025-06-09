@@ -3,14 +3,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, LogIn, UserPlus, Shield, LogOut, Tag, Ticket, ShoppingBag, LayoutDashboard } from 'lucide-react'; // Added LayoutDashboard
+import { Heart, LogIn, UserPlus, LogOut, Tag, Ticket, ShoppingBag, LayoutDashboard, BookOpenText } from 'lucide-react';
 import MobileNav from './MobileNav';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from './ui/button';
 import logoSrc from '@/img/logo.png';
 
 function AuthDependentLinks() {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <>
@@ -37,7 +37,7 @@ function AuthDependentLinks() {
         <>
           {isAdmin && (
              <Link href="/admin/dashboard" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
-              <LayoutDashboard className="h-4 w-4" /> {/* Using a more appropriate icon */}
+              <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Admin</span>
               <span className="sm:hidden">Admin</span>
             </Link>
@@ -49,7 +49,6 @@ function AuthDependentLinks() {
           </Button>
         </>
       )}
-      {/* The old separate Admin Login link is removed from here as login is unified */}
     </>
   );
 }
@@ -87,6 +86,10 @@ export default function Header() {
           <Link href="/coupons" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <Ticket className="h-4 w-4" />
             <span className="hidden sm:inline">Cupons</span>
+          </Link>
+          <Link href="/blog" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
+            <BookOpenText className="h-4 w-4" />
+            <span className="hidden sm:inline">Blog</span>
           </Link>
           <AuthDependentLinks />
         </nav>

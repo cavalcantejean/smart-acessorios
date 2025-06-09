@@ -1,12 +1,13 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories } from '@/lib/data';
+import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories, getLatestPosts } from '@/lib/data';
 import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
 import TestimonialCard from '@/components/TestimonialCard';
-import type { Accessory, Coupon, Testimonial } from '@/lib/types';
-import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star } from 'lucide-react';
+import BlogPostCard from '@/components/BlogPostCard'; // Import BlogPostCard
+import type { Accessory, Coupon, Testimonial, Post } from '@/lib/types'; // Import Post type
+import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star, BookOpenText } from 'lucide-react'; // Import BookOpenText
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -22,9 +23,10 @@ export default function HomePage() {
   const dailyDealsData: Accessory[] = getDailyDeals();
   const promotionalCouponsData: Coupon[] = getCoupons();
   const testimonialsData: Testimonial[] = getTestimonials();
+  const latestPostsData: Post[] = getLatestPosts(3); // Get latest 3 posts
 
   const dealsToShowInCarousel = dailyDealsData.slice(0, 6); 
-  const dealsToShowInGrid = dailyDealsData.slice(0, 4); // For the "Mais Ofertas do Dia" grid
+  const dealsToShowInGrid = dailyDealsData.slice(0, 4); 
   const testimonialsToShow = testimonialsData.slice(0, 3);
   const couponsOnHomepageLimit = 3;
 
@@ -32,13 +34,10 @@ export default function HomePage() {
     Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true, stopOnFocusIn: true })
   );
 
-  // State for "Mais Acessórios" filtering
   const [searchTermAccessories, setSearchTermAccessories] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState<string[]>([]);
   const [displayedAccessories, setDisplayedAccessories] = useState<Accessory[]>([]);
-
-  // State for "Cupons Promocionais" filtering
   const [couponSearchTerm, setCouponSearchTerm] = useState('');
   const [displayedCoupons, setDisplayedCoupons] = useState<Coupon[]>(promotionalCouponsData.slice(0, couponsOnHomepageLimit));
 
@@ -48,11 +47,9 @@ export default function HomePage() {
 
   useEffect(() => {
     let filtered = allAccessoriesData;
-
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(acc => acc.category === selectedCategory);
     }
-
     if (searchTermAccessories) {
       filtered = filtered.filter(acc => 
         acc.name.toLowerCase().includes(searchTermAccessories.toLowerCase()) ||
@@ -99,7 +96,7 @@ export default function HomePage() {
               {dealsToShowInCarousel.map((accessory) => (
                 <CarouselItem key={`carousel-${accessory.id}`} className="basis-full pl-4">
                   <div className="p-1 h-full">
-                     <AccessoryCard accessory={accessory} priority={true} />
+                     <AccessoryCard accessory={accessory} />
                   </div>
                 </CarouselItem>
               ))}
@@ -147,6 +144,29 @@ export default function HomePage() {
         )}
       </section>
 
+      <Separator className="my-8" />
+
+      {latestPostsData.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <BookOpenText className="h-7 w-7 text-primary" />
+              <h2 className="text-3xl font-bold font-headline">Últimos Artigos do Blog</h2>
+            </div>
+            <Button variant="outline" asChild size="sm">
+              <Link href="/blog">
+                Ver Todos os Artigos <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {latestPostsData.map(post => (
+              <BlogPostCard key={post.id} post={post} />
+            ))}
+          </div>
+        </section>
+      )}
+      
       <Separator className="my-8" />
 
       {promotionalCouponsData.length > 0 && (

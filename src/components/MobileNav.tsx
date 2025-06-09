@@ -3,7 +3,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket } from 'lucide-react'; // Changed Shield to LayoutDashboard
+import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getUniqueCategories } from '@/lib/data';
@@ -44,7 +44,6 @@ export default function MobileNav() {
   
   const categoryLinkClasses = (category: string) => {
     const categoryQuery = `/products?category=${encodeURIComponent(category)}`;
-    // Check if window is defined before accessing window.location
     const currentQuery = typeof window !== 'undefined' ? window.location.search : '';
     const currentPathWithQuery = pathname + currentQuery;
     return cn("flex items-center justify-between w-full text-left p-3 rounded-md hover:bg-muted transition-colors",
@@ -95,6 +94,12 @@ export default function MobileNav() {
           <Link href="/coupons" className={navLinkClasses("/coupons")} onClick={handleLinkClick}>
             <div className="flex items-center gap-2">
               <Ticket className="h-5 w-5" /> Cupons Promocionais
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+          <Link href="/blog" className={navLinkClasses("/blog")} onClick={handleLinkClick}>
+            <div className="flex items-center gap-2">
+              <BookOpenText className="h-5 w-5" /> Blog
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
@@ -159,8 +164,6 @@ export default function MobileNav() {
               </button>
             </>
           )}
-          {/* O link separado para /admin/login é removido, pois o login é unificado. 
-              O acesso ao dashboard de admin é condicional à autenticação e status de admin. */}
         </div>
       </SheetContent>
     </Sheet>

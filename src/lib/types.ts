@@ -31,7 +31,6 @@ export interface Testimonial {
   role?: string;
 }
 
-// New User interface
 export interface User {
   id: string;
   name: string;
@@ -40,5 +39,20 @@ export interface User {
   isAdmin: boolean;
 }
 
-// User data subset for client-side auth context (without password)
 export interface AuthUser extends Omit<User, 'password'> {}
+
+export interface Post {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string; 
+  imageUrl: string;
+  imageHint?: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  authorAvatarHint?: string;
+  category?: string;
+  tags?: string[];
+  publishedAt: string; // ISO date string e.g., "2024-07-28T10:00:00Z"
+}
