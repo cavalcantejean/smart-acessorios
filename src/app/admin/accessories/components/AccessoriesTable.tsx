@@ -16,7 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Edit, Trash2, Eye, CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
+import { Edit, Trash2, CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -53,10 +53,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
           title: "Sucesso!",
           description: deleteState.message,
         });
-        // Optimistically update UI or re-fetch if `revalidatePath` isn't fast enough
-        // For now, relying on revalidatePath from server action.
-        // To immediately update, filter out the deleted accessory:
-        // setAccessories(prev => prev.filter(acc => acc.id !== accessoryToDelete?.id)); 
+        // The list will re-render due to revalidatePath or state update if we filter locally
       } else if (!deleteState.success && deleteState.error) {
         toast({
           title: "Erro",
@@ -64,7 +61,8 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
           variant: "destructive",
         });
       }
-      setAccessoryToDelete(null); // Clear after action
+      // Close the dialog regardless of success/failure of the action itself
+      setAccessoryToDelete(null); 
     }
   }, [deleteState, toast]);
 
@@ -79,7 +77,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
   };
 
   return (
-    <>
+    <AlertDialog open={!!accessoryToDelete} onOpenChange={(isOpen) => { if (!isOpen) setAccessoryToDelete(null); }}>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -155,9 +153,9 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
         </Table>
       </div>
 
-      {accessoryToDelete && (
-        <AlertDialog open={!!accessoryToDelete} onOpenChange={(open) => !open && setAccessoryToDelete(null)}>
-          <AlertDialogContent>
+      <AlertDialogContent>
+        {accessoryToDelete && (
+          <>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
               <AlertDialogDescription>
@@ -165,7 +163,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setAccessoryToDelete(null)} disabled={isDeletePending}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel disabled={isDeletePending}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
                 disabled={isDeletePending}
@@ -175,9 +173,9 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
                 Excluir
               </AlertDialogAction>
             </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-    </>
+          </>
+        )}
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
