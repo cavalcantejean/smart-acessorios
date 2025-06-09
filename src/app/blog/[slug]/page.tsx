@@ -5,19 +5,14 @@ import { getPostBySlug } from '@/lib/data';
 import type { Post } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, UserCircle } from 'lucide-react';
+import { ArrowLeft, CalendarDays, UserCircle, BookOpenText } from 'lucide-react'; // Added BookOpenText
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { notFound } from 'next/navigation';
 import { useEffect, useState } from 'react';
-// Note: Metadata is typically handled in a server component or `generateMetadata` function.
-// For client components, you'd use `useEffect` to update document.title if needed,
-// but Next.js prefers `generateMetadata` for static/server rendering.
-// Since this page structure might fetch data that determines metadata,
-// it's often better as a server component or using generateMetadata.
-// For this example, we'll assume basic metadata is set by layout or a higher level.
+import { Separator } from '@/components/ui/separator'; // Import Separator
 
 interface PostPageProps {
   params: { slug: string };
@@ -61,9 +56,6 @@ export default function PostPage({ params }: PostPageProps) {
   }
 
   if (!post) {
-    // Using Next.js's notFound utility is preferred for proper 404 handling
-    // For client components, this might redirect or show a custom not found message.
-    // For this structure, a manual "not found" display is simpler.
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <BookOpenText className="h-20 w-20 text-muted-foreground mb-6" />
@@ -130,13 +122,19 @@ export default function PostPage({ params }: PostPageProps) {
           </div>
         )}
         
+        {post.embedHtml && (
+          <div className="my-8">
+            <Separator />
+            <div 
+              className="aspect-video mt-8 w-full max-w-full overflow-hidden rounded-lg shadow-lg [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:rounded-lg"
+              dangerouslySetInnerHTML={{ __html: post.embedHtml }} 
+            />
+            <Separator className="mt-8"/>
+          </div>
+        )}
+
         <Card>
           <CardContent className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none pt-6 text-foreground/90">
-             {/* 
-              For security, ensure `post.content` is sanitized if it comes from user input
-              or a CMS where arbitrary HTML can be injected.
-              If `post.content` is Markdown, you'd use a Markdown-to-HTML library here.
-            */}
             <div dangerouslySetInnerHTML={{ __html: post.content }} />
           </CardContent>
         </Card>
@@ -155,17 +153,3 @@ export default function PostPage({ params }: PostPageProps) {
     </div>
   );
 }
-
-// You would typically use generateMetadata for server-side metadata generation
-// export async function generateMetadata({ params }: PostPageProps) {
-//   const post = getPostBySlug(params.slug);
-//   if (!post) {
-//     return {
-//       title: 'Artigo Não Encontrado',
-//     };
-//   }
-//   return {
-//     title: `${post.title} | SmartAcessorios Blog`,
-//     description: post.excerpt,
-//   };
-// }

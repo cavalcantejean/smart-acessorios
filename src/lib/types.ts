@@ -73,6 +73,7 @@ export interface Post {
   category?: string;
   tags?: string[]; // Array of tags
   publishedAt: string; // ISO date string e.g., "2024-07-28T10:00:00Z"
+  embedHtml?: string; // Novo campo para embed
 }
 
 // Badge System Types
@@ -127,3 +128,4 @@ export interface AnalyticsData {
   mostCommentedAccessories: TopAccessoryInfo[];
   recentComments: RecentCommentInfo[];
 }
+

@@ -27,6 +27,8 @@ export const PostFormSchema = z.object({
   category: z.string().optional(),
   tags: z.string().optional().describe("Tags separadas por vírgula (ex: tecnologia, review, dicas)"),
   publishedAt: dateSchema.optional(),
+  embedHtml: z.string().optional(), // Novo campo para embed
 });
 
 export type PostFormValues = z.infer<typeof PostFormSchema>;
+

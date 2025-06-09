@@ -113,6 +113,7 @@ export default function PostForm({
       category: initialData?.category || "",
       tags: Array.isArray(initialData?.tags) ? initialData.tags.join(", ") : (initialData?.tags || ""),
       publishedAt: defaultPublishedAt,
+      embedHtml: initialData?.embedHtml || "", // Initialize embedHtml
     },
   });
 
@@ -133,7 +134,8 @@ export default function PostForm({
           form.reset({ 
             title: "", slug: "", excerpt: "", content: "", imageUrl: "", imageHint: "",
             authorName: "Equipe SmartAcessorios", authorAvatarUrl: "", authorAvatarHint: "",
-            category: "", tags: "", publishedAt: new Date().toISOString().split('T')[0]
+            category: "", tags: "", publishedAt: new Date().toISOString().split('T')[0],
+            embedHtml: "" // Reset embedHtml
           });
           setImagePreview(null);
           if(fileInputRef.current) fileInputRef.current.value = "";
@@ -212,6 +214,28 @@ export default function PostForm({
               <FormLabel>Conteúdo Principal do Post</FormLabel>
               <FormControl><Textarea placeholder="Escreva o conteúdo completo do seu post aqui. Você pode usar HTML básico se precisar." {...field} rows={15} /></FormControl>
               <FormDescription>Por enquanto, use texto simples ou HTML básico. Um editor rico será adicionado no futuro.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="embedHtml"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>HTML de Embed (Opcional)</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Cole o código HTML de embed aqui (ex: vídeo do YouTube, mapa)" 
+                  {...field} 
+                  value={field.value || ""}
+                  rows={4} 
+                />
+              </FormControl>
+              <FormDescription>
+                Insira o código HTML completo para incorporar conteúdo externo (ex: iframes).
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -324,3 +348,4 @@ export default function PostForm({
     </Form>
   );
 }
+

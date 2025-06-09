@@ -184,6 +184,7 @@ let mockPosts: Post[] = [
     category: 'Tecnologia',
     tags: ['carregadores sem fio', 'Qi', 'smartphones', 'tecnologia'],
     publishedAt: '2024-07-28T10:00:00Z',
+    embedHtml: '<iframe width="560" height="315" src="https://www.youtube.com/embed/vCHy4qF1xSY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
   },
   {
     id: 'post-2',
@@ -199,6 +200,7 @@ let mockPosts: Post[] = [
     category: 'Dicas',
     tags: ['acessórios', 'smartphones', 'dicas', '2024'],
     publishedAt: '2024-07-25T14:30:00Z',
+    embedHtml: '',
   },
   {
     id: 'post-3',
@@ -214,6 +216,7 @@ let mockPosts: Post[] = [
     category: 'Guias',
     tags: ['USB-C', 'cabos', 'tecnologia', 'guias', 'power delivery'],
     publishedAt: '2024-07-22T09:15:00Z',
+    embedHtml: '',
   }
 ];
 
@@ -375,13 +378,13 @@ export function addPost(postData: Omit<Post, 'id'>): Post {
   const newPost: Post = {
     id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     ...postData,
-    // Ensure publishedAt is set, default to now if not provided or invalid
     publishedAt: postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())
                    ? new Date(postData.publishedAt).toISOString()
                    : new Date().toISOString(),
-    tags: postData.tags || [], // Ensure tags is an array
+    tags: postData.tags || [], 
+    embedHtml: postData.embedHtml || '', // Ensure embedHtml is initialized
   };
-  mockPosts.unshift(newPost); // Add to the beginning of the array
+  mockPosts.unshift(newPost); 
   return newPost;
 }
 
@@ -393,10 +396,11 @@ export function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>):
   const updatedPost = {
     ...mockPosts[postIndex],
     ...postData,
+    embedHtml: postData.embedHtml !== undefined ? postData.embedHtml : mockPosts[postIndex].embedHtml, // Handle embedHtml update
   };
   if (postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())) {
     updatedPost.publishedAt = new Date(postData.publishedAt).toISOString();
-  } else if (postData.publishedAt) { // if invalid date string was passed, keep original
+  } else if (postData.publishedAt) { 
     updatedPost.publishedAt = mockPosts[postIndex].publishedAt;
   }
 
@@ -688,3 +692,4 @@ export function deleteAccessory(accessoryId: string): boolean {
   accessories = accessories.filter(acc => acc.id !== accessoryId);
   return accessories.length < initialLength;
 }
+
