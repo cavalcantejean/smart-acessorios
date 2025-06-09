@@ -3,7 +3,7 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText } from 'lucide-react';
+import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText, UserCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getUniqueCategories } from '@/lib/data';
@@ -18,7 +18,7 @@ export default function MobileNav() {
   const [categories, setCategories] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { isAuthenticated, isAdmin, logout, isLoading: isLoadingAuth } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout, isLoading: isLoadingAuth } = useAuth();
 
   useEffect(() => {
     setCategories(getUniqueCategories());
@@ -26,7 +26,8 @@ export default function MobileNav() {
 
   useEffect(() => {
     if (isOpen) {
-      setIsOpen(false);
+      // Close sheet on navigation
+      // setIsOpen(false); // This was causing issues, handled by handleLinkClick
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
@@ -43,11 +44,17 @@ export default function MobileNav() {
     );
   
   const categoryLinkClasses = (category: string) => {
-    const categoryQuery = `/products?category=${encodeURIComponent(category)}`;
-    const currentQuery = typeof window !== 'undefined' ? window.location.search : '';
-    const currentPathWithQuery = pathname + currentQuery;
+    // Constructing the category path for comparison.
+    // This assumes products page displays categories as query params.
+    // Adjust if your routing for categories is different (e.g., /products/category-name)
+    const categoryPath = `/products?category=${encodeURIComponent(category)}`;
+    let currentPathWithQuery = pathname;
+    if (typeof window !== 'undefined') {
+      currentPathWithQuery += window.location.search;
+    }
+    
     return cn("flex items-center justify-between w-full text-left p-3 rounded-md hover:bg-muted transition-colors",
-       currentPathWithQuery === categoryQuery ? "bg-muted font-semibold" : ""
+       currentPathWithQuery === categoryPath ? "bg-muted font-semibold" : ""
     );
   }
 
@@ -105,12 +112,21 @@ export default function MobileNav() {
           </Link>
 
           {isAuthenticated && (
-            <Link href="/favorites" className={navLinkClasses("/favorites")} onClick={handleLinkClick}>
-              <div className="flex items-center gap-2">
-                <Heart className="h-5 w-5" /> Favoritos
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
+            <>
+              <Separator className="my-3" />
+              <Link href="/dashboard" className={navLinkClasses("/dashboard")} onClick={handleLinkClick}>
+                <div className="flex items-center gap-2">
+                  <UserCircle className="h-5 w-5" /> Painel ({user?.name.split(' ')[0]})
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              <Link href="/favorites" className={navLinkClasses("/favorites")} onClick={handleLinkClick}>
+                <div className="flex items-center gap-2">
+                  <Heart className="h-5 w-5" /> Favoritos
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            </>
           )}
           
           {categories.length > 0 && (
@@ -120,6 +136,7 @@ export default function MobileNav() {
               {categories.map(category => (
                 <Link 
                   key={category} 
+                  // Ensure this link structure matches how categories are handled on the products page
                   href={`/products?category=${encodeURIComponent(category)}`}
                   className={categoryLinkClasses(category)}
                   onClick={handleLinkClick}
