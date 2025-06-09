@@ -1,6 +1,6 @@
 
 import { getSiteSettings, getBaseSocialLinkSettings } from '@/lib/data';
-import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; // Keep SiteSettings for general structure
+import type { SiteSettings, SocialLinkSetting } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -14,42 +14,41 @@ export const metadata: Metadata = {
   description: 'Gerencie as configurações gerais do site.',
 };
 
-// Define a type for the data being passed to the client component
-// This excludes non-serializable parts like IconComponent
-interface SerializableSocialLinkForForm {
+// This interface is for the data passed to the client component form.
+// It includes everything the form needs to render, including fallbacks.
+export interface SocialLinkFormData {
   platform: string;
   label: string;
   url: string;
   placeholderUrl: string;
+  customImageUrl?: string;
+  // IconComponent is NOT passed to client, client will look it up if needed for fallback display
 }
 
 export interface SettingsFormDataForClient {
   siteTitle: string;
   siteDescription: string;
-  socialLinks: SerializableSocialLinkForForm[];
+  socialLinks: SocialLinkFormData[];
 }
 
 
 export default async function SiteSettingsPage() {
-  const currentSettings = getSiteSettings(); 
-  const baseSocialLinks = getBaseSocialLinkSettings(); // This has IconComponent, used for labels/placeholders
-
-  // Prepare data specifically for the client component, stripping non-serializable parts
+  const currentSettings = getSiteSettings(); // This has IconComponent and customImageUrl from data store
+  
+  // Prepare data specifically for the client component form.
+  // We pass all necessary display and value data.
   const initialDataForForm: SettingsFormDataForClient = {
     siteTitle: currentSettings.siteTitle,
     siteDescription: currentSettings.siteDescription,
-    socialLinks: baseSocialLinks.map(baseLink => {
-      const currentLinkData = currentSettings.socialLinks.find(sl => sl.platform === baseLink.platform);
-      return {
-        platform: baseLink.platform,
-        label: baseLink.label,
-        url: currentLinkData?.url || '', // Use current URL if available, else empty
-        placeholderUrl: baseLink.placeholderUrl,
-        // IconComponent is NOT included here
-      };
-    }),
+    socialLinks: currentSettings.socialLinks.map(link => ({
+      platform: link.platform,
+      label: link.label, // Label comes from currentSettings (which is from base)
+      url: link.url || '',
+      placeholderUrl: link.placeholderUrl, // placeholderUrl from currentSettings
+      customImageUrl: link.customImageUrl || '',
+      // IconComponent is NOT included here for client component props
+    })),
   };
-
 
   return (
     <div className="space-y-6">

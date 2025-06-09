@@ -3,8 +3,8 @@
 
 import { z } from 'zod';
 import { SettingsFormSchema, type SettingsFormValues } from '@/lib/schemas/settings-schema';
-import { getSiteSettings, updateSiteSettings } from '@/lib/data';
-import type { SiteSettings } from '@/lib/types';
+import { getSiteSettings, updateSiteSettings, getBaseSocialLinkSettings } from '@/lib/data';
+import type { SiteSettings, SocialLinkSetting } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 export interface SettingsActionResult {
@@ -25,18 +25,17 @@ export async function updateSettingsAction(
     socialLinks: [],
   };
 
-  // Reconstruct socialLinks array from FormData
-  // Assuming social links are submitted like: socialLinks[0].platform, socialLinks[0].label, socialLinks[0].url, etc.
-  const baseSocialLinks = getSiteSettings().socialLinks; // Get base structure with IconComponent
+  const baseLinks = getBaseSocialLinkSettings(); // To know how many links to expect
   const submittedSocialLinks: Partial<SettingsFormValues['socialLinks'][0]>[] = [];
 
-  baseSocialLinks.forEach((_, index) => {
+  baseLinks.forEach((_, index) => {
     const platform = formData.get(`socialLinks[${index}].platform`) as string;
-    const label = formData.get(`socialLinks[${index}].label`) as string;
+    const label = formData.get(`socialLinks[${index}].label`) as string; // Label is also submitted
     const url = formData.get(`socialLinks[${index}].url`) as string;
-    // Only add if platform exists, as client sends all platforms
-    if (platform) {
-      submittedSocialLinks.push({ platform, label, url });
+    const customImageUrl = formData.get(`socialLinks[${index}].customImageUrl`) as string;
+
+    if (platform) { // Platform must exist
+      submittedSocialLinks.push({ platform, label, url, customImageUrl });
     }
   });
   rawFormData.socialLinks = submittedSocialLinks;
@@ -55,11 +54,16 @@ export async function updateSettingsAction(
 
   try {
     const currentSettings = getSiteSettings();
+    
+    // Map over current settings to preserve IconComponent and placeholderUrl,
+    // then update with validated data.
     const updatedSocialLinks = currentSettings.socialLinks.map(currentLink => {
       const submittedLink = validatedFields.data.socialLinks.find(sl => sl.platform === currentLink.platform);
       return {
-        ...currentLink, // Keep IconComponent and other base properties
-        url: submittedLink?.url || '', // Update URL, default to empty string if not submitted or empty
+        ...currentLink, // Keeps IconComponent, placeholderUrl, and original label
+        url: submittedLink?.url || '',
+        customImageUrl: submittedLink?.customImageUrl || '', // Update custom image URL
+        label: submittedLink?.label || currentLink.label, // Update label if submitted
       };
     });
 
@@ -72,10 +76,8 @@ export async function updateSettingsAction(
     const updatedSettings = updateSiteSettings(newSettingsData);
 
     revalidatePath('/admin/settings');
-    revalidatePath('/'); // Revalidate homepage
-    revalidatePath('/layout'); // To attempt revalidating metadata in RootLayout
-    // Note: Revalidating layout.tsx directly for metadata changes can be tricky.
-    // The best way is usually to revalidate pages that use the layout.
+    revalidatePath('/'); 
+    revalidatePath('/layout'); 
 
     return {
       success: true,

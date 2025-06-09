@@ -24,7 +24,7 @@ export interface Accessory {
   isDeal?: boolean;
   likedBy: string[]; // Array of user IDs who liked this accessory
   comments: Comment[];
-  embedHtml?: string; 
+  embedHtml?: string;
 }
 
 export interface Coupon {
@@ -136,8 +136,9 @@ export interface SocialLinkSetting {
   platform: string; // e.g., 'Facebook', 'Instagram' - used as key/id
   label: string; // User-friendly label, e.g., "Facebook"
   url: string;
-  IconComponent: ComponentType<{ className?: string }>; // Lucide icon component
+  IconComponent: ComponentType<{ className?: string }>; // Lucide icon component for fallback
   placeholderUrl: string; // Placeholder for the input field
+  customImageUrl?: string; // URL for custom uploaded image (e.g., data URI)
 }
 
 export interface SiteSettings {
