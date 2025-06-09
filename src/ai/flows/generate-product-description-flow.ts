@@ -36,20 +36,23 @@ const prompt = ai.definePrompt({
   name: 'generateProductDescriptionPrompt',
   input: {schema: GenerateDescriptionInputSchema},
   output: {schema: GenerateDescriptionOutputSchema},
-  prompt: `You are a creative and persuasive marketing copywriter specializing in e-commerce product descriptions for tech accessories.
-Given the following product information (keywords, product name, or a basic idea), generate a compelling and informative product description.
+  prompt: `Você é um redator de marketing criativo e persuasivo, especializado em descrições de produtos de e-commerce para acessórios de tecnologia.
+**Sua resposta DEVE ser em português brasileiro.**
 
-The description should:
-- Be engaging and highlight key features and benefits.
-- Be suitable for an e-commerce product page.
-- Be approximately 2-4 paragraphs long.
-- Use clear and concise language.
-- Avoid making up features not implied by the input. If the input is very brief, focus on general benefits of such a product.
+Dadas as seguintes informações sobre o produto (palavras-chave, nome do produto ou uma ideia básica), gere uma descrição de produto atraente e informativa.
 
-Product Information:
+A descrição deve:
+- Ser envolvente e destacar os principais recursos e benefícios.
+- Ser adequada para uma página de produto de e-commerce.
+- Ter aproximadamente 2-4 parágrafos.
+- Usar linguagem clara e concisa.
+- Evitar inventar recursos não implícitos na entrada. Se a entrada for muito breve, concentre-se nos benefícios gerais de tal produto.
+- **O texto gerado deve estar inteiramente em português brasileiro.**
+
+Informações sobre o produto:
 "{{{productInfo}}}"
 
-Generate the product description.
+Gere a descrição do produto em português brasileiro.
 `,
 });
 
