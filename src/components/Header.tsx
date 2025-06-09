@@ -74,10 +74,10 @@ export default function Header() {
           <Image
             src={logoSrc}
             alt="SmartAcessorios Logo"
-            width={191} 
-            height={32}
+            width={239} // Intrinsic width of logo.png
+            height={40} // Intrinsic height of logo.png
             priority={true}
-            className="h-8 w-auto" 
+            className="h-8 w-auto" // CSS to set display height to 32px (h-8), width will adjust automatically
           />
         </Link>
         
