@@ -17,14 +17,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, Upload, Image as ImageIcon, Settings2 } from "lucide-react";
 import { useActionState, useEffect, startTransition, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { SettingsActionResult } from "../actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getBaseSocialLinkSettings } from "@/lib/data"; // Used for fallback IconComponent
-import type { SettingsFormDataForClient, SocialLinkFormData } from "../page";
-import Image from "next/image"; // Next.js Image component
+import { getBaseSocialLinkSettings } from "@/lib/data"; 
+import type { SettingsFormDataForClient } from "../page"; // Use updated type from page
+import Image from "next/image"; 
 
 interface SettingsFormProps {
   formAction: (prevState: SettingsActionResult | null, formData: FormData) => Promise<SettingsActionResult>;
@@ -33,8 +33,7 @@ interface SettingsFormProps {
 
 const initialState: SettingsActionResult = { success: false };
 
-// Helper function to resize and compress image to JPEG data URI
-const processImageFile = (file: File, maxWidth: number = 64, maxHeight: number = 64, quality: number = 0.8): Promise<string> => {
+const processImageFile = (file: File, maxWidth: number = 64, maxHeight: number = 64, quality: number = 0.8, type: 'image/png' | 'image/jpeg' = 'image/png'): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -45,8 +44,8 @@ const processImageFile = (file: File, maxWidth: number = 64, maxHeight: number =
 
         if (width > maxWidth || height > maxHeight) {
           const ratio = Math.min(maxWidth / width, maxHeight / height);
-          width *= ratio;
-          height *= ratio;
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
         }
         canvas.width = width;
         canvas.height = height;
@@ -55,7 +54,7 @@ const processImageFile = (file: File, maxWidth: number = 64, maxHeight: number =
           return reject(new Error('Could not get canvas context'));
         }
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/png', quality)); // Use PNG for icons to preserve transparency
+        resolve(canvas.toDataURL(type, quality)); 
       };
       img.onerror = reject;
       if (event.target?.result) {
@@ -85,16 +84,19 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
   const formRef = useRef<HTMLFormElement>(null);
   const { pending } = useFormStatus();
 
-  // State for image previews, one for each social link
+  const [siteLogoPreview, setSiteLogoPreview] = useState<string | null>(initialData.siteLogoUrl || null);
+  const [siteFaviconPreview, setSiteFaviconPreview] = useState<string | null>(initialData.siteFaviconUrl || null);
+  const [isProcessingLogo, setIsProcessingLogo] = useState(false);
+  const [isProcessingFavicon, setIsProcessingFavicon] = useState(false);
+
   const [imagePreviews, setImagePreviews] = useState<Record<string, string | null>>(
     initialData.socialLinks.reduce((acc, link) => {
       acc[link.platform] = link.customImageUrl || null;
       return acc;
     }, {} as Record<string, string | null>)
   );
-  const [isProcessingImage, setIsProcessingImage] = useState<Record<string, boolean>>({});
+  const [isProcessingSocialImage, setIsProcessingSocialImage] = useState<Record<string, boolean>>({});
 
-  // Full base settings including IconComponent, fetched on client for fallback display
   const baseSocialLinksWithIcons = getBaseSocialLinkSettings();
 
   const form = useForm<SettingsFormValues>({
@@ -102,6 +104,8 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
     defaultValues: {
       siteTitle: initialData.siteTitle,
       siteDescription: initialData.siteDescription,
+      siteLogoUrl: initialData.siteLogoUrl || '',
+      siteFaviconUrl: initialData.siteFaviconUrl || '',
       socialLinks: initialData.socialLinks.map(sl => ({
         platform: sl.platform,
         label: sl.label,
@@ -111,7 +115,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
     },
   });
 
-  const { fields: socialLinkFields, update } = useFieldArray({
+  const { fields: socialLinkFields, update: updateSocialLinkField } = useFieldArray({
     control: form.control,
     name: "socialLinks",
   });
@@ -121,9 +125,9 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
       if (state.success) {
         toast({ title: "Sucesso!", description: state.message });
         if (state.updatedSettings) {
-          const newPreviews: Record<string, string | null> = {};
+          const newSocialPreviews: Record<string, string | null> = {};
           const formSocialLinks = state.updatedSettings.socialLinks.map(sl => {
-            newPreviews[sl.platform] = sl.customImageUrl || null;
+            newSocialPreviews[sl.platform] = sl.customImageUrl || null;
             return {
               platform: sl.platform,
               label: sl.label,
@@ -134,9 +138,13 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
           form.reset({
             siteTitle: state.updatedSettings.siteTitle,
             siteDescription: state.updatedSettings.siteDescription,
+            siteLogoUrl: state.updatedSettings.siteLogoUrl || '',
+            siteFaviconUrl: state.updatedSettings.siteFaviconUrl || '',
             socialLinks: formSocialLinks,
           });
-          setImagePreviews(newPreviews);
+          setImagePreviews(newSocialPreviews);
+          setSiteLogoPreview(state.updatedSettings.siteLogoUrl || null);
+          setSiteFaviconPreview(state.updatedSettings.siteFaviconUrl || null);
         }
       } else {
         toast({
@@ -145,7 +153,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
           variant: "destructive",
         });
         state.errors?.forEach(issue => {
-          const path = issue.path.join('.') as keyof SettingsFormValues | `socialLinks.${number}.url` | `socialLinks.${number}.customImageUrl`;
+          const path = issue.path.join('.') as keyof SettingsFormValues | `socialLinks.${number}.url` | `socialLinks.${number}.customImageUrl` | 'siteLogoUrl' | 'siteFaviconUrl';
           form.setError(path as any, {
             type: "server",
             message: issue.message,
@@ -155,27 +163,50 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
     }
   }, [state, toast, form]);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, index: number, platform: string) => {
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    setImagePreviewState: React.Dispatch<React.SetStateAction<string | null>>,
+    setProcessingState: React.Dispatch<React.SetStateAction<boolean>>,
+    formFieldName: "siteLogoUrl" | "siteFaviconUrl",
+    maxWidth: number,
+    maxHeight: number,
+    imageType: 'image/png' | 'image/jpeg' = 'image/png' 
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
-      setIsProcessingImage(prev => ({ ...prev, [platform]: true }));
+      setProcessingState(true);
       try {
-        const compressedDataUrl = await processImageFile(file);
-        setImagePreviews(prev => ({ ...prev, [platform]: compressedDataUrl }));
-        // Use `update` from `useFieldArray` to set value correctly for the specific item
-        const currentLink = socialLinkFields[index];
-        update(index, { ...currentLink, customImageUrl: compressedDataUrl });
-        // Also use form.setValue if direct field update is more reliable for react-hook-form state
-        form.setValue(`socialLinks.${index}.customImageUrl`, compressedDataUrl, { shouldValidate: true });
+        const compressedDataUrl = await processImageFile(file, maxWidth, maxHeight, 0.8, imageType);
+        setImagePreviewState(compressedDataUrl);
+        form.setValue(formFieldName, compressedDataUrl, { shouldValidate: true });
+        toast({ title: "Imagem Carregada", description: `Pré-visualização de ${formFieldName === 'siteLogoUrl' ? 'Logo' : 'Favicon'} atualizada.` });
+      } catch (error) {
+        console.error("Error processing image:", error);
+        toast({ title: "Erro de Imagem", description: `Falha ao processar ${formFieldName === 'siteLogoUrl' ? 'Logo' : 'Favicon'}.`, variant: "destructive" });
+        setImagePreviewState(initialData[formFieldName] || null);
+      } finally {
+        setProcessingState(false);
+      }
+    }
+  };
 
+  const handleSocialImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, index: number, platform: string) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setIsProcessingSocialImage(prev => ({ ...prev, [platform]: true }));
+      try {
+        const compressedDataUrl = await processImageFile(file, 64, 64, 0.8, 'image/png');
+        setImagePreviews(prev => ({ ...prev, [platform]: compressedDataUrl }));
+        const currentLink = socialLinkFields[index];
+        updateSocialLinkField(index, { ...currentLink, customImageUrl: compressedDataUrl });
+        form.setValue(`socialLinks.${index}.customImageUrl`, compressedDataUrl, { shouldValidate: true });
         toast({ title: "Imagem Carregada", description: `Ícone para ${platform} atualizado.` });
       } catch (error) {
         console.error("Error processing image:", error);
         toast({ title: "Erro de Imagem", description: `Falha ao processar imagem para ${platform}.`, variant: "destructive" });
-        // Revert to previous preview if available
         setImagePreviews(prev => ({ ...prev, [platform]: form.getValues(`socialLinks.${index}.customImageUrl`) || null }));
       } finally {
-        setIsProcessingImage(prev => ({ ...prev, [platform]: false }));
+        setIsProcessingSocialImage(prev => ({ ...prev, [platform]: false }));
       }
     }
   };
@@ -184,6 +215,9 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
     const formData = new FormData();
     formData.append('siteTitle', data.siteTitle);
     formData.append('siteDescription', data.siteDescription);
+    formData.append('siteLogoUrl', data.siteLogoUrl || '');
+    formData.append('siteFaviconUrl', data.siteFaviconUrl || '');
+
     data.socialLinks.forEach((link, index) => {
       formData.append(`socialLinks[${index}].platform`, link.platform);
       formData.append(`socialLinks[${index}].label`, link.label);
@@ -205,8 +239,8 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
       >
         <Card>
           <CardHeader>
-            <CardTitle>Configurações Gerais do Site</CardTitle>
-            <CardDescription>Ajuste o título e a descrição padrão do seu site.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Settings2 className="h-5 w-5"/>Configurações Gerais do Site</CardTitle>
+            <CardDescription>Ajuste o título, a descrição, o logo e o favicon do seu site.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <FormField
@@ -237,6 +271,65 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
                 </FormItem>
               )}
             />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              <FormField
+                control={form.control}
+                name="siteLogoUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Logo do Site (PNG, JPG, SVG)</FormLabel>
+                    <FormControl>
+                       <Input 
+                        type="file" 
+                        accept="image/png, image/jpeg, image/svg+xml" 
+                        className="cursor-pointer"
+                        onChange={(e) => handleImageUpload(e, setSiteLogoPreview, setIsProcessingLogo, "siteLogoUrl", 240, 60, 'image/png')}
+                        disabled={isProcessingLogo}
+                       />
+                    </FormControl>
+                     <input type="hidden" {...form.register("siteLogoUrl")} />
+                    {isProcessingLogo && <p className="text-xs text-muted-foreground flex items-center"><Loader2 className="mr-1 h-3 w-3 animate-spin"/> Processando logo...</p>}
+                    <FormDescription>Envie a imagem do logo. Recomendado: fundo transparente (PNG), máx 240x60px.</FormDescription>
+                    <FormMessage />
+                    {siteLogoPreview && (
+                      <div className="mt-2 p-2 border rounded-md inline-block bg-muted">
+                        <Image src={siteLogoPreview} alt="Pré-visualização do Logo" width={120} height={30} style={{objectFit: "contain", maxHeight: "30px"}}/>
+                      </div>
+                    )}
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="siteFaviconUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Favicon do Site (PNG, ICO)</FormLabel>
+                    <FormControl>
+                       <Input 
+                        type="file" 
+                        accept="image/png, image/x-icon, image/vnd.microsoft.icon" 
+                        className="cursor-pointer"
+                        onChange={(e) => handleImageUpload(e, setSiteFaviconPreview, setIsProcessingFavicon, "siteFaviconUrl", 64, 64, 'image/png')}
+                        disabled={isProcessingFavicon}
+                        />
+                    </FormControl>
+                    <input type="hidden" {...form.register("siteFaviconUrl")} />
+                    {isProcessingFavicon && <p className="text-xs text-muted-foreground flex items-center"><Loader2 className="mr-1 h-3 w-3 animate-spin"/> Processando favicon...</p>}
+                    <FormDescription>Envie a imagem do favicon. Recomendado: PNG quadrado (32x32px ou 64x64px).</FormDescription>
+                    <FormMessage />
+                     {siteFaviconPreview && (
+                      <div className="mt-2 p-1 border rounded-md inline-block bg-muted">
+                        <Image src={siteFaviconPreview} alt="Pré-visualização do Favicon" width={32} height={32} />
+                      </div>
+                    )}
+                  </FormItem>
+                )}
+              />
+            </div>
+
+
           </CardContent>
         </Card>
 
@@ -285,7 +378,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
                   <FormField
                     control={form.control}
                     name={`socialLinks.${index}.customImageUrl`}
-                    render={({ field: customImageField }) => ( // field is for the hidden input storing data URI
+                    render={() => ( 
                       <FormItem>
                         <FormLabel>Imagem Customizada do Ícone (Opcional)</FormLabel>
                         <FormControl>
@@ -293,19 +386,17 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
                             type="file"
                             accept="image/png, image/jpeg, image/svg+xml, image/gif"
                             className="cursor-pointer"
-                            onChange={(e) => handleImageUpload(e, index, formField.platform)}
-                            disabled={isProcessingImage[formField.platform]}
+                            onChange={(e) => handleSocialImageUpload(e, index, formField.platform)}
+                            disabled={isProcessingSocialImage[formField.platform]}
                           />
                         </FormControl>
-                        {isProcessingImage[formField.platform] && <p className="text-xs text-muted-foreground flex items-center"><Loader2 className="mr-1 h-3 w-3 animate-spin"/> Processando...</p>}
+                        {isProcessingSocialImage[formField.platform] && <p className="text-xs text-muted-foreground flex items-center"><Loader2 className="mr-1 h-3 w-3 animate-spin"/> Processando...</p>}
                         <FormDescription>Envie uma imagem (PNG, JPG, SVG, GIF - max 64x64px recomendado). Se não enviar, o ícone padrão será usado.</FormDescription>
-                        {/* Hidden input to store the actual customImageUrl (data URI) value */}
                         <input type="hidden" {...form.register(`socialLinks.${index}.customImageUrl`)} />
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  {/* Hidden inputs for platform and label to ensure they are submitted */}
                   <input type="hidden" {...form.register(`socialLinks.${index}.platform`)} value={formField.platform} />
                   <input type="hidden" {...form.register(`socialLinks.${index}.label`)} value={formField.label} />
                 </div>
@@ -314,7 +405,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
           </CardContent>
         </Card>
 
-        <SubmitButton text="Salvar Configurações" pending={form.formState.isSubmitting || pending || Object.values(isProcessingImage).some(v => v)} />
+        <SubmitButton text="Salvar Configurações" pending={form.formState.isSubmitting || pending || isProcessingLogo || isProcessingFavicon || Object.values(isProcessingSocialImage).some(v => v)} />
          {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
            <p className="text-sm font-medium text-destructive">{state.error}</p>
         )}

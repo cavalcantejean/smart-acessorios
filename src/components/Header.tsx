@@ -3,18 +3,22 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, LogIn, UserPlus, LogOut, Tag, Ticket, ShoppingBag, LayoutDashboard, BookOpenText, UserCircle } from 'lucide-react';
+import { Heart, LogIn, UserPlus, LogOut, Tag, Ticket, ShoppingBag, LayoutDashboard, BookOpenText, UserCircle, Home } from 'lucide-react';
 import MobileNav from './MobileNav';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from './ui/button';
-import logoSrc from '@/img/logo.png';
+import logoSrc from '@/img/logo.png'; // Fallback static logo
+
+interface HeaderProps {
+  siteLogoUrl?: string;
+}
 
 function AuthDependentLinks() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <>
-      {isAuthenticated && user && ( // Ensure user object exists
+      {isAuthenticated && user && (
         <>
           <Link href={`/profile/${user.id}`} className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <UserCircle className="h-4 w-4" />
@@ -66,23 +70,27 @@ function AuthDependentLinks() {
 }
 
 
-export default function Header() {
+export default function Header({ siteLogoUrl }: HeaderProps) {
+  const currentLogoSrc = siteLogoUrl && siteLogoUrl.startsWith('data:image') ? siteLogoUrl : logoSrc;
+  const logoAltText = siteLogoUrl ? "Site Logo" : "SmartAcessorios Logo";
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-primary text-primary-foreground shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src={logoSrc}
-            alt="SmartAcessorios Logo"
-            width={239} // Intrinsic width of logo.png
-            height={40} // Intrinsic height of logo.png
+            src={currentLogoSrc}
+            alt={logoAltText}
+            width={siteLogoUrl ? 120 : 239} // Adjust width based on if custom logo is used
+            height={siteLogoUrl ? 30 : 40}  // Adjust height based on if custom logo is used
             priority={true}
-            className="h-8 w-auto" // CSS to set display height to 32px (h-8), width will adjust automatically
+            className="h-8 w-auto" 
+            style={{maxHeight: '40px', objectFit: 'contain'}} // Ensure logo fits
           />
         </Link>
         
         <div className="md:hidden">
-          <MobileNav />
+          <MobileNav siteLogoUrl={siteLogoUrl} />
         </div>
 
         <nav className="hidden md:flex items-center gap-2 text-xs sm:text-sm lg:gap-4">

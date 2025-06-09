@@ -145,4 +145,6 @@ export interface SiteSettings {
   siteTitle: string;
   siteDescription: string;
   socialLinks: SocialLinkSetting[];
+  siteLogoUrl?: string;
+  siteFaviconUrl?: string;
 }

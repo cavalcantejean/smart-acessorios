@@ -12,13 +12,20 @@ import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import logoSrc from '@/img/logo.png';
+import logoSrc from '@/img/logo.png'; // Fallback static logo
 
-export default function MobileNav() {
+interface MobileNavProps {
+  siteLogoUrl?: string;
+}
+
+export default function MobileNav({ siteLogoUrl }: MobileNavProps) {
   const [categories, setCategories] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, isAdmin, logout, isLoading: isLoadingAuth } = useAuth();
+
+  const currentLogoSrc = siteLogoUrl && siteLogoUrl.startsWith('data:image') ? siteLogoUrl : logoSrc;
+  const logoAltText = siteLogoUrl ? "Site Logo" : "SmartAcessorios Logo";
 
   useEffect(() => {
     setCategories(getUniqueCategories());
@@ -69,12 +76,13 @@ export default function MobileNav() {
         <SheetHeader className="p-4 border-b">
           <Link href="/" className="flex items-center" onClick={handleLinkClick}>
             <Image
-              src={logoSrc} 
-              alt="SmartAcessorios Logo"
-              width={239} 
-              height={40} 
+              src={currentLogoSrc} 
+              alt={logoAltText}
+              width={siteLogoUrl ? 120 : 239}
+              height={siteLogoUrl ? 30 : 40}
               priority={true}
-              className="h-10 w-auto" 
+              className="h-10 w-auto"
+              style={{maxHeight: '40px', objectFit: 'contain'}}
             />
           </Link>
         </SheetHeader>

@@ -22,19 +22,21 @@ export async function updateSettingsAction(
   const rawFormData: Record<string, any> = {
     siteTitle: formData.get('siteTitle'),
     siteDescription: formData.get('siteDescription'),
+    siteLogoUrl: formData.get('siteLogoUrl'),
+    siteFaviconUrl: formData.get('siteFaviconUrl'),
     socialLinks: [],
   };
 
-  const baseLinks = getBaseSocialLinkSettings(); // To know how many links to expect
+  const baseLinks = getBaseSocialLinkSettings(); 
   const submittedSocialLinks: Partial<SettingsFormValues['socialLinks'][0]>[] = [];
 
   baseLinks.forEach((_, index) => {
     const platform = formData.get(`socialLinks[${index}].platform`) as string;
-    const label = formData.get(`socialLinks[${index}].label`) as string; // Label is also submitted
+    const label = formData.get(`socialLinks[${index}].label`) as string;
     const url = formData.get(`socialLinks[${index}].url`) as string;
     const customImageUrl = formData.get(`socialLinks[${index}].customImageUrl`) as string;
 
-    if (platform) { // Platform must exist
+    if (platform) { 
       submittedSocialLinks.push({ platform, label, url, customImageUrl });
     }
   });
@@ -55,21 +57,21 @@ export async function updateSettingsAction(
   try {
     const currentSettings = getSiteSettings();
     
-    // Map over current settings to preserve IconComponent and placeholderUrl,
-    // then update with validated data.
     const updatedSocialLinks = currentSettings.socialLinks.map(currentLink => {
       const submittedLink = validatedFields.data.socialLinks.find(sl => sl.platform === currentLink.platform);
       return {
-        ...currentLink, // Keeps IconComponent, placeholderUrl, and original label
+        ...currentLink, 
         url: submittedLink?.url || '',
-        customImageUrl: submittedLink?.customImageUrl || '', // Update custom image URL
-        label: submittedLink?.label || currentLink.label, // Update label if submitted
+        customImageUrl: submittedLink?.customImageUrl || '',
+        label: submittedLink?.label || currentLink.label, 
       };
     });
 
     const newSettingsData: SiteSettings = {
       siteTitle: validatedFields.data.siteTitle,
       siteDescription: validatedFields.data.siteDescription,
+      siteLogoUrl: validatedFields.data.siteLogoUrl || '',
+      siteFaviconUrl: validatedFields.data.siteFaviconUrl || '',
       socialLinks: updatedSocialLinks,
     };
     

@@ -1,7 +1,6 @@
 
-import { getSiteSettings, getBaseSocialLinkSettings } from '@/lib/data';
-import type { SiteSettings, SocialLinkSetting } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getSiteSettings } from '@/lib/data';
+import type { SiteSettings } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
@@ -14,39 +13,37 @@ export const metadata: Metadata = {
   description: 'Gerencie as configurações gerais do site.',
 };
 
-// This interface is for the data passed to the client component form.
-// It includes everything the form needs to render, including fallbacks.
 export interface SocialLinkFormData {
   platform: string;
   label: string;
   url: string;
-  placeholderUrl: string;
+  placeholderUrl: string; // Kept for consistency if needed, though IconComponent is client-side now
   customImageUrl?: string;
-  // IconComponent is NOT passed to client, client will look it up if needed for fallback display
 }
 
 export interface SettingsFormDataForClient {
   siteTitle: string;
   siteDescription: string;
+  siteLogoUrl?: string;
+  siteFaviconUrl?: string;
   socialLinks: SocialLinkFormData[];
 }
 
 
 export default async function SiteSettingsPage() {
-  const currentSettings = getSiteSettings(); // This has IconComponent and customImageUrl from data store
+  const currentSettings = getSiteSettings(); 
   
-  // Prepare data specifically for the client component form.
-  // We pass all necessary display and value data.
   const initialDataForForm: SettingsFormDataForClient = {
     siteTitle: currentSettings.siteTitle,
     siteDescription: currentSettings.siteDescription,
+    siteLogoUrl: currentSettings.siteLogoUrl || '',
+    siteFaviconUrl: currentSettings.siteFaviconUrl || '',
     socialLinks: currentSettings.socialLinks.map(link => ({
       platform: link.platform,
-      label: link.label, // Label comes from currentSettings (which is from base)
+      label: link.label, 
       url: link.url || '',
-      placeholderUrl: link.placeholderUrl, // placeholderUrl from currentSettings
+      placeholderUrl: link.placeholderUrl, 
       customImageUrl: link.customImageUrl || '',
-      // IconComponent is NOT included here for client component props
     })),
   };
 

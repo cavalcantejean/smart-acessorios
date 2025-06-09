@@ -227,6 +227,8 @@ let mockPosts: Post[] = [
 let siteSettings: SiteSettings = {
   siteTitle: 'SmartAcessorios',
   siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
+  siteLogoUrl: '', // Initialize with empty string or a default data URI if available
+  siteFaviconUrl: '', // Initialize with empty string or a default data URI
   socialLinks: [
     { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", IconComponent: Facebook, placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
     { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", IconComponent: Instagram, placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
@@ -245,19 +247,13 @@ let siteSettings: SiteSettings = {
 };
 
 export function getSiteSettings(): SiteSettings {
-  // Return a deep copy to prevent direct modification of the mock data,
-  // ensuring IconComponent is preserved correctly.
   return {
     ...siteSettings,
     socialLinks: siteSettings.socialLinks.map(link => ({ ...link }))
   };
 }
 
-// Helper to get the original social link definitions with IconComponents
 export function getBaseSocialLinkSettings(): SocialLinkSetting[] {
-    // This function now directly returns the current state of socialLinks
-    // from siteSettings, as it includes all necessary fields including IconComponent.
-    // The customImageUrl is part of this state.
     return siteSettings.socialLinks.map(link => ({ ...link }));
 }
 
@@ -269,19 +265,24 @@ export function updateSiteSettings(newSettings: Partial<SiteSettings>): SiteSett
   if (newSettings.siteDescription !== undefined) {
     siteSettings.siteDescription = newSettings.siteDescription;
   }
+  if (newSettings.siteLogoUrl !== undefined) {
+    siteSettings.siteLogoUrl = newSettings.siteLogoUrl;
+  }
+  if (newSettings.siteFaviconUrl !== undefined) {
+    siteSettings.siteFaviconUrl = newSettings.siteFaviconUrl;
+  }
+
   if (newSettings.socialLinks) {
-    // The newSettings.socialLinks from the form will include platform, url, and customImageUrl.
-    // We need to merge this with the existing IconComponent and placeholderUrl from the current settings.
     siteSettings.socialLinks = siteSettings.socialLinks.map(currentLink => {
       const submittedLinkData = newSettings.socialLinks.find(sl => sl.platform === currentLink.platform);
       return {
-        ...currentLink, // Retains IconComponent, placeholderUrl, label
+        ...currentLink,
         url: submittedLinkData?.url !== undefined ? submittedLinkData.url : currentLink.url,
         customImageUrl: submittedLinkData?.customImageUrl !== undefined ? submittedLinkData.customImageUrl : currentLink.customImageUrl,
       };
     });
   }
-  return getSiteSettings(); // Return a deep copy
+  return getSiteSettings();
 }
 // --- End Site Settings ---
 
@@ -291,7 +292,7 @@ export function getUserById(id: string): User | undefined {
   if (user) {
     return {
       ...user,
-      badges: user.badges || [], // Ensure badges array exists
+      badges: user.badges || [], 
     };
   }
   return undefined;
@@ -310,10 +311,8 @@ export function getUserByEmail(email: string): User | undefined {
 
 export function addUser(user: User): boolean {
   if (getUserByEmail(user.email)) {
-    return false; // User already exists
+    return false; 
   }
-  // For this mock, we add to the array.
-  // Ensure new users have empty arrays for followers, following, and badges.
   const newUserWithDefaults = {
     ...user,
     followers: [],
@@ -348,17 +347,16 @@ export function toggleLikeOnAccessory(accessoryId: string, userId: string): { li
     return null;
   }
   const accessory = accessories[accessoryIndex];
-  // Ensure likedBy array exists
   accessory.likedBy = accessory.likedBy || [];
   const userIndex = accessory.likedBy.indexOf(userId);
 
   if (userIndex > -1) {
-    accessory.likedBy.splice(userIndex, 1); // Unlike
+    accessory.likedBy.splice(userIndex, 1); 
   } else {
-    accessory.likedBy.push(userId); // Like
+    accessory.likedBy.push(userId); 
   }
   accessories[accessoryIndex] = { ...accessory };
-  checkAndAwardBadges(userId); // Check for badges after liking/unliking
+  checkAndAwardBadges(userId); 
   return { likedBy: [...accessory.likedBy], likesCount: accessory.likedBy.length };
 }
 
@@ -391,7 +389,7 @@ export function addCommentToAccessoryData(
     ...accessories[accessoryIndex],
     comments: [...accessories[accessoryIndex].comments]
   };
-  if (status === 'approved') { // Only award for approved comments
+  if (status === 'approved') { 
     checkAndAwardBadges(userId);
   }
   return newComment;
@@ -423,7 +421,6 @@ export function getTestimonials(): Testimonial[] {
   return testimonials;
 }
 
-// --- Blog Post Data Functions ---
 export function getAllPosts(): Post[] {
   return mockPosts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 }
@@ -448,7 +445,7 @@ export function addPost(postData: Omit<Post, 'id'>): Post {
                    ? new Date(postData.publishedAt).toISOString()
                    : new Date().toISOString(),
     tags: postData.tags || [],
-    embedHtml: postData.embedHtml || '', // Ensure embedHtml is initialized
+    embedHtml: postData.embedHtml || '', 
   };
   mockPosts.unshift(newPost);
   return newPost;
@@ -462,7 +459,7 @@ export function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>):
   const updatedPost = {
     ...mockPosts[postIndex],
     ...postData,
-    embedHtml: postData.embedHtml !== undefined ? postData.embedHtml : mockPosts[postIndex].embedHtml, // Handle embedHtml update
+    embedHtml: postData.embedHtml !== undefined ? postData.embedHtml : mockPosts[postIndex].embedHtml,
   };
   if (postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())) {
     updatedPost.publishedAt = new Date(postData.publishedAt).toISOString();
@@ -479,7 +476,6 @@ export function deletePost(postId: string): boolean {
   mockPosts = mockPosts.filter(p => p.id !== postId);
   return mockPosts.length < initialLength;
 }
-// --- End Blog Post Data Functions ---
 
 
 export function toggleFollowUser(currentUserId: string, targetUserId: string): { isFollowing: boolean; targetFollowersCount: number } | null {
@@ -511,7 +507,6 @@ export function toggleFollowUser(currentUserId: string, targetUserId: string): {
   mockUsers[currentUserIndex] = { ...currentUser };
   mockUsers[targetUserIndex] = { ...targetUser };
 
-  // Check badges for both users after a follow/unfollow action
   checkAndAwardBadges(currentUserId);
   checkAndAwardBadges(targetUserId);
 
@@ -521,7 +516,6 @@ export function toggleFollowUser(currentUserId: string, targetUserId: string): {
   };
 }
 
-// Badge Awarding Logic
 export function checkAndAwardBadges(userId: string): void {
   const userIndex = mockUsers.findIndex(u => u.id === userId);
   if (userIndex === -1) {
@@ -530,7 +524,6 @@ export function checkAndAwardBadges(userId: string): void {
   }
 
   let user = mockUsers[userIndex];
-  // Ensure user.badges is an array
   user.badges = Array.isArray(user.badges) ? user.badges : [];
 
   const criteriaData = generateBadgeCriteriaData(user);
@@ -545,11 +538,10 @@ export function checkAndAwardBadges(userId: string): void {
   });
 
   if (badgesUpdated) {
-    mockUsers[userIndex] = { ...user, badges: [...(user.badges || [])] }; // Ensure a new reference for state updates if needed
+    mockUsers[userIndex] = { ...user, badges: [...(user.badges || [])] }; 
   }
 }
 
-// Function to get all users (needed for some badge criteria or admin views)
 export function getAllUsers(): User[] {
   return mockUsers.map(user => ({
     ...user,
@@ -557,19 +549,16 @@ export function getAllUsers(): User[] {
   }));
 }
 
-// Function to toggle admin status for a user
 export function toggleUserAdminStatus(userId: string): User | null {
   const userIndex = mockUsers.findIndex(u => u.id === userId);
   if (userIndex === -1) {
     return null;
   }
   mockUsers[userIndex].isAdmin = !mockUsers[userIndex].isAdmin;
-  // Create a new object reference for the updated user to help with state updates if necessary
   mockUsers[userIndex] = { ...mockUsers[userIndex] };
   return mockUsers[userIndex];
 }
 
-// --- Content Moderation Data Functions ---
 
 export function getPendingComments(): PendingCommentDisplay[] {
   const pending: PendingCommentDisplay[] = [];
@@ -577,7 +566,7 @@ export function getPendingComments(): PendingCommentDisplay[] {
     (acc.comments || []).forEach(comment => {
       if (comment.status === 'pending_review') {
         pending.push({
-          comment: { ...comment }, // Create a new object reference
+          comment: { ...comment }, 
           accessoryId: acc.id,
           accessoryName: acc.name,
         });
@@ -610,11 +599,9 @@ export function updateCommentStatus(
     return null;
   }
 
-  // Update status
   accessory.comments[commentIndex].status = newStatus;
   const updatedComment = { ...accessory.comments[commentIndex] };
 
-  // Ensure changes are reflected in the main 'accessories' array by creating new references
   const updatedComments = [...accessory.comments];
   updatedComments[commentIndex] = updatedComment;
   accessories[accessoryIndex] = { ...accessory, comments: updatedComments };
@@ -627,81 +614,7 @@ export function updateCommentStatus(
   return updatedComment;
 }
 
-// --- Analytics Data Functions ---
-export function getTotalUsersCount(): number {
-  return mockUsers.length;
-}
-
-export function getTotalAccessoriesCount(): number {
-  return accessories.length;
-}
-
-export function getTotalApprovedCommentsCount(): number {
-  let count = 0;
-  accessories.forEach(acc => {
-    count += (acc.comments || []).filter(c => c.status === 'approved').length;
-  });
-  return count;
-}
-
-export function getAccessoriesPerCategory(): CategoryCount[] {
-  const categoryMap: Record<string, number> = {};
-  accessories.forEach(acc => {
-    if (acc.category) {
-      categoryMap[acc.category] = (categoryMap[acc.category] || 0) + 1;
-    } else {
-      categoryMap['Sem Categoria'] = (categoryMap['Sem Categoria'] || 0) + 1;
-    }
-  });
-  return Object.entries(categoryMap).map(([category, count]) => ({ category, count })).sort((a,b) => b.count - a.count);
-}
-
-export function getMostLikedAccessories(limit: number = 5): TopAccessoryInfo[] {
-  return [...accessories]
-    .sort((a, b) => (b.likedBy?.length || 0) - (a.likedBy?.length || 0))
-    .slice(0, limit)
-    .map(acc => ({
-      id: acc.id,
-      name: acc.name,
-      count: acc.likedBy?.length || 0,
-      imageUrl: acc.imageUrl
-    }));
-}
-
-export function getMostCommentedAccessories(limit: number = 5): TopAccessoryInfo[] {
-  return [...accessories]
-    .map(acc => ({
-      ...acc,
-      approvedCommentsCount: (acc.comments || []).filter(c => c.status === 'approved').length
-    }))
-    .sort((a, b) => b.approvedCommentsCount - a.approvedCommentsCount)
-    .slice(0, limit)
-    .map(acc => ({
-      id: acc.id,
-      name: acc.name,
-      count: acc.approvedCommentsCount,
-      imageUrl: acc.imageUrl
-    }));
-}
-
-export function getRecentComments(limit: number = 5): RecentCommentInfo[] {
-  const allApprovedComments: RecentCommentInfo[] = [];
-  accessories.forEach(acc => {
-    (acc.comments || []).forEach(comment => {
-      if (comment.status === 'approved') {
-        allApprovedComments.push({
-          ...comment,
-          accessoryName: acc.name,
-          accessoryId: acc.id,
-        });
-      }
-    });
-  });
-  return allApprovedComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
-}
-
 export async function getAnalyticsData(): Promise<AnalyticsData> {
-  // Simulate async data fetching if needed, though current functions are sync
   return {
     totalUsers: getTotalUsersCount(),
     totalAccessories: getTotalAccessoriesCount(),
@@ -713,7 +626,6 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   };
 }
 
-// --- Accessory Management Data Functions ---
 export function addAccessory(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'isDeal'> & { isDeal?: boolean }): Accessory {
   const newAccessory: Accessory = {
     id: `acc-${Date.now()}`,
@@ -748,7 +660,7 @@ export function updateAccessory(accessoryId: string, accessoryData: Partial<Omit
   accessories[accessoryIndex] = {
     ...accessories[accessoryIndex],
     ...updatedAccessoryData,
-    embedHtml: accessoryData.embedHtml !== undefined ? accessoryData.embedHtml : accessories[accessoryIndex].embedHtml, // Manter o valor antigo se não fornecido
+    embedHtml: accessoryData.embedHtml !== undefined ? accessoryData.embedHtml : accessories[accessoryIndex].embedHtml, 
   };
   return accessories[accessoryIndex];
 }
@@ -758,3 +670,4 @@ export function deleteAccessory(accessoryId: string): boolean {
   accessories = accessories.filter(acc => acc.id !== accessoryId);
   return accessories.length < initialLength;
 }
+
