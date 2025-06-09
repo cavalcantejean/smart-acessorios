@@ -146,7 +146,7 @@ export default function AdminDashboardPage() {
             <Button asChild className="w-full" variant="outline" disabled>
               <Link href="/admin/settings">Acessar Configurações</Link>
             </Button>
-             <p className="text-xs text-center mt-2 text-muted-foreground">Em breve</p>
+            <p className="text-xs text-center mt-2 text-muted-foreground">Em breve</p>
           </CardContent>
         </Card>
 
