@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, MessageCircle } from "lucide-react";
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, startTransition } from "react"; // Added startTransition
 import { addCommentAccessoryAction } from "@/app/accessory/[id]/actions";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -84,7 +84,9 @@ export default function CommentsSection({ accessoryId, comments: initialComments
     formData.append("commentText", data.commentText);
     formData.append("userId", user.id);
     formData.append("userName", user.name);
-    formAction(formData);
+    startTransition(() => {
+      formAction(formData);
+    });
   };
 
   const formatDate = (dateString: string) => {

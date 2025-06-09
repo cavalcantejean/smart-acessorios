@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState } from "react";
+import { useEffect, useActionState, startTransition } from "react"; // Added startTransition
 import { useFormStatus } from "react-dom";
 import { useAuth } from '@/hooks/useAuth';
 import type { AuthUser } from "@/lib/types";
@@ -119,13 +119,15 @@ export default function LoginForm({ formAction, title, description, submitButton
         <Form {...form}>
           <form
             action={dispatch}
-            className="space-y-4" // Adjusted space-y
+            className="space-y-4" 
             onSubmit={form.handleSubmit(() => {
                 const formData = new FormData();
                 const values = form.getValues();
                 formData.append('email', values.email);
                 formData.append('password', values.password);
-                dispatch(formData);
+                startTransition(() => {
+                  dispatch(formData);
+                });
             })}
           >
             <FormField

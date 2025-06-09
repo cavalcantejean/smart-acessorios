@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, startTransition } from 'react'; // Added startTransition
 import { Button } from '@/components/ui/button';
 import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
 import type { toggleFollowAction } from '@/app/profile/actions'; // Type only import
@@ -66,7 +66,9 @@ export default function FollowButton({
     const formData = new FormData();
     formData.append('currentUserId', currentUserId);
     formData.append('targetUserId', targetUserId);
-    handleFormAction(formData);
+    startTransition(() => {
+      handleFormAction(formData);
+    });
   };
 
   return (

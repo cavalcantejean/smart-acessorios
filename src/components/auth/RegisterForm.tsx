@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState } from "react";
+import { useEffect, useActionState, startTransition } from "react"; // Added startTransition
 import { useFormStatus } from "react-dom";
 import type { AuthUser } from "@/lib/types";
 // import { useAuth } from '@/hooks/useAuth'; // Uncomment if auto-login after register is desired
@@ -143,11 +143,9 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 formData.append('email', values.email);
                 formData.append('password', values.password);
                 formData.append('confirmPassword', values.confirmPassword);
-                // Add any other fields needed by the specific registration action
-                // For example, if an adminSecretKey was part of this form (it's not anymore)
-                // const adminSecretKeyInput = document.querySelector('input[name="adminSecretKey"]') as HTMLInputElement;
-                // if (adminSecretKeyInput) formData.append('adminSecretKey', adminSecretKeyInput.value);
-                dispatch(formData);
+                startTransition(() => {
+                  dispatch(formData);
+                });
             })}
           >
             <FormField
@@ -202,8 +200,6 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 </FormItem>
               )}
             />
-            {/* Children prop can be used here if RegisterForm was designed to accept custom fields */}
-            {/* {children}  */}
             <SubmitButton text={submitButtonText} />
             {state && !state.success && state.message && Object.keys(form.formState.errors).length === 0 && (
                  <p className="text-sm font-medium text-destructive text-center">{state.message}</p>
@@ -222,4 +218,3 @@ export default function RegisterForm({ formAction, title, description, submitBut
     </Card>
   );
 }
-
