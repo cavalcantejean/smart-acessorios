@@ -20,14 +20,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
 import { useActionState, useEffect, startTransition, useRef } from "react";
 import { useFormStatus } from "react-dom";
-import type { SiteSettings, SocialLinkSetting } from "@/lib/types";
 import type { SettingsActionResult } from "../actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { getBaseSocialLinkSettings } from "@/lib/data"; // Import to get IconComponents
+import type { SettingsFormDataForClient } from "../page"; // Import the specific type for initialData
 
+// The initialData prop now uses SettingsFormDataForClient which doesn't include IconComponent
 interface SettingsFormProps {
   formAction: (prevState: SettingsActionResult | null, formData: FormData) => Promise<SettingsActionResult>;
-  initialData: SiteSettings; // Full SiteSettings including IconComponent
+  initialData: SettingsFormDataForClient;
 }
 
 const initialState: SettingsActionResult = { success: false };
@@ -45,9 +46,11 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
   const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const { pending } = useFormStatus(); // For global form pending state
+  const { pending } = useFormStatus();
 
-  // Prepare initial form values from SiteSettings, excluding IconComponent for form data
+  // Full base settings including IconComponent, fetched on client
+  const baseSocialLinksWithIcons = getBaseSocialLinkSettings();
+
   const initialFormValues: SettingsFormValues = {
     siteTitle: initialData.siteTitle,
     siteDescription: initialData.siteDescription,
@@ -55,7 +58,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
       platform: sl.platform,
       label: sl.label,
       url: sl.url,
-      // placeholderUrl and IconComponent are not part of form values, but used for rendering
+      // placeholderUrl is part of baseSocialLinksWithIcons, not directly in form values but used for rendering
     })),
   };
 
@@ -64,10 +67,6 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
     defaultValues: initialFormValues,
   });
 
-  // `fields` from useFieldArray contains the IconComponent from `initialData`
-  // because `control` is passed to useFieldArray, and defaultValues from useForm
-  // are based on `initialData` which has `IconComponent`.
-  // We need to use the `initialData.socialLinks` for rendering icons.
   const { fields: socialLinkFields } = useFieldArray({
     control: form.control,
     name: "socialLinks",
@@ -79,7 +78,6 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
       if (state.success) {
         toast({ title: "Sucesso!", description: state.message });
         if (state.updatedSettings) {
-          // Reset form with updated values to reflect changes
           form.reset({
             siteTitle: state.updatedSettings.siteTitle,
             siteDescription: state.updatedSettings.siteDescription,
@@ -98,7 +96,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
         });
         state.errors?.forEach(issue => {
           const path = issue.path.join('.') as keyof SettingsFormValues | `socialLinks.${number}.url`;
-          form.setError(path as any, { // Use 'any' for path due to dynamic nature of array field errors
+          form.setError(path as any, { 
             type: "server",
             message: issue.message,
           });
@@ -113,7 +111,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
     formData.append('siteDescription', data.siteDescription);
     data.socialLinks.forEach((link, index) => {
       formData.append(`socialLinks[${index}].platform`, link.platform);
-      formData.append(`socialLinks[${index}].label`, link.label);
+      formData.append(`socialLinks[${index}].label`, link.label); // label is now from form state
       formData.append(`socialLinks[${index}].url`, link.url || '');
     });
     startTransition(() => {
@@ -172,33 +170,33 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
             <CardDescription>Gerencie os links para suas redes sociais que aparecem no rodapé. Deixe a URL em branco para ocultar um ícone.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {socialLinkFields.map((field, index) => {
-              // Get the original SocialLinkSetting from initialData to access IconComponent
-              const originalLinkData = initialData.socialLinks.find(l => l.platform === field.platform);
-              const Icon = originalLinkData?.IconComponent;
+            {socialLinkFields.map((formField, index) => {
+              // Find the full base link data (which includes IconComponent) using platform from formField
+              const baseLinkData = baseSocialLinksWithIcons.find(b => b.platform === formField.platform);
+              const Icon = baseLinkData?.IconComponent;
 
               return (
                 <FormField
-                  key={field.id} // platform can be used as key if stable
+                  key={formField.id} 
                   control={form.control}
                   name={`socialLinks.${index}.url`}
                   render={({ field: urlField }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         {Icon && <Icon className="h-5 w-5 text-muted-foreground" />}
-                        {originalLinkData?.label || field.platform}
+                        {/* Use label from form's defaultValues (derived from initialData) or baseLinkData as fallback */}
+                        {form.getValues(`socialLinks.${index}.label`) || baseLinkData?.label || formField.platform}
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="url"
-                          placeholder={originalLinkData?.placeholderUrl || `https://exemplo.com/${field.platform.toLowerCase()}`}
+                          placeholder={baseLinkData?.placeholderUrl || `https://exemplo.com/${formField.platform.toLowerCase()}`}
                           {...urlField}
-                          value={urlField.value || ''} // Ensure controlled component even if url is undefined
+                          value={urlField.value || ''}
                         />
                       </FormControl>
-                       {/* Hidden fields to ensure platform and label are submitted */}
-                      <input type="hidden" {...form.register(`socialLinks.${index}.platform`)} value={field.platform} />
-                      <input type="hidden" {...form.register(`socialLinks.${index}.label`)} value={originalLinkData?.label || field.platform} />
+                      <input type="hidden" {...form.register(`socialLinks.${index}.platform`)} value={formField.platform} />
+                      <input type="hidden" {...form.register(`socialLinks.${index}.label`)} value={form.getValues(`socialLinks.${index}.label`) || baseLinkData?.label || formField.platform} />
                       <FormMessage />
                     </FormItem>
                   )}

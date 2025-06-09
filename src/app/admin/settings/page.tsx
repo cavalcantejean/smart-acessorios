@@ -1,6 +1,6 @@
 
 import { getSiteSettings, getBaseSocialLinkSettings } from '@/lib/data';
-import type { SiteSettings } from '@/lib/types';
+import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; // Keep SiteSettings for general structure
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -14,19 +14,38 @@ export const metadata: Metadata = {
   description: 'Gerencie as configurações gerais do site.',
 };
 
-export default async function SiteSettingsPage() {
-  // Fetch initial settings to pass to the form
-  // We need the full social link definitions including IconComponent for the form labels
-  const currentSettings = getSiteSettings(); // Gets URLs
-  const baseSocialLinks = getBaseSocialLinkSettings(); // Gets structure with Icons
+// Define a type for the data being passed to the client component
+// This excludes non-serializable parts like IconComponent
+interface SerializableSocialLinkForForm {
+  platform: string;
+  label: string;
+  url: string;
+  placeholderUrl: string;
+}
 
-  const initialDataForForm: SiteSettings = {
-    ...currentSettings,
+export interface SettingsFormDataForClient {
+  siteTitle: string;
+  siteDescription: string;
+  socialLinks: SerializableSocialLinkForForm[];
+}
+
+
+export default async function SiteSettingsPage() {
+  const currentSettings = getSiteSettings(); 
+  const baseSocialLinks = getBaseSocialLinkSettings(); // This has IconComponent, used for labels/placeholders
+
+  // Prepare data specifically for the client component, stripping non-serializable parts
+  const initialDataForForm: SettingsFormDataForClient = {
+    siteTitle: currentSettings.siteTitle,
+    siteDescription: currentSettings.siteDescription,
     socialLinks: baseSocialLinks.map(baseLink => {
-      const currentLink = currentSettings.socialLinks.find(sl => sl.platform === baseLink.platform);
+      const currentLinkData = currentSettings.socialLinks.find(sl => sl.platform === baseLink.platform);
       return {
-        ...baseLink, // This has IconComponent and placeholderUrl
-        url: currentLink?.url || '', // Use current URL if available
+        platform: baseLink.platform,
+        label: baseLink.label,
+        url: currentLinkData?.url || '', // Use current URL if available, else empty
+        placeholderUrl: baseLink.placeholderUrl,
+        // IconComponent is NOT included here
       };
     }),
   };
