@@ -10,8 +10,8 @@ import Link from 'next/link';
 import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft, ThumbsUp } from 'lucide-react';
 import { summarizeAccessoryDescriptionAction, toggleLikeAccessoryAction } from '../actions';
 import FavoriteButton from '@/components/FavoriteButton';
-import LikeButton from '@/components/LikeButton'; 
-import CommentsSection from '@/components/CommentsSection'; 
+import LikeButton from '@/components/LikeButton';
+import CommentsSection from '@/components/CommentsSection';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
 
@@ -37,12 +37,12 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
   const [isFavorite, setIsFavorite] = useState(isFavoriteInitial);
 
   const { toast } = useToast();
-  const { user, isAuthenticated, isLoading: isLoadingAuth } = useAuth();
+  const { user, isAuthenticated, isAdmin, isLoading: isLoadingAuth } = useAuth(); // Added isAdmin
 
   const [likeState, handleLikeAction, isLikePending] = useActionState(toggleLikeAccessoryAction, initialLikeActionState);
   const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(false);
   const [currentLikesCount, setCurrentLikesCount] = useState(0);
-  
+
   const [currentComments, setCurrentComments] = useState<Comment[]>([]);
 
   useEffect(() => {
@@ -51,7 +51,6 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     setIsFavorite(isFavoriteInitial);
     setCurrentLikesCount(initialAccessory.likedBy?.length || 0);
     setIsLikedByCurrentUser(isAuthenticated && user ? initialAccessory.likedBy?.includes(user.id) : false);
-    // Initialize with only approved comments for display
     setCurrentComments(initialAccessory.comments?.filter(c => c.status === 'approved') || []);
   }, [initialAccessory, isFavoriteInitial, isAuthenticated, user]);
 
@@ -94,17 +93,11 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     formData.append('userId', user.id);
     handleLikeAction(formData);
   };
-  
-  // This callback is now only for *approved* comments added via CommentsSection
+
   const handleCommentAdded = (newComment: Comment) => {
     if (newComment.status === 'approved') {
       setCurrentComments(prevComments => [...prevComments, newComment]);
-      // Update the main accessory object if it's re-fetched or passed around
-      // For now, we only update the local `currentComments` for display.
-      // The full accessory object in `initialAccessory` might become stale for comments
-      // if not re-fetched from server on subsequent visits.
     }
-    // Pending comments are handled by CommentsSection's toast
   };
 
 
@@ -178,7 +171,7 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
                 />
             )}
         </div>
-        
+
         {accessory.category && (
           <p className="text-sm text-muted-foreground">Categoria: {accessory.category}</p>
         )}
@@ -190,8 +183,8 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
           <h3 className="text-lg font-semibold">Resumo</h3>
           <p className="text-muted-foreground text-sm leading-relaxed">{currentSummary}</p>
         </div>
-        
-        {accessory.fullDescription && accessory.fullDescription !== currentSummary && (
+
+        {!isLoadingAuth && isAuthenticated && isAdmin && accessory.fullDescription && accessory.fullDescription !== currentSummary && (
           <Button onClick={handleGenerateSummary} disabled={isLoadingSummary} variant="outline" className="w-full sm:w-auto">
             {isLoadingSummary ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -201,7 +194,7 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
             {isLoadingSummary ? 'Gerando...' : (currentSummary === accessory.aiSummary || currentSummary === accessory.shortDescription ? 'Gerar Resumo com IA' : 'Gerar Novo Resumo com IA')}
           </Button>
         )}
-        
+
         {accessory.fullDescription && (
            <details className="mt-4">
             <summary className="cursor-pointer text-sm text-primary hover:underline">Ver Descrição Completa</summary>
@@ -211,7 +204,7 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
 
         <CommentsSection
           accessoryId={accessory.id}
-          comments={currentComments} // Pass only approved comments initially, will be updated by onCommentAdded for new approved ones
+          comments={currentComments}
           onCommentAdded={handleCommentAdded}
         />
       </CardContent>
