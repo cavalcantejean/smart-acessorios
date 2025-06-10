@@ -3,8 +3,8 @@
 
 import type { RegisterFormState } from '@/components/auth/RegisterForm';
 import { z } from 'zod';
-import type { AuthUser, User } from '@/lib/types'; // Import User type as well for Firestore data structure
-import { db } from '@/lib/firebase';
+import type { AuthUser, User } from '@/lib/types';
+import { db } from '@/lib/firebase'; // Importa a instância db
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const RegisterSchema = z.object({
@@ -21,11 +21,15 @@ export async function registerUserAction(
   prevState: RegisterFormState,
   formData: FormData
 ): Promise<RegisterFormState> {
+  console.log("--- registerUserAction Server Action START ---");
+  console.log("Checking 'db' instance from firebase.ts:", db ? "db IS VALID" : "db IS NULL or UNDEFINED");
+
   const validatedFields = RegisterSchema.safeParse(
     Object.fromEntries(formData.entries())
   );
 
   if (!validatedFields.success) {
+    console.log("Validation failed in registerUserAction.");
     return {
       message: "Dados de cadastro inválidos. Verifique os campos.",
       success: false,
@@ -39,17 +43,30 @@ export async function registerUserAction(
   }
 
   const { name, email, password } = validatedFields.data;
-  const lowercasedEmail = email.toLowerCase(); // Use lowercase for consistent querying
+  const lowercasedEmail = email.toLowerCase();
 
   console.log("Attempting User Registration with Firestore:", { name, email: lowercasedEmail });
   
+  // Verificação crucial antes do try-catch para Firestore
+  if (!db) {
+    console.error("!!! CRITICAL: Firestore 'db' instance is not available in registerUserAction. Registration aborted. Check firebase.ts logs. !!!");
+    return {
+      message: "Erro crítico na configuração do banco de dados. Contate o suporte.",
+      success: false,
+      fields: { name, email: lowercasedEmail },
+      user: null,
+    };
+  }
+
   try {
+    console.log("Proceeding with Firestore operations in registerUserAction...");
     // 1. Check if user already exists in Firestore
     const usersRef = collection(db, "usuarios");
     const q = query(usersRef, where("email", "==", lowercasedEmail));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
+      console.log("User email already exists in Firestore.");
       return {
         message: "Este e-mail já está cadastrado.",
         success: false,
@@ -62,25 +79,21 @@ export async function registerUserAction(
     // 2. Add new user to Firestore
     const newUserId = doc(collection(db, "usuarios")).id; // Generate a new unique ID
 
-    const newUserFirestoreData: Omit<User, 'password'> & { password?: string; createdAt: any } = { // Password is still stored for mock compatibility
+    const newUserFirestoreData: Omit<User, 'password'> & { password?: string; createdAt: any } = { 
       id: newUserId,
       name,
       email: lowercasedEmail,
-      // ATENÇÃO: Armazenar senha em texto plano é INSEGURO.
-      // Isto é mantido apenas para compatibilidade com a estrutura mock atual.
-      // INTEGRE O FIREBASE AUTHENTICATION para um manuseio seguro de senhas.
-      password: password,
+      password: password, 
       isAdmin: false,
       followers: [],
       following: [],
       badges: [],
-      createdAt: serverTimestamp(), // Firestore server-side timestamp
-      // avatarUrl and bio can be added later or set to defaults if needed
+      createdAt: serverTimestamp(), 
     };
 
     await setDoc(doc(db, "usuarios", newUserId), newUserFirestoreData);
 
-    console.log("User registration successful with Firestore:", newUserFirestoreData);
+    console.log("User registration successful with Firestore:", newUserFirestoreData.id);
     
     const authUser: AuthUser = {
       id: newUserId,
@@ -96,14 +109,13 @@ export async function registerUserAction(
     };
 
   } catch (error) {
-    console.error("--- Firestore Registration Error ---");
+    console.error("--- Firestore Registration Error in registerUserAction CATCH BLOCK ---");
     console.error("Timestamp:", new Date().toISOString());
-    console.error("Input Data:", { name, email: lowercasedEmail }); // Log input that led to error
+    console.error("Input Data:", { name, email: lowercasedEmail }); 
     if (error instanceof Error) {
         console.error("Error Name:", error.name);
         console.error("Error Message:", error.message);
         console.error("Error Stack:", error.stack);
-        // Specific Firebase error properties
         if ('code' in error) {
           console.error("Firebase Error Code:", (error as any).code);
         }
@@ -113,9 +125,12 @@ export async function registerUserAction(
     console.error("--- End Firestore Registration Error ---");
 
     let clientErrorMessage = "Não foi possível registrar o usuário. Tente novamente.";
-    // Potentially customize clientErrorMessage based on specific Firebase error codes if desired later
-    // For example: if ((error as any).code === 'permission-denied') clientErrorMessage = "Permissão negada ao tentar registrar no banco de dados."
-
+    if (error instanceof Error && (error as any).code === 'permission-denied') {
+      clientErrorMessage = "Erro de permissão ao registrar no banco de dados. Verifique as regras de segurança do Firestore.";
+    } else if (error instanceof Error && error.message.includes("Failed to get document because the client is offline")) {
+      clientErrorMessage = "Falha na conexão com o banco de dados. Verifique sua internet ou tente mais tarde.";
+    }
+    
     return {
       message: clientErrorMessage,
       success: false,

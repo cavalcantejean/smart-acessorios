@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
@@ -18,15 +19,37 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let app: FirebaseApp;
+let db: Firestore; // Declarada aqui para ser acessível no catch e exportada
 
-// Prevent Firebase from initializing multiple times
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApp();
+try {
+  console.log("Attempting Firebase initialization...");
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+    console.log("Firebase app initialized successfully in firebase.ts.");
+  } else {
+    app = getApp();
+    console.log("Firebase app already initialized, getting existing app in firebase.ts.");
+  }
+
+  db = getFirestore(app);
+  if (db) {
+    console.log("Firestore 'db' instance obtained successfully in firebase.ts.");
+  } else {
+    console.error("!!! Critical Error: Firestore 'db' instance is NULL or UNDEFINED after getFirestore(app) in firebase.ts !!!");
+  }
+} catch (error) {
+  console.error("!!! Firebase/Firestore Initialization Error in firebase.ts !!!");
+  if (error instanceof Error) {
+    console.error("Error Name:", error.name);
+    console.error("Error Message:", error.message);
+    console.error("Error Stack:", error.stack);
+  } else {
+    console.error("Raw Error Object during Firebase init in firebase.ts:", error);
+  }
+  // db será undefined ou null aqui, o que causará problemas posteriores.
+  // Considere lançar o erro novamente ou ter uma estratégia de fallback se a inicialização falhar.
 }
 
-const db: Firestore = getFirestore(app);
 
 // If you want to use Firebase Analytics:
 // import { getAnalytics, type Analytics } from "firebase/analytics";
