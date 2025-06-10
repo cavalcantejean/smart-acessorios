@@ -1,22 +1,22 @@
 
 "use client";
 import React, { useState, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react';
-import { auth, db } from '@/lib/firebase'; 
-import { 
-  onAuthStateChanged, 
+import { auth, db } from '@/lib/firebase';
+import {
+  onAuthStateChanged,
   signOut,
-  type User as FirebaseUser 
+  type User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import type { AuthUser, UserFirestoreData } from '@/lib/types';
 
 interface AuthContextType {
   user: AuthUser | null;
-  firebaseUser: FirebaseUser | null; 
+  firebaseUser: FirebaseUser | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isLoading: boolean;
-  logout: () => Promise<void>; 
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,80 +24,76 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Começa como true
 
   useEffect(() => {
     console.log("useAuth: Setting up onAuthStateChanged listener.");
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      console.log("useAuth: onAuthStateChanged triggered. fbUser:", fbUser ? fbUser.uid : "null");
-      setIsLoading(true);
+      console.log("useAuth: onAuthStateChanged triggered. fbUser UID:", fbUser ? fbUser.uid : "null");
+      setIsLoading(true); // Inicia o carregamento ao detectar mudança
+
       if (fbUser) {
-        setFirebaseUser(fbUser);
+        setFirebaseUser(fbUser); // Define o usuário do Firebase imediatamente
         console.log("useAuth: Firebase user found (UID:", fbUser.uid, "). Fetching Firestore data...");
         const userDocRef = doc(db, "usuarios", fbUser.uid);
         try {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const firestoreData = userDocSnap.data() as UserFirestoreData;
-            console.log("useAuth: Firestore data found for UID:", fbUser.uid, "isAdmin:", firestoreData.isAdmin);
-            setAuthUser({
+            const currentAuthUser: AuthUser = {
               id: fbUser.uid,
-              email: fbUser.email, // Email from Firebase Auth user object
-              name: firestoreData.name || fbUser.displayName || "Usuário", 
+              email: fbUser.email,
+              name: firestoreData.name || fbUser.displayName || "Usuário",
               isAdmin: firestoreData.isAdmin || false,
-            });
+            };
+            setAuthUser(currentAuthUser);
+            console.log("useAuth: Firestore data found & AuthUser set. UID:", fbUser.uid, "isAdmin:", currentAuthUser.isAdmin, "Name:", currentAuthUser.name);
           } else {
-            console.warn(`useAuth: User ${fbUser.uid} authenticated but no Firestore document found. Logging out potentially incomplete user.`);
-            // This case could happen if Firestore doc creation failed after Auth creation
-            // Or if the user was deleted from Firestore but not Auth.
-            // For safety, treat as not fully logged in or log out.
-            await signOut(auth); // This will trigger onAuthStateChanged again with fbUser = null
-            setFirebaseUser(null);
-            setAuthUser(null);
+            console.warn(`useAuth: User ${fbUser.uid} authenticated but NO Firestore document found. Logging out.`);
+            await signOut(auth); // Isso acionará onAuthStateChanged novamente com fbUser = null
+                                 // O estado authUser e firebaseUser será limpo no próximo ciclo
           }
         } catch (error) {
-            console.error("useAuth: Error fetching user document from Firestore:", error);
-            // Potentially log out the user if essential data cannot be fetched
-            await signOut(auth);
-            setFirebaseUser(null);
-            setAuthUser(null);
+          console.error("useAuth: Error fetching user document from Firestore:", error);
+          await signOut(auth); // Log out em caso de erro ao buscar dados essenciais
         }
       } else {
         console.log("useAuth: No Firebase user. Clearing auth state.");
         setFirebaseUser(null);
         setAuthUser(null);
       }
-      setIsLoading(false);
-      console.log("useAuth: isLoading set to false.");
+      setIsLoading(false); // Finaliza o carregamento após todo o processamento
+      console.log("useAuth: isLoading set to false. isAuthenticated will be:", !!(fbUser && authUser)); // Log para depuração
     });
 
     return () => {
       console.log("useAuth: Cleaning up onAuthStateChanged listener.");
       unsubscribe();
     };
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Dependências vazias para rodar apenas na montagem e desmontagem
 
   const logout = useCallback(async () => {
     console.log("useAuth: logout called.");
     setIsLoading(true);
     try {
       await signOut(auth);
-      // onAuthStateChanged will handle setting user to null & isLoading to false
-      console.log("useAuth: signOut successful.");
+      // onAuthStateChanged cuidará de definir user como null e isLoading como false
+      console.log("useAuth: signOut successful. onAuthStateChanged will clear user state.");
     } catch (error) {
       console.error("useAuth: Error signing out: ", error);
-      setIsLoading(false); // Ensure loading state is reset on error
+      setIsLoading(false); // Garante que o estado de carregamento seja resetado em caso de erro
     }
   }, []);
 
-  const isAuthenticated = !!authUser && !!firebaseUser;
+  // isAuthenticated é verdadeiro apenas se não estiver carregando E os objetos de usuário existirem
+  const isAuthenticated = !isLoading && !!authUser && !!firebaseUser;
   const isAdmin = authUser?.isAdmin ?? false;
 
-  if (isLoading) {
-      console.log("useAuth: AuthProvider rendering loading state (isLoading is true).");
-  } else {
-      console.log("useAuth: AuthProvider rendering. isAuthenticated:", isAuthenticated, "isAdmin:", isAdmin, "User:", authUser ? authUser.id : "null");
+  if(typeof window !== 'undefined'){
+    console.log("useAuth: AuthProvider rendering/re-rendering. isLoading:", isLoading, "isAuthenticated:", isAuthenticated, "isAdmin:", isAdmin, "authUser ID:", authUser ? authUser.id : "null", "fbUser UID:", firebaseUser ? firebaseUser.uid : "null");
   }
+
 
   return React.createElement(
     AuthContext.Provider,
@@ -113,3 +109,4 @@ export function useAuth() {
   }
   return context;
 }
+    
