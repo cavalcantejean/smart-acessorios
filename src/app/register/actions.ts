@@ -4,8 +4,8 @@
 import type { RegisterFormState } from '@/components/auth/RegisterForm';
 import { z } from 'zod';
 import { auth, db } from '@/lib/firebase'; // Firebase Auth and Firestore
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth'; // Import sendEmailVerification
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import type { AuthUser, UserFirestoreData } from '@/lib/types';
 
 const RegisterSchema = z.object({
@@ -58,6 +58,22 @@ export async function registerUserAction(
   }
 
   try {
+    // Verificar se o e-mail já existe na coleção 'usuarios' do Firestore
+    const usersRef = collection(db, "usuarios");
+    const q = query(usersRef, where("email", "==", lowercasedEmail));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      console.log("Email already exists in Firestore 'usuarios' collection.");
+      return {
+        message: "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.",
+        success: false,
+        issues: { email: ["Este e-mail já está cadastrado."] },
+        fields: { name, email: lowercasedEmail },
+        user: null,
+      };
+    }
+
     // Step 1: Create user in Firebase Authentication
     const userCredential = await createUserWithEmailAndPassword(auth, lowercasedEmail, password);
     const firebaseAuthUser = userCredential.user;
@@ -65,7 +81,7 @@ export async function registerUserAction(
 
     // Step 2: Create user document in Firestore
     const newUserFirestoreData: UserFirestoreData = { 
-      id: firebaseAuthUser.uid, // Use Firebase Auth UID as Firestore doc ID
+      id: firebaseAuthUser.uid,
       name,
       email: lowercasedEmail,
       isAdmin: false,
@@ -73,13 +89,27 @@ export async function registerUserAction(
       following: [],
       badges: [],
       createdAt: serverTimestamp(),
-      // Password is NOT stored in Firestore
+      avatarUrl: `https://placehold.co/150x150.png?text=${name.charAt(0).toUpperCase()}`, // Simple placeholder avatar
+      avatarHint: "user avatar placeholder",
+      bio: `Novo membro da comunidade SmartAcessorios!`,
     };
+
+    // Log do objeto que será enviado para o Firestore
+    console.log("Data to be sent to Firestore (newUserFirestoreData):", JSON.stringify(newUserFirestoreData, null, 2));
 
     await setDoc(doc(db, "usuarios", firebaseAuthUser.uid), newUserFirestoreData);
     console.log("Firestore document created for user:", firebaseAuthUser.uid);
     
-    // The AuthUser type for the frontend (simplified)
+    // Step 3: Send email verification
+    try {
+      await sendEmailVerification(firebaseAuthUser);
+      console.log("Verification email sent to:", firebaseAuthUser.email);
+    } catch (emailError) {
+      console.error("Error sending verification email:", emailError);
+      // Não consideramos isso um erro fatal para o registro, mas logamos.
+      // Poderia adicionar uma mensagem ao usuário aqui, se desejado.
+    }
+    
     const authUserForState: AuthUser = {
       id: firebaseAuthUser.uid,
       name,
@@ -87,10 +117,8 @@ export async function registerUserAction(
       isAdmin: false,
     };
 
-    // The useAuth hook will pick up the auth state change via onAuthStateChanged
-    // This return is primarily for UI feedback (e.g., success message)
     return { 
-      message: `Cadastro de ${name} realizado com sucesso! Você já pode fazer login.`, 
+      message: `Cadastro de ${name} realizado com sucesso! Um e-mail de verificação foi enviado para ${lowercasedEmail}. Por favor, verifique sua caixa de entrada (e spam).`, 
       success: true,
       user: authUserForState, 
     };
@@ -102,7 +130,7 @@ export async function registerUserAction(
     
     let errorMessage = "Não foi possível registrar o usuário. Tente novamente.";
     if (error.code === 'auth/email-already-in-use') {
-      errorMessage = "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.";
+      errorMessage = "Este e-mail já está cadastrado no Firebase Authentication. Tente fazer login ou use outro e-mail.";
       return {
         message: errorMessage,
         success: false,
