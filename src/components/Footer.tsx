@@ -10,7 +10,7 @@ import React, { useEffect, useState } from 'react';
 // Importa os ícones PNG locais
 import facebookIcon from '@/img/social/facebook.png';
 import instagramIcon from '@/img/social/instagram.png';
-// import twitterIcon from '@/img/social/twitter.png'; // Removido devido a erro de "Module not found"
+import twitterIcon from '@/img/social/twitter.png'; // Reinstated
 import tiktokIcon from '@/img/social/tiktok.png';
 import whatsappIcon from '@/img/social/whatsapp.png';
 import pinterestIcon from '@/img/social/pinterest.png';
@@ -18,6 +18,7 @@ import telegramIcon from '@/img/social/telegram.png';
 import discordIcon from '@/img/social/discord.png';
 import snapchatIcon from '@/img/social/snapchat.png';
 import threadsIcon from '@/img/social/threads.png';
+import emailIcon from '@/img/social/email.png'; // Reinstated
 import youtubeIcon from '@/img/social/youtube.png';
 import kwaiIcon from '@/img/social/kwai.png';
 // Adicione mais importações se tiver mais ícones
@@ -26,7 +27,7 @@ import kwaiIcon from '@/img/social/kwai.png';
 const localIconMap: Record<string, StaticImageData | undefined> = {
   Facebook: facebookIcon,
   Instagram: instagramIcon,
-  // Twitter: twitterIcon, // Removido do mapa
+  Twitter: twitterIcon, // Mapeado para X (Twitter)
   TikTok: tiktokIcon,
   WhatsApp: whatsappIcon,
   Pinterest: pinterestIcon,
@@ -34,9 +35,9 @@ const localIconMap: Record<string, StaticImageData | undefined> = {
   Discord: discordIcon,
   Snapchat: snapchatIcon,
   Threads: threadsIcon,
+  Email: emailIcon, // Mapeado para Email
   YouTube: youtubeIcon,
   Kwai: kwaiIcon,
-  // "Email" não tem um PNG local no seu exemplo, então será tratado pelo fallback IconComponent
 };
 
 
