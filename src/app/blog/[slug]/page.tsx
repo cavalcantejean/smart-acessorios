@@ -115,7 +115,7 @@ export default function PostPage({ params }: PostPageProps) {
               alt={post.title}
               fill={true}
               style={{ objectFit: 'cover' }}
-              priority // Consider if this is LCP
+              priority={true} 
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 1000px"
               data-ai-hint={post.imageHint || "blog hero"}
             />

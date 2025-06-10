@@ -108,7 +108,7 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle>Seguidores</DialogTitle>
+                      <DialogTitle>Seguidores de {profileUser.name}</DialogTitle>
                       <DialogDescription>
                         Pessoas que seguem {profileUser.name}.
                       </DialogDescription>
@@ -140,7 +140,7 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle>Seguindo</DialogTitle>
+                      <DialogTitle>{profileUser.name} está Seguindo</DialogTitle>
                       <DialogDescription>
                         Pessoas que {profileUser.name} segue.
                       </DialogDescription>

@@ -141,7 +141,7 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
             style={{ objectFit: 'cover' }}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             data-ai-hint={accessory.imageHint || "accessory details"}
-            priority={true}
+            priority={true} 
           />
         </div>
         {!isLoadingAuth && isAuthenticated && (

@@ -4,73 +4,75 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Função helper para verificar se o usuário é admin (SOMENTE PARA MOCK E TESTES INICIAIS)
+    // Para produção, use Custom Claims: request.auth.token.admin == true
     function isAdmin() {
-      // Em um ambiente de produção, NUNCA confie em um campo 'isAdmin' no documento do usuário
-      // para regras de segurança críticas sem proteção adicional (como Custom Claims via Firebase Auth).
-      // Esta função é apenas para o contexto do mock data e da fase de desenvolvimento.
-      // Para um sistema real, use Custom Claims: request.auth.token.admin == true
-      // ou uma coleção separada de administradores.
-      // Também é importante proteger o campo isAdmin de ser modificado por não-admins.
-      return request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
+      // Verifica se o usuário está autenticado ANTES de tentar o get()
+      return request.auth != null && 
+             get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // Coleção de Usuários (usuarios)
     match /usuarios/{userId} {
-      // REGRA DE CRIAÇÃO TEMPORARIAMENTE SIMPLIFICADA PARA DEPURAÇÃO:
+      // PERMISSÃO DE LEITURA E LISTAGEM TEMPORARIAMENTE ABERTA PARA DEPURAR O REGISTRO (email check)
+      // ISTO É INSEGURO PARA PRODUÇÃO. Deve ser restringido após o teste.
+      // allow read: if true; // Permite get /usuarios/{anyUserId}
+      allow list: if true; // Permite queries na coleção /usuarios. CUIDADO!
+      allow get: if true; // Permite get /usuarios/{anyUserId} (redundante se list=true, mas explícito)
+
+
+      // REGRA DE CRIAÇÃO ATUALIZADA para maior segurança
+      // Permite a criação se o ID no documento corresponder ao ID do caminho,
+      // e os campos obrigatórios estiverem presentes, e isAdmin for false ou nulo.
       allow create: if request.resource.data.id == userId &&
                        request.resource.data.name != null &&
-                       request.resource.data.email != null;
-                       // As seguintes linhas foram temporariamente comentadas para teste:
-                       // && request.resource.data.password != null 
-                       // && (request.resource.data.isAdmin == false || request.resource.data.isAdmin == null);
+                       request.resource.data.email != null &&
+                       request.resource.data.password != null && // Lembre-se que armazenar senha em plaintext é inseguro
+                       (request.resource.data.isAdmin == false || request.resource.data.isAdmin == null);
 
-      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      // Permite update e delete apenas pelo dono do documento.
+      // Impede que o usuário se auto-promova a admin, a menos que já seja.
       allow update: if request.auth != null && request.auth.uid == userId &&
-                       // Impede que um usuário se torne admin, a menos que já seja ou esteja sendo definido por um admin
-                       (request.resource.data.isAdmin == resource.data.isAdmin || resource.data.isAdmin == true || isAdmin());
-      
-      allow get: if true; // Permite leitura pública de perfis (ajuste campos se necessário)
+                       (request.resource.data.isAdmin == resource.data.isAdmin || resource.data.isAdmin == true);
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Coleção de Acessórios (acessorios)
     match /acessorios/{accessoryId} {
       allow get, list: if true;
-      allow create, delete, write: if isAdmin(); // 'write' cobre 'create' e 'update' completos
+      allow create, delete, write: if isAdmin();
       
-      // Regra de update mais granular para usuários autenticados (não admins)
-      allow update: if request.auth != null &&
-                      (
-                        // Permitir curtir/descurtir
-                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy']) &&
-                           (request.resource.data.likedBy.hasAny([request.auth.uid]) || resource.data.likedBy.hasAny([request.auth.uid]))
-                        ) ||
-                        // Permitir adicionar um novo comentário (apenas 'pending_review')
-                        (
-                          resource.data.comments == null || // Se não houver comentários antes
-                          request.resource.data.comments.size() == resource.data.comments.size() + 1 // Adicionando um novo
-                        ) &&
-                        request.resource.data.comments[request.resource.data.comments.size() - 1].userId == request.auth.uid &&
-                        request.resource.data.comments[request.resource.data.comments.size() - 1].status == 'pending_review' &&
-                        !('status' in request.resource.data.comments[request.resource.data.comments.size() - 1].keys()) // Usuário não pode definir status
-                      );
+      allow update: if (request.auth != null &&
+                        ( (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy'])) ||
+                          (request.resource.data.comments.size() == resource.data.comments.size() + 1 &&
+                            request.resource.data.comments[request.resource.data.comments.size()-1].userId == request.auth.uid &&
+                            request.resource.data.comments[request.resource.data.comments.size()-1].status == 'pending_review') // Novos comentários devem ir para moderação
+                        )
+                       ) || isAdmin();
     }
 
+    // Coleção de Posts do Blog (posts)
     match /posts/{postId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
+    // Coleção de Cupons (cupons)
     match /cupons/{couponId} {
       allow get, list: if true;
       allow create, update, delete: if isAdmin();
     }
 
+    // Configurações do Site
     match /siteConfig/{configId} {
-        allow get: if true;
-        allow write: if isAdmin();
+      allow get: if true;
+      allow write: if isAdmin();
     }
 
+    // Testimonials
     match /testimonials/{testimonialId} {
-        allow get, list: if true;
-        allow create, update, delete: if isAdmin();
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
     }
   }
 }
