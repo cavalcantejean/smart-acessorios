@@ -4,50 +4,91 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Função helper para verificar se o usuário é admin
+    // Para produção, considere usar Custom Claims para eficiência e segurança.
+    function isAdmin() {
+      // Em um ambiente de produção, NUNCA confie em um campo 'isAdmin' no documento do usuário
+      // para regras de segurança críticas sem proteção adicional (como Custom Claims via Firebase Auth).
+      // Esta função é apenas para o contexto do mock data.
+      // Para um sistema real, use Custom Claims: request.auth.token.admin == true
+      return request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
+    }
+
     // Coleção de Usuários (usuarios)
-    // REGRAS DE TESTE MINIMALISTAS E INSEGURAS PARA DEPURAÇÃO
     match /usuarios/{userId} {
+      // Dono do perfil pode ler e escrever tudo, exceto se tornar admin por conta própria (a menos que já seja admin).
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId &&
+                       // Impede que um usuário se torne admin, a menos que já seja
+                       (request.resource.data.isAdmin == resource.data.isAdmin || resource.data.isAdmin == true);
+
       // Permite que qualquer pessoa crie um novo usuário (registre-se)
-      // Esta é a regra mais permissiva possível para 'create'.
-      allow create: if true;
+      // desde que os dados necessários sejam fornecidos e o ID corresponda.
+      // E o usuário não pode se auto-atribuir como admin durante a criação.
+      allow create: if request.resource.data.id == userId &&
+                       request.resource.data.name != null &&
+                       request.resource.data.email != null &&
+                       request.resource.data.password != null && // Lembre-se, armazenar senha assim é inseguro
+                       (request.resource.data.isAdmin == false || request.resource.data.isAdmin == null);
 
-      // Permite que qualquer pessoa leia qualquer documento de usuário.
-      // INSEGURO PARA PRODUÇÃO.
-      allow read: if true; 
-      
-      // Para o teste, vamos manter update e delete mais restritos ou comentar.
-      // allow update, delete: if request.auth != null && request.auth.uid == userId;
+      // Permitir leitura pública de alguns campos do perfil (ex: nome, bio, avatar)
+      // Cuidado para não expor dados sensíveis como email aqui sem necessidade.
+      allow get: if true; // Ajuste isso conforme a necessidade de perfis públicos
     }
 
-    // Outras coleções (comente ou remova para o teste se o problema persistir)
-    // Se o problema de permissão ao criar usuários persistir,
-    // comente temporariamente todas as outras regras de coleções abaixo
-    // para garantir que não há nenhuma interferência inesperada.
-
+    // Coleção de Acessórios (acessorios)
     match /acessorios/{accessoryId} {
+      // Todos podem ler acessórios
       allow get, list: if true;
-      // allow create, delete, write: if false; // Temporariamente desabilitado para focar no problema de usuários
-      // allow update: if false; // Temporariamente desabilitado
+
+      // Apenas admins podem criar, deletar e sobrescrever documentos de acessórios
+      allow create, delete, write: if isAdmin();
+
+      // Usuários autenticados podem atualizar para curtir/descurtir ou adicionar comentários
+      allow update: if request.auth != null &&
+                      // Permitir adicionar/remover a si mesmo da lista de 'likedBy'
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy']) &&
+                       (request.resource.data.likedBy.hasAny([request.auth.uid]) || resource.data.likedBy.hasAny([request.auth.uid]))) ||
+                      // Permitir adicionar um novo comentário (não editar existentes ou mudar status)
+                      (request.resource.data.comments.size() == resource.data.comments.size() + 1 &&
+                       request.resource.data.comments[request.resource.data.comments.size() - 1].userId == request.auth.uid &&
+                       // Garante que o novo comentário está indo para 'pending_review' ou 'approved' (se o usuário puder aprovar direto)
+                       (request.resource.data.comments[request.resource.data.comments.size() - 1].status == 'pending_review' ||
+                        request.resource.data.comments[request.resource.data.comments.size() - 1].status == 'approved') &&
+                       // Impede a alteração de outros campos do comentário
+                       request.resource.data.comments[request.resource.data.comments.size() - 1].keys().hasOnly(['id', 'userId', 'userName', 'text', 'createdAt', 'status'])
+                      );
+
+      // Admins podem atualizar status de comentários ou qualquer outro campo
+      allow update: if isAdmin();
     }
 
+    // Coleção de Posts do Blog (posts)
     match /posts/{postId} {
+      // Todos podem ler posts
       allow get, list: if true;
-      // allow create, update, delete: if false; // Temporariamente desabilitado
+      // Apenas admins podem criar, atualizar e deletar posts
+      allow create, update, delete: if isAdmin();
     }
 
+    // Coleção de Cupons (cupons)
     match /cupons/{couponId} {
+      // Todos podem ler cupons
       allow get, list: if true;
-      // allow create, update, delete: if false; // Temporariamente desabilitado
+      // Apenas admins podem criar, atualizar e deletar cupons
+      allow create, update, delete: if isAdmin();
     }
 
+    // Configurações do Site (ex: um único documento 'global' em uma coleção 'siteConfig')
     match /siteConfig/{configId} {
-      allow get: if true;
-      // allow write: if false; // Temporariamente desabilitado
+        allow get: if true; // Todos podem ler
+        allow write: if isAdmin(); // Apenas admin pode escrever
     }
 
+    // Se você tiver uma coleção de Testimonials (depoimentos)
     match /testimonials/{testimonialId} {
-      allow get, list: if true;
-      // allow create, update, delete: if false; // Temporariamente desabilitado
+        allow get, list: if true; // Todos podem ler
+        allow create, update, delete: if isAdmin(); // Apenas admin gerencia
     }
   }
 }

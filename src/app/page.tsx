@@ -105,10 +105,10 @@ export default function HomePage() {
             className="w-full"
           >
             <CarouselContent className="-ml-4">
-              {dealsToShowInCarousel.map((accessory) => (
+              {dealsToShowInCarousel.map((accessory, index) => (
                 <CarouselItem key={`carousel-${accessory.id}`} className="basis-full pl-4">
                   <div className="p-1 h-full">
-                     <AccessoryCard accessory={accessory} />
+                     <AccessoryCard accessory={accessory} priority={index === 0} /> {/* Adiciona priority ao primeiro item */}
                   </div>
                 </CarouselItem>
               ))}

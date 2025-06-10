@@ -12,9 +12,10 @@ import { useAuth } from '@/hooks/useAuth';
 
 interface AccessoryCardProps {
   accessory: Accessory;
+  priority?: boolean; // Nova prop para prioridade da imagem
 }
 
-export default function AccessoryCard({ accessory }: AccessoryCardProps) {
+export default function AccessoryCard({ accessory, priority = false }: AccessoryCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAuthenticated, isLoading: isLoadingAuth } = useAuth(); 
   const favoriteStatus = isFavorite(accessory.id);
@@ -32,6 +33,7 @@ export default function AccessoryCard({ accessory }: AccessoryCardProps) {
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               className="rounded-t-lg"
               data-ai-hint={accessory.imageHint || "accessory product"}
+              priority={priority} // Aplicar a prop priority
             />
           </div>
         </CardHeader>
@@ -57,4 +59,3 @@ export default function AccessoryCard({ accessory }: AccessoryCardProps) {
     </Card>
   );
 }
-
