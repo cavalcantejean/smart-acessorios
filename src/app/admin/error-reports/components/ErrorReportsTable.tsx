@@ -67,7 +67,6 @@ export default function ErrorReportsTable({ initialErrorReports }: ErrorReportsT
           title: "Sucesso!",
           description: updateStatusState.message,
         });
-        // Update local state to reflect the change
         setErrorReports(prevReports =>
           prevReports.map(report =>
             report.id === updateStatusState.updatedReport!.id ? updateStatusState.updatedReport! : report
@@ -236,3 +235,5 @@ export default function ErrorReportsTable({ initialErrorReports }: ErrorReportsT
     </>
   );
 }
+
+    
