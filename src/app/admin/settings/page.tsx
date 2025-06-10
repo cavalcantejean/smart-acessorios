@@ -13,11 +13,14 @@ export const metadata: Metadata = {
   description: 'Gerencie as configurações gerais do site.',
 };
 
+// This interface is for the data passed to the Client Component (SettingsForm)
+// It should only contain serializable data. IconComponent is removed.
 export interface SocialLinkFormData {
   platform: string;
   label: string;
   url: string;
-  placeholderUrl: string; // Kept for consistency if needed, though IconComponent is client-side now
+  // IconComponent: React.ComponentType<{ className?: string }>; // Removed
+  placeholderUrl: string;
   customImageUrl?: string;
 }
 
@@ -43,6 +46,7 @@ export default async function SiteSettingsPage() {
       label: link.label, 
       url: link.url || '',
       placeholderUrl: link.placeholderUrl, 
+      // IconComponent: link.IconComponent, // Removed: Cannot pass component constructors
       customImageUrl: link.customImageUrl || '',
     })),
   };
