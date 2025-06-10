@@ -132,7 +132,7 @@ export default function ErrorReportsTable({ initialErrorReports }: ErrorReportsT
                   <TableCell className="font-medium max-w-[300px] truncate" title={report.message}>
                     {report.message}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-xs max-w-[200px] truncate" title={report.source}>
+                  <TableCell className="hidden md:table-cell text-xs max-w-[200px] truncate" title={report.source || undefined}>
                     {report.source || 'N/A'}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-xs">
@@ -151,7 +151,7 @@ export default function ErrorReportsTable({ initialErrorReports }: ErrorReportsT
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="xs" disabled={isUpdatePending} title="Mudar Status">
+                        <Button variant="outline" size="xs" disabled={isUpdatePending && updateStatusState?.updatedReport?.id === report.id} title="Mudar Status">
                           {isUpdatePending && updateStatusState?.updatedReport?.id === report.id ? (
                              <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
@@ -166,7 +166,7 @@ export default function ErrorReportsTable({ initialErrorReports }: ErrorReportsT
                           <DropdownMenuItem
                             key={statusKey}
                             onClick={() => handleStatusChange(report.id, statusKey)}
-                            disabled={report.status === statusKey || isUpdatePending}
+                            disabled={report.status === statusKey || (isUpdatePending && updateStatusState?.updatedReport?.id === report.id)}
                           >
                             <statusConfig[statusKey].icon className="mr-2 h-4 w-4" />
                             {statusConfig[statusKey].label}
