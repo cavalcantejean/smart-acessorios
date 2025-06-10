@@ -1,5 +1,5 @@
 
-import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
+import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting, CommentWithAccessoryInfo } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges';
 import { Facebook, Instagram, Twitter, Film, MessageSquare, Send, MessageCircle, Ghost, AtSign, Mail, Youtube, PlaySquare } from 'lucide-react';
 import PinterestIcon from '@/components/icons/PinterestIcon';
@@ -377,3 +377,26 @@ export function updateAccessory(accessoryId: string, accessoryData: Partial<Omit
   return accessories[accessoryIndex];
 }
 export function deleteAccessory(accessoryId: string): boolean { const initialLength = accessories.length; accessories = accessories.filter(acc => acc.id !== accessoryId); return accessories.length < initialLength; }
+
+// Functions for Recent Activity on User Profile
+export function getCommentsByUserId(userId: string): CommentWithAccessoryInfo[] {
+  const userComments: CommentWithAccessoryInfo[] = [];
+  accessories.forEach(acc => {
+    (acc.comments || [])
+      .filter(comment => comment.userId === userId && comment.status === 'approved')
+      .forEach(comment => {
+        userComments.push({
+          ...comment,
+          accessoryId: acc.id,
+          accessoryName: acc.name,
+        });
+      });
+  });
+  return userComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function getAccessoriesLikedByUser(userId: string): Accessory[] {
+  // Note: This doesn't sort by recency of like, as like timestamps are not stored.
+  // It returns all accessories liked by the user.
+  return accessories.filter(acc => acc.likedBy.includes(userId));
+}

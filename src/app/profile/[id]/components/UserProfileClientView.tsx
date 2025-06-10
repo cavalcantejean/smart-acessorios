@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { User, Badge as BadgeType } from '@/lib/types';
+import type { User, Badge as BadgeType, Accessory, CommentWithAccessoryInfo } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UserCircle, Users, UserCheck, Rss, Award, Loader2 } from 'lucide-react';
+import { ArrowLeft, UserCircle, Users, UserCheck, Award, Loader2, MessageSquare, ThumbsUp, ExternalLinkIcon } from 'lucide-react';
 import FollowButton from '@/components/FollowButton';
 import { toggleFollowAction } from '../../actions';
 import { AuthProviderClientComponent } from '@/components/AuthProviderClientComponent';
@@ -17,7 +17,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import UserListItem from "@/components/UserListItem";
-import { getUserById } from '@/lib/data'; // Import getUserById
+import { getUserById, getCommentsByUserId, getAccessoriesLikedByUser } from '@/lib/data'; // Import new data functions
+import { Separator } from '@/components/ui/separator';
 
 interface UserProfileClientViewProps {
   profileUser: User;
@@ -29,19 +30,21 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
 
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
   
-  // State for dialogs and lists
   const [followersList, setFollowersList] = useState<User[]>([]);
   const [followingList, setFollowingList] = useState<User[]>([]);
   const [isLoadingFollowLists, setIsLoadingFollowLists] = useState(false);
   const [isFollowersDialogOpen, setIsFollowersDialogOpen] = useState(false);
   const [isFollowingDialogOpen, setIsFollowingDialogOpen] = useState(false);
 
+  const [recentComments, setRecentComments] = useState<CommentWithAccessoryInfo[]>([]);
+  const [likedAccessories, setLikedAccessories] = useState<Accessory[]>([]);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(true);
+
   const earnedBadges = (profileUser.badges || [])
     .map(badgeId => getBadgeById(badgeId))
     .filter(badge => badge !== undefined) as BadgeType[];
 
   useEffect(() => {
-    // Update followers count if it changes via FollowButton
     if (profileUser.followers) {
       setFollowersCount(profileUser.followers.length);
     }
@@ -65,6 +68,25 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
     }
   }, [profileUser, isFollowersDialogOpen, isFollowingDialogOpen]);
 
+  useEffect(() => {
+    if (profileUser.id) {
+      setIsLoadingActivity(true);
+      const comments = getCommentsByUserId(profileUser.id);
+      const likes = getAccessoriesLikedByUser(profileUser.id);
+      setRecentComments(comments);
+      setLikedAccessories(likes);
+      setIsLoadingActivity(false);
+    }
+  }, [profileUser.id]);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  const MAX_RECENT_COMMENTS = 3;
+  const MAX_LIKED_ITEMS = 4; // Display more liked items as they are smaller
 
   return (
     <AuthProviderClientComponent>
@@ -206,12 +228,80 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
               )}
               
               <div className="pt-6 border-t">
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Rss className="h-5 w-5 text-primary"/> Atividade Recente (Em breve)
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Aqui serão exibidos os comentários e curtidas mais recentes de {profileUser.name}.
-                </p>
+                <h3 className="text-xl font-semibold mb-4">Atividade Recente</h3>
+                {isLoadingActivity ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="ml-2 text-muted-foreground">Carregando atividades...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-lg font-medium mb-3 flex items-center gap-2">
+                        <MessageSquare className="h-5 w-5 text-primary"/> Comentários Recentes
+                      </h4>
+                      {recentComments.length > 0 ? (
+                        <ul className="space-y-3">
+                          {recentComments.slice(0, MAX_RECENT_COMMENTS).map(comment => (
+                            <li key={comment.id} className="p-3 border rounded-md bg-muted/20 shadow-sm">
+                              <p className="text-xs text-muted-foreground mb-1">
+                                {formatDate(comment.createdAt)} em{' '}
+                                <Link href={`/accessory/${comment.accessoryId}`} className="text-primary hover:underline">
+                                  {comment.accessoryName}
+                                </Link>
+                              </p>
+                              <blockquote className="text-sm text-foreground border-l-2 border-primary/50 pl-2 italic">
+                                {comment.text.length > 100 ? `${comment.text.substring(0, 100)}...` : comment.text}
+                              </blockquote>
+                            </li>
+                          ))}
+                           {recentComments.length > MAX_RECENT_COMMENTS && (
+                            <li className="text-center mt-2">
+                                <Button variant="link" size="sm" asChild>
+                                    <Link href={`/profile/${profileUser.id}/activity/comments`}>Ver todos os comentários</Link>
+                                </Button>
+                            </li>
+                           )}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhum comentário para exibir.</p>
+                      )}
+                    </div>
+
+                    <Separator/>
+
+                    <div>
+                      <h4 className="text-lg font-medium mb-3 flex items-center gap-2">
+                        <ThumbsUp className="h-5 w-5 text-blue-500"/> Itens Curtidos
+                      </h4>
+                      {likedAccessories.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                          {likedAccessories.slice(0, MAX_LIKED_ITEMS).map(acc => (
+                            <Link key={acc.id} href={`/accessory/${acc.id}`} className="group block">
+                              <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
+                                <div className="relative aspect-square w-full">
+                                  <Image src={acc.imageUrl} alt={acc.name} fill style={{objectFit: 'cover'}} data-ai-hint={acc.imageHint || "liked item"} sizes="(max-width: 640px) 50vw, 25vw"/>
+                                </div>
+                                <CardFooter className="p-2">
+                                  <p className="text-xs text-center font-medium text-foreground group-hover:text-primary truncate w-full">{acc.name}</p>
+                                </CardFooter>
+                              </Card>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhum item curtido para exibir.</p>
+                      )}
+                      {likedAccessories.length > MAX_LIKED_ITEMS && (
+                         <div className="text-center mt-3">
+                            <Button variant="link" size="sm" asChild>
+                                <Link href={`/profile/${profileUser.id}/activity/likes`}>Ver todos os itens curtidos</Link>
+                            </Button>
+                        </div>
+                       )}
+                    </div>
+                  </div>
+                )}
               </div>
 
             </CardContent>
@@ -228,4 +318,3 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
     </AuthProviderClientComponent>
   );
 }
-

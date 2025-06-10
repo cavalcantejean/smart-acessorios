@@ -141,3 +141,9 @@ export interface SiteSettings {
   siteLogoUrl?: string;
   siteFaviconUrl?: string;
 }
+
+// New Type for Recent Activity
+export interface CommentWithAccessoryInfo extends Comment {
+  accessoryId: string;
+  accessoryName: string;
+}
