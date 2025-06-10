@@ -175,19 +175,19 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-muted-foreground" />
-              Configurações (Em Breve)
+              Configurações
             </CardTitle>
             <CardDescription>Gerencie suas preferências e dados.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button disabled className="w-full">
-              Acessar Configurações
+            <Button asChild className="w-full">
+              <Link href="/dashboard/settings">Acessar Configurações</Link>
             </Button>
-            <p className="text-xs text-center mt-2 text-muted-foreground">Funcionalidade em desenvolvimento.</p>
           </CardContent>
         </Card>
       </div>
     </div>
   );
+}
 
     
