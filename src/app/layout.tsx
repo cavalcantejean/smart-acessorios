@@ -15,9 +15,6 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const siteSettings = getSiteSettings();
 
 export async function generateMetadata(): Promise<Metadata> {
-  // Ensure metadataBase is correctly defined. Using a common placeholder if window is not available.
-  // For server components, window.location.origin is not available.
-  // You might need to set this from an environment variable for production.
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'; // Default to localhost for dev
   const metadataBase = new URL(baseUrl);
 
@@ -28,31 +25,24 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${siteSettings.siteTitle || 'SmartAcessorios'}`,
     },
     description: siteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-    manifest: '/manifest.json', // Link to the manifest file
+    // manifest: '/manifest.json', // REMOVED from here
     icons: {
       icon: siteSettings.siteFaviconUrl || '/favicon.ico', 
       apple: [ // Apple touch icons
         { url: '/apple-touch-icon.png', sizes: '180x180' }, // Default apple-touch-icon
-        // Add other sizes if you provide them, e.g.:
-        // { url: '/apple-touch-icon-152x152.png', sizes: '152x152' },
-        // { url: '/apple-touch-icon-120x120.png', sizes: '120x120' },
-        // { url: '/apple-touch-icon-76x76.png', sizes: '76x76' },
       ],
     },
     applicationName: siteSettings.siteTitle || 'SmartAcessorios',
     appleWebApp: { // Apple PWA specific settings
       capable: true,
       title: siteSettings.siteTitle || 'SmartAcessorios',
-      statusBarStyle: 'default', // or 'black', 'black-translucent'
+      statusBarStyle: 'default', 
     },
   };
 }
 
-// Add Viewport configuration for PWA theme color
 export const viewport: Viewport = {
-  themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5', // Fallback, ideally from settings
-  // Example of theme_color from settings if it were stored as { platform: 'ThemeColor', url: '#HEXVAL' }
-  // themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5', 
+  themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5', 
 };
 
 
@@ -61,11 +51,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // siteSettings is already fetched above
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
       <head>
-        {/* Removed manifest link from here as it's handled by generateMetadata */}
+        <link rel="manifest" href="/manifest.json" /> {/* ADDED EXPLICITLY HERE */}
         {/* Theme color is now handled by viewport export */}
         {/* Apple PWA meta tags are now handled by generateMetadata */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -80,7 +69,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <Toaster />
-          <ServiceWorkerRegistrar /> {/* Add the registrar component here */}
+          <ServiceWorkerRegistrar />
         </AuthProvider>
       </body>
     </html>
