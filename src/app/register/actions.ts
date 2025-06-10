@@ -3,8 +3,9 @@
 
 import type { RegisterFormState } from '@/components/auth/RegisterForm';
 import { z } from 'zod';
-import { getUserByEmail, addUser } from '@/lib/data'; // For mock data interaction
-import type { AuthUser } from '@/lib/types';
+import type { AuthUser, User } from '@/lib/types'; // Import User type as well for Firestore data structure
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const RegisterSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -38,42 +39,74 @@ export async function registerUserAction(
   }
 
   const { name, email, password } = validatedFields.data;
+  const lowercasedEmail = email.toLowerCase(); // Use lowercase for consistent querying
 
-  console.log("Attempting User Registration:", { name, email });
+  console.log("Attempting User Registration with Firestore:", { name, email: lowercasedEmail });
   
-  if (getUserByEmail(email)) {
+  try {
+    // 1. Check if user already exists in Firestore
+    const usersRef = collection(db, "usuarios");
+    const q = query(usersRef, where("email", "==", lowercasedEmail));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      return {
+        message: "Este e-mail já está cadastrado.",
+        success: false,
+        issues: { email: ["Este e-mail já está cadastrado."] },
+        fields: { name, email: lowercasedEmail },
+        user: null,
+      };
+    }
+
+    // 2. Add new user to Firestore
+    const newUserId = doc(collection(db, "usuarios")).id; // Generate a new unique ID
+
+    const newUserFirestoreData: Omit<User, 'password'> & { password?: string; createdAt: any } = { // Password is still stored for mock compatibility
+      id: newUserId,
+      name,
+      email: lowercasedEmail,
+      // ATENÇÃO: Armazenar senha em texto plano é INSEGURO.
+      // Isto é mantido apenas para compatibilidade com a estrutura mock atual.
+      // INTEGRE O FIREBASE AUTHENTICATION para um manuseio seguro de senhas.
+      password: password,
+      isAdmin: false,
+      followers: [],
+      following: [],
+      badges: [],
+      createdAt: serverTimestamp(), // Firestore server-side timestamp
+      // avatarUrl and bio can be added later or set to defaults if needed
+    };
+
+    await setDoc(doc(db, "usuarios", newUserId), newUserFirestoreData);
+
+    console.log("User registration successful with Firestore:", newUserFirestoreData);
+    
+    const authUser: AuthUser = {
+      id: newUserId,
+      name,
+      email: lowercasedEmail,
+      isAdmin: false,
+    };
+
+    return { 
+      message: `Cadastro de ${name} realizado com sucesso! Um e-mail de confirmação (simulado) foi enviado para ${email}. Por favor, verifique sua caixa de entrada e também a pasta de spam para validar seu cadastro.`, 
+      success: true,
+      user: authUser, 
+    };
+
+  } catch (error) {
+    console.error("Error during Firestore registration:", error);
+    let errorMessage = "Não foi possível registrar o usuário. Tente novamente.";
+    if (error instanceof Error) {
+        // You might want to check for specific Firebase error codes here
+        // e.g., if (error.code === '...') { /* handle specific error */ }
+    }
     return {
-      message: "Este e-mail já está cadastrado.",
+      message: errorMessage,
       success: false,
-      issues: { email: ["Este e-mail já está cadastrado."] },
-      fields: { name, email },
+      fields: { name, email: lowercasedEmail },
       user: null,
     };
   }
-
-  const newUser: AuthUser = {
-    id: `user-${Date.now()}`, // mock ID
-    name,
-    email,
-    isAdmin: false, 
-  };
-
-  const userAdded = addUser({ ...newUser, password }); 
-
-  if (!userAdded && email !== "existing@example.com") { 
-     return {
-        message: "Não foi possível registrar o usuário. Tente novamente.",
-        success: false,
-        fields: { name, email },
-        user: null,
-     }
-  }
-
-  console.log("User registration successful (mocked):", newUser);
-  return { 
-    message: `Cadastro de ${name} realizado com sucesso! Um e-mail de confirmação foi enviado para ${email}. Por favor, verifique sua caixa de entrada e também a pasta de spam para validar seu cadastro.`, 
-    success: true,
-    user: newUser, 
-  };
 }
-
