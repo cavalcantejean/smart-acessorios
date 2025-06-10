@@ -77,22 +77,25 @@ export default function Header({ siteLogoUrl }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-primary text-primary-foreground shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src={currentLogoSrc}
-            alt={logoAltText}
-            width={siteLogoUrl ? 120 : 239} // Adjust width based on if custom logo is used
-            height={siteLogoUrl ? 30 : 40}  // Adjust height based on if custom logo is used
-            priority={true}
-            className="h-8 w-auto" 
-            style={{maxHeight: '40px', objectFit: 'contain'}} // Ensure logo fits
-          />
-        </Link>
-        
-        <div className="md:hidden">
-          <MobileNav siteLogoUrl={siteLogoUrl} />
+        {/* Grupo de itens à esquerda: Ícone do Menu Mobile (apenas mobile) e Logo */}
+        <div className="flex items-center">
+          <div className="md:hidden mr-2"> {/* Container do MobileNav movido para a esquerda */}
+            <MobileNav siteLogoUrl={siteLogoUrl} />
+          </div>
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src={currentLogoSrc}
+              alt={logoAltText}
+              width={siteLogoUrl ? 120 : 239} 
+              height={siteLogoUrl ? 30 : 40}  
+              priority={true}
+              className="h-8 w-auto" 
+              style={{maxHeight: '40px', objectFit: 'contain'}} 
+            />
+          </Link>
         </div>
-
+        
+        {/* Navegação Desktop permanece à direita */}
         <nav className="hidden md:flex items-center gap-2 text-xs sm:text-sm lg:gap-4">
           <Link href="/products" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <ShoppingBag className="h-4 w-4" />
