@@ -149,19 +149,3 @@ export interface SiteSettings {
   siteLogoUrl?: string;
   siteFaviconUrl?: string;
 }
-
-// Error Reporting Types
-export type ErrorReportStatus = 'new' | 'seen' | 'resolved' | 'ignored';
-
-export interface ErrorReport {
-  id: string;
-  timestamp: string; // ISO date string
-  message: string;
-  source?: string; // URL or component name where error occurred
-  stackTrace?: string;
-  userId?: string;
-  userName?: string;
-  userAgent?: string; // Browser/OS info
-  status: ErrorReportStatus;
-  details?: Record<string, any>; // Any other relevant details
-}
