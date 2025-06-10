@@ -164,13 +164,13 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
                 </Dialog>
               </div>
 
-              {isAuthenticated && currentUser && currentUser.id !== profileUser.id && (
+              {isAuthenticated && currentUser && (
                 <div className="flex justify-center pt-4">
                   <FollowButton
                     currentUserId={currentUser.id}
                     targetUserId={profileUser.id}
                     initialIsFollowing={currentUser.following?.includes(profileUser.id) ?? false}
-                    initialFollowersCount={initialFollowersCount} // Pass initial to FollowButton for its own logic
+                    initialFollowersCount={initialFollowersCount}
                     formAction={toggleFollowAction}
                   />
                 </div>
@@ -228,3 +228,4 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
     </AuthProviderClientComponent>
   );
 }
+
