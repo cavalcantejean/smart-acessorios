@@ -1,57 +1,53 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Coleção de Usuários (usuarios) - TESTE ULTRA-SIMPLIFICADO
+    // Coleção de Usuários (usuarios)
+    // REGRAS DE TESTE MINIMALISTAS E INSEGURAS PARA DEPURAÇÃO
     match /usuarios/{userId} {
-      // PERMITE QUALQUER CRIAÇÃO - APENAS PARA TESTE, INSEGURO PARA PRODUÇÃO
+      // Permite que qualquer pessoa crie um novo usuário (registre-se)
+      // Esta é a regra mais permissiva possível para 'create'.
       allow create: if true;
 
-      // Outras operações podem ser mantidas ou comentadas para o teste,
-      // mas o foco é garantir que 'create' funcione.
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow get: if true; // Permite leitura pública de perfis para teste
+      // Permite que qualquer pessoa leia qualquer documento de usuário.
+      // INSEGURO PARA PRODUÇÃO.
+      allow read: if true; 
+      
+      // Para o teste, vamos manter update e delete mais restritos ou comentar.
+      // allow update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Para isolar o problema, você pode comentar temporariamente as regras de outras coleções
-    // se o erro persistir.
-    /*
-    // Função helper para verificar se o usuário é admin
-    function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
-    }
+    // Outras coleções (comente ou remova para o teste se o problema persistir)
+    // Se o problema de permissão ao criar usuários persistir,
+    // comente temporariamente todas as outras regras de coleções abaixo
+    // para garantir que não há nenhuma interferência inesperada.
 
-    // Coleção de Acessórios (acessorios)
     match /acessorios/{accessoryId} {
       allow get, list: if true;
-      allow create, delete, write: if isAdmin();
-      allow update: if request.auth != null || isAdmin();
+      // allow create, delete, write: if false; // Temporariamente desabilitado para focar no problema de usuários
+      // allow update: if false; // Temporariamente desabilitado
     }
 
-    // Coleção de Posts do Blog (posts)
     match /posts/{postId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      // allow create, update, delete: if false; // Temporariamente desabilitado
     }
 
-    // Coleção de Cupons (cupons)
     match /cupons/{couponId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      // allow create, update, delete: if false; // Temporariamente desabilitado
     }
 
-    // Configurações do Site
     match /siteConfig/{configId} {
-        allow get: if true;
-        allow write: if isAdmin();
+      allow get: if true;
+      // allow write: if false; // Temporariamente desabilitado
     }
 
-    // Coleção de Testimonials (depoimentos)
     match /testimonials/{testimonialId} {
-        allow get, list: if true;
-        allow create, update, delete: if isAdmin();
+      allow get, list: if true;
+      // allow create, update, delete: if false; // Temporariamente desabilitado
     }
-    */
   }
 }
