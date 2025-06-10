@@ -2,11 +2,9 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getFirestore, type Firestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAuth, type Auth } from "firebase/auth"; // Import Firebase Auth
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCXVzd3bIG1cNsMZ4nPElKkuu_vE9YS-Ys",
   authDomain: "smart-acessorios.firebaseapp.com",
@@ -19,7 +17,8 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let app: FirebaseApp;
-let db: Firestore; // Declarada aqui para ser acessível no catch e exportada
+let db: Firestore;
+let auth: Auth; // Declare Auth instance
 
 try {
   console.log("Attempting Firebase initialization...");
@@ -32,13 +31,21 @@ try {
   }
 
   db = getFirestore(app);
+  auth = getAuth(app); // Initialize Auth
+
   if (db) {
     console.log("Firestore 'db' instance obtained successfully in firebase.ts.");
   } else {
     console.error("!!! Critical Error: Firestore 'db' instance is NULL or UNDEFINED after getFirestore(app) in firebase.ts !!!");
   }
+  if (auth) {
+    console.log("Firebase Auth 'auth' instance obtained successfully in firebase.ts.");
+  } else {
+    console.error("!!! Critical Error: Firebase Auth 'auth' instance is NULL or UNDEFINED after getAuth(app) in firebase.ts !!!");
+  }
+
 } catch (error) {
-  console.error("!!! Firebase/Firestore Initialization Error in firebase.ts !!!");
+  console.error("!!! Firebase/Firestore/Auth Initialization Error in firebase.ts !!!");
   if (error instanceof Error) {
     console.error("Error Name:", error.name);
     console.error("Error Message:", error.message);
@@ -46,17 +53,6 @@ try {
   } else {
     console.error("Raw Error Object during Firebase init in firebase.ts:", error);
   }
-  // db será undefined ou null aqui, o que causará problemas posteriores.
-  // Considere lançar o erro novamente ou ter uma estratégia de fallback se a inicialização falhar.
 }
 
-
-// If you want to use Firebase Analytics:
-// import { getAnalytics, type Analytics } from "firebase/analytics";
-// let analytics: Analytics;
-// if (typeof window !== 'undefined') {
-//   analytics = getAnalytics(app);
-// }
-// export { app, db, analytics };
-
-export { app, db };
+export { app, db, auth }; // Export auth

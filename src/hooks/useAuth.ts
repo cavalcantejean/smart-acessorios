@@ -1,67 +1,89 @@
 
 "use client";
 import React, { useState, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react';
-import type { AuthUser } from '@/lib/types'; // Using AuthUser which omits password
-
-// ESTE É UM HOOK E PROVEDOR DE AUTENTICAÇÃO SIMULADO
-// Em uma aplicação real, isso interagiria com seu provedor de autenticação.
+import { auth, db } from '@/lib/firebase'; // Import Firebase auth and db
+import { 
+  onAuthStateChanged, 
+  signOut,
+  type User as FirebaseUser // Firebase Auth User type
+} from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import type { AuthUser, UserFirestoreData } from '@/lib/types';
 
 interface AuthContextType {
   user: AuthUser | null;
+  firebaseUser: FirebaseUser | null; // Raw Firebase user object
   isAuthenticated: boolean;
   isAdmin: boolean;
   isLoading: boolean;
-  login: (userData: AuthUser) => void; // Login agora aceita dados do usuário
-  logout: () => void;
+  // login function is now handled by loginUserAction which uses Firebase SDK
+  logout: () => Promise<void>; // Logout is now async
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const MOCK_AUTH_USER_KEY = 'mockAppAuthUser';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simula a verificação do status de autenticação do localStorage ao montar
-    try {
-      const storedUser = localStorage.getItem(MOCK_AUTH_USER_KEY);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      setIsLoading(true);
+      if (fbUser) {
+        setFirebaseUser(fbUser);
+        // Fetch additional user data (like name, isAdmin) from Firestore
+        const userDocRef = doc(db, "usuarios", fbUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const firestoreData = userDocSnap.data() as UserFirestoreData;
+          setAuthUser({
+            id: fbUser.uid,
+            email: fbUser.email,
+            name: firestoreData.name || fbUser.displayName, // Prefer Firestore name
+            isAdmin: firestoreData.isAdmin || false,
+          });
+        } else {
+          // User exists in Auth but not Firestore (should not happen with current register flow)
+          // Or, this is a new user and their Firestore doc is about to be created
+          console.warn(`User ${fbUser.uid} authenticated but no Firestore document found. Creating a basic AuthUser.`);
+          setAuthUser({
+            id: fbUser.uid,
+            email: fbUser.email,
+            name: fbUser.displayName || "Novo Usuário", // Fallback name
+            isAdmin: false, // Default to not admin
+          });
+        }
+      } else {
+        setFirebaseUser(null);
+        setAuthUser(null);
       }
-    } catch (error) {
-      console.warn("Não foi possível acessar o localStorage para os dados do usuário simulado.", error);
-      setUser(null);
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = useCallback((userData: AuthUser) => {
+  const logout = useCallback(async () => {
+    setIsLoading(true);
     try {
-      localStorage.setItem(MOCK_AUTH_USER_KEY, JSON.stringify(userData));
+      await signOut(auth);
+      // onAuthStateChanged will handle setting user to null
     } catch (error) {
-       console.warn("Não foi possível definir os dados do usuário simulado no localStorage.", error);
+      console.error("Error signing out: ", error);
+    } finally {
+      // Let onAuthStateChanged handle loading state if appropriate,
+      // or set it false here if there's no further async activity.
+      // For now, onAuthStateChanged should set isLoading to false after state update.
     }
-    setUser(userData);
   }, []);
 
-  const logout = useCallback(() => {
-    try {
-      localStorage.removeItem(MOCK_AUTH_USER_KEY);
-    } catch (error)
- {
-      console.warn("Não foi possível limpar os dados do usuário simulado no localStorage.", error);
-    }
-    setUser(null);
-  }, []);
-
-  const isAuthenticated = !!user;
-  const isAdmin = user?.isAdmin ?? false;
+  const isAuthenticated = !!authUser && !!firebaseUser;
+  const isAdmin = authUser?.isAdmin ?? false;
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { user, isAuthenticated, isAdmin, isLoading, login, logout } },
+    { value: { user: authUser, firebaseUser, isAuthenticated, isAdmin, isLoading, logout } },
     children
   );
 }
@@ -69,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

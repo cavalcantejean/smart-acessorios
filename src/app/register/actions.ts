@@ -3,9 +3,10 @@
 
 import type { RegisterFormState } from '@/components/auth/RegisterForm';
 import { z } from 'zod';
-import type { AuthUser, User } from '@/lib/types';
-import { db } from '@/lib/firebase'; 
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase'; // Firebase Auth and Firestore
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import type { AuthUser, UserFirestoreData } from '@/lib/types';
 
 const RegisterSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -21,8 +22,7 @@ export async function registerUserAction(
   prevState: RegisterFormState,
   formData: FormData
 ): Promise<RegisterFormState> {
-  console.log("--- registerUserAction Server Action START ---");
-  console.log("Checking 'db' instance from firebase.ts:", db ? "db IS VALID" : "db IS NULL or UNDEFINED");
+  console.log("--- registerUserAction Server Action START (Firebase Auth) ---");
 
   const validatedFields = RegisterSchema.safeParse(
     Object.fromEntries(formData.entries())
@@ -45,12 +45,12 @@ export async function registerUserAction(
   const { name, email, password } = validatedFields.data;
   const lowercasedEmail = email.toLowerCase();
 
-  console.log("Attempting User Registration with Firestore:", { name, email: lowercasedEmail });
+  console.log("Attempting User Registration with Firebase Auth:", { name, email: lowercasedEmail });
   
-  if (!db) {
-    console.error("!!! CRITICAL: Firestore 'db' instance is not available in registerUserAction. Registration aborted. Check firebase.ts logs. !!!");
+  if (!auth || !db) {
+    console.error("!!! CRITICAL: Firebase 'auth' or 'db' instance is not available in registerUserAction. Registration aborted. !!!");
     return {
-      message: "Erro crítico na configuração do banco de dados. Contate o suporte.",
+      message: "Erro crítico na configuração. Contate o suporte.",
       success: false,
       fields: { name, email: lowercasedEmail },
       user: null,
@@ -58,71 +58,74 @@ export async function registerUserAction(
   }
 
   try {
-    console.log("Proceeding with Firestore operations in registerUserAction...");
-    const usersRef = collection(db, "usuarios");
-    const q = query(usersRef, where("email", "==", lowercasedEmail));
-    const querySnapshot = await getDocs(q);
+    // Step 1: Create user in Firebase Authentication
+    const userCredential = await createUserWithEmailAndPassword(auth, lowercasedEmail, password);
+    const firebaseAuthUser = userCredential.user;
+    console.log("Firebase Auth user created successfully:", firebaseAuthUser.uid);
 
-    if (!querySnapshot.empty) {
-      console.log("User email already exists in Firestore.");
-      return {
-        message: "Este e-mail já está cadastrado.",
-        success: false,
-        issues: { email: ["Este e-mail já está cadastrado."] },
-        fields: { name, email: lowercasedEmail },
-        user: null,
-      };
-    }
-
-    const newUserId = doc(collection(db, "usuarios")).id; 
-
-    const newUserFirestoreData: Omit<User, 'password'> & { password?: string; createdAt: any } = { 
-      id: newUserId,
+    // Step 2: Create user document in Firestore
+    const newUserFirestoreData: UserFirestoreData = { 
+      id: firebaseAuthUser.uid, // Use Firebase Auth UID as Firestore doc ID
       name,
       email: lowercasedEmail,
-      password: password, 
       isAdmin: false,
       followers: [],
       following: [],
       badges: [],
-      createdAt: serverTimestamp(), 
+      createdAt: serverTimestamp(),
+      // Password is NOT stored in Firestore
     };
 
-    // Log do objeto que será enviado para o Firestore
-    console.log("Data to be sent to Firestore (newUserFirestoreData):", JSON.stringify(newUserFirestoreData, null, 2));
-
-    await setDoc(doc(db, "usuarios", newUserId), newUserFirestoreData);
-
-    console.log("User registration successful with Firestore:", newUserFirestoreData.id);
+    await setDoc(doc(db, "usuarios", firebaseAuthUser.uid), newUserFirestoreData);
+    console.log("Firestore document created for user:", firebaseAuthUser.uid);
     
-    const authUser: AuthUser = {
-      id: newUserId,
+    // The AuthUser type for the frontend (simplified)
+    const authUserForState: AuthUser = {
+      id: firebaseAuthUser.uid,
       name,
       email: lowercasedEmail,
       isAdmin: false,
     };
 
+    // The useAuth hook will pick up the auth state change via onAuthStateChanged
+    // This return is primarily for UI feedback (e.g., success message)
     return { 
-      message: `Cadastro de ${name} realizado com sucesso! Um e-mail de confirmação (simulado) foi enviado para ${email}. Por favor, verifique sua caixa de entrada e também a pasta de spam para validar seu cadastro.`, 
+      message: `Cadastro de ${name} realizado com sucesso! Você já pode fazer login.`, 
       success: true,
-      user: authUser, 
+      user: authUserForState, 
     };
 
   } catch (error: any) {
-    console.error("--- Firestore Registration Error in registerUserAction CATCH BLOCK ---");
+    console.error("--- Firebase Registration Error in registerUserAction CATCH BLOCK ---");
     console.error("Timestamp:", new Date().toISOString());
     console.error("Input Data:", { name, email: lowercasedEmail }); 
+    
     let errorMessage = "Não foi possível registrar o usuário. Tente novamente.";
-    if (error.code === 'permission-denied') {
-        errorMessage = "Erro de permissão ao registrar no banco de dados. Verifique as regras de segurança do Firestore.";
-        console.error("Firebase Permission Denied Error Details:", error);
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.";
+      return {
+        message: errorMessage,
+        success: false,
+        issues: { email: [errorMessage] },
+        fields: { name, email: lowercasedEmail },
+        user: null,
+      };
+    } else if (error.code === 'auth/weak-password') {
+      errorMessage = "A senha é muito fraca. Use pelo menos 6 caracteres.";
+       return {
+        message: errorMessage,
+        success: false,
+        issues: { password: [errorMessage] },
+        fields: { name, email: lowercasedEmail },
+        user: null,
+      };
     } else {
-        console.error("Firebase Error Code:", error.code);
-        console.error("Firebase Error Message:", error.message);
-        console.error("Full Firebase Error Object:", error);
-        errorMessage = `Erro no servidor ao registrar: ${error.message} (Código: ${error.code || 'N/A'})`;
+      console.error("Firebase Error Code:", error.code);
+      console.error("Firebase Error Message:", error.message);
+      console.error("Full Firebase Error Object:", error);
+      errorMessage = `Erro no servidor ao registrar: ${error.message || 'Erro desconhecido.'} (Código: ${error.code || 'N/A'})`;
     }
-    console.error("--- End Firestore Registration Error ---");
+    console.error("--- End Firebase Registration Error ---");
     
     return {
       message: errorMessage,

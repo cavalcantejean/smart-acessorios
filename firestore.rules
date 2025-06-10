@@ -4,51 +4,76 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Função helper para verificar se o usuário é admin (SOMENTE PARA MOCK E TESTES INICIAIS)
-    // Para produção, use Custom Claims: request.auth.token.admin == true
+    // Função helper para verificar se o usuário é admin (baseado no Firestore)
+    // Para produção REALMENTE SEGURA, use Custom Claims do Firebase Auth.
     function isAdmin() {
-      // Verifica se o usuário está autenticado ANTES de tentar o get()
       return request.auth != null && 
              get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
     }
 
     // Coleção de Usuários (usuarios)
+    // O ID do documento {userId} DEVE ser igual ao request.auth.uid
     match /usuarios/{userId} {
-      // PERMISSÃO DE LEITURA E LISTAGEM TEMPORARIAMENTE ABERTA PARA DEPURAR O REGISTRO (email check)
-      // ISTO É INSEGURO PARA PRODUÇÃO. Deve ser restringido após o teste.
-      // allow read: if true; // Permite get /usuarios/{anyUserId}
-      allow list: if true; // Permite queries na coleção /usuarios. CUIDADO!
-      allow get: if true; // Permite get /usuarios/{anyUserId} (redundante se list=true, mas explícito)
+      // Quem pode ler documentos de usuário?
+      // - O próprio usuário autenticado pode ler seu documento.
+      // - Qualquer usuário autenticado pode ler qualquer perfil (para páginas de perfil público).
+      // - Administradores podem ler qualquer perfil.
+      allow get: if request.auth != null; // Permite que usuários logados vejam perfis
 
+      // Quem pode listar usuários? (Normalmente não é necessário para clientes, a menos que haja uma busca de usuários)
+      // Cuidado com esta regra, pois pode expor todos os e-mails se não for bem pensada.
+      // Para a verificação de e-mail duplicado no registro, não precisamos de 'list' aqui
+      // porque a registerUserAction usa o SDK Admin (ou equivalente do lado do servidor) que bypassa regras.
+      // Se o cliente precisasse fazer a query, seria: allow list: if request.auth != null; (e com índices)
+      // Por enquanto, sem listagem geral.
 
-      // REGRA DE CRIAÇÃO ATUALIZADA para maior segurança
-      // Permite a criação se o ID no documento corresponder ao ID do caminho,
-      // e os campos obrigatórios estiverem presentes, e isAdmin for false ou nulo.
-      allow create: if request.resource.data.id == userId &&
+      // Quem pode criar um documento de usuário?
+      // - Somente um usuário autenticado (via Firebase Auth) pode criar SEU PRÓPRIO documento no Firestore.
+      // - O ID do documento DEVE ser o UID do usuário autenticado.
+      // - Dados obrigatórios devem estar presentes (name, email).
+      // - 'isAdmin' deve ser false no momento da criação pelo usuário.
+      allow create: if request.auth.uid == userId &&
                        request.resource.data.name != null &&
                        request.resource.data.email != null &&
-                       request.resource.data.password != null && // Lembre-se que armazenar senha em plaintext é inseguro
-                       (request.resource.data.isAdmin == false || request.resource.data.isAdmin == null);
+                       // a senha não é mais armazenada aqui
+                       (request.resource.data.isAdmin == false || request.resource.data.isAdmin == null) &&
+                       request.resource.data.id == request.auth.uid; // Garante que o campo 'id' interno também é o uid
 
-      // Permite update e delete apenas pelo dono do documento.
-      // Impede que o usuário se auto-promova a admin, a menos que já seja.
-      allow update: if request.auth != null && request.auth.uid == userId &&
-                       (request.resource.data.isAdmin == resource.data.isAdmin || resource.data.isAdmin == true);
-      allow delete: if request.auth != null && request.auth.uid == userId;
+
+      // Quem pode atualizar um documento de usuário?
+      // - O próprio usuário autenticado pode atualizar seu documento.
+      // - Um administrador pode atualizar qualquer documento de usuário.
+      // - Não permitir que o usuário mude seu próprio 'isAdmin' status ou 'id' ou 'email' (email é gerenciado pelo Auth).
+      allow update: if (request.auth.uid == userId && 
+                        !(request.resource.data.isAdmin is boolean && request.resource.data.isAdmin != resource.data.isAdmin) &&
+                        request.resource.data.id == resource.data.id &&
+                        request.resource.data.email == resource.data.email
+                        ) || isAdmin();
+
+      // Quem pode deletar um documento de usuário?
+      // - O próprio usuário autenticado pode deletar seu documento.
+      // - Um administrador pode deletar qualquer documento de usuário.
+      allow delete: if request.auth.uid == userId || isAdmin();
     }
 
     // Coleção de Acessórios (acessorios)
     match /acessorios/{accessoryId} {
-      allow get, list: if true;
-      allow create, delete, write: if isAdmin();
-      
-      allow update: if (request.auth != null &&
-                        ( (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy'])) ||
-                          (request.resource.data.comments.size() == resource.data.comments.size() + 1 &&
-                            request.resource.data.comments[request.resource.data.comments.size()-1].userId == request.auth.uid &&
-                            request.resource.data.comments[request.resource.data.comments.size()-1].status == 'pending_review') // Novos comentários devem ir para moderação
-                        )
-                       ) || isAdmin();
+      allow get, list: if true; // Qualquer um pode ver e listar acessórios
+
+      // Criação, atualização e exclusão de acessórios somente por administradores.
+      allow create, update, delete: if isAdmin();
+
+      // Comentários e Likes (subcoleções ou campos dentro de acessorios)
+      // Assumindo que 'comments' e 'likedBy' são campos no documento do acessório
+      // Se 'comments' for uma subcoleção: match /comments/{commentId} { ... }
+      // A lógica de adicionar/remover likes e comentários é feita por Server Actions,
+      // que podem usar o Admin SDK (bypassando regras) ou operar como um usuário autenticado.
+      // Se Server Actions operam como usuário:
+      // Ex: para adicionar um comentário (update no array de comments)
+      // allow update: if request.auth.uid != null && 
+      //                  request.resource.data.comments.size() == resource.data.comments.size() + 1; 
+      // Regras mais granulares para campos específicos são recomendadas.
+      // Por enquanto, a 'update' acima para /acessorios/{accessoryId} já cobre isso se isAdmin.
     }
 
     // Coleção de Posts do Blog (posts)
@@ -63,16 +88,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Configurações do Site
-    match /siteConfig/{configId} {
-      allow get: if true;
-      allow write: if isAdmin();
+    // Configurações do Site (ex: um único documento 'global' em uma coleção 'siteConfig')
+    match /siteConfig/{configDocId} { // Nome do wildcard alterado para clareza
+        allow get: if true;
+        allow write: if isAdmin(); // write = create, update, delete
     }
 
-    // Testimonials
     match /testimonials/{testimonialId} {
-      allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+        allow get, list: if true;
+        allow create, update, delete: if isAdmin();
     }
   }
 }

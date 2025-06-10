@@ -18,10 +18,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState, startTransition } from "react"; // Added startTransition
+import { useEffect, useActionState, startTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useAuth } from '@/hooks/useAuth';
-import type { AuthUser } from "@/lib/types";
+import { useRouter } from 'next/navigation'; // For redirection
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
@@ -36,15 +36,14 @@ export interface LoginFormState {
   issues?: Record<string, string[] | undefined>;
   fields?: {
     email?: string;
-    password?: string;
+    password?: string; // Keep for re-filling on error
   };
-  user?: AuthUser | null;
+  // user?: AuthUser | null; // No longer need to pass user from action
 }
 
 const initialState: LoginFormState = {
   message: "",
   success: false,
-  user: null,
 };
 
 interface LoginFormProps {
@@ -72,25 +71,29 @@ function SubmitButton({ text }: { text: string }) {
 export default function LoginForm({ formAction, title, description, submitButtonText, linkToRegister }: LoginFormProps) {
   const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
-  const { login: clientAuthLogin } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth(); // Get auth state
+  const router = useRouter();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
       email: state?.fields?.email || "",
-      password: "",
+      password: "", // Always clear password field for security
     },
   });
 
   useEffect(() => {
     if (state.message) {
-      if (state.success && state.user) {
+      if (state.success) {
         toast({
           title: "Sucesso!",
           description: state.message,
         });
-        clientAuthLogin(state.user);
+        // Redirection will be handled by the main auth state listener (useAuth)
+        // or you can explicitly redirect here after a short delay if onAuthStateChanged is too slow.
+        // For now, let's assume useAuth handles it.
         form.reset({ email: '', password: ''});
+        // router.push('/dashboard'); // Or let useAuth redirect
       } else {
         toast({
           title: "Erro de Login",
@@ -104,10 +107,21 @@ export default function LoginForm({ formAction, title, description, submitButton
             }
           }
         }
-        form.reset({ email: form.getValues('email'), password: '' });
+        // Re-fill email, clear password
+        form.reset({ email: state.fields?.email || form.getValues('email'), password: '' });
       }
     }
-  }, [state, toast, form, clientAuthLogin]);
+  }, [state, toast, form]);
+
+  // Redirect if user becomes authenticated (e.g., after successful login action)
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectTo = searchParams.get('redirect') || '/dashboard';
+      router.replace(redirectTo);
+    }
+  }, [isAuthenticated, isLoading, router]);
+
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl">

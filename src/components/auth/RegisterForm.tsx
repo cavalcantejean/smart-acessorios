@@ -20,8 +20,8 @@ import { Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useActionState, startTransition } from "react";
 import { useFormStatus } from "react-dom";
-import type { AuthUser } from "@/lib/types";
-// import { useAuth } from '@/hooks/useAuth'; // Uncomment if auto-login after register is desired
+import type { AuthUser } from "@/lib/types"; // AuthUser for potential immediate feedback
+import { useRouter } from "next/navigation"; // For potential redirection
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -43,7 +43,7 @@ export interface RegisterFormState {
     name?: string;
     email?: string;
   };
-  user?: AuthUser | null; // To potentially hold created user data
+  user?: AuthUser | null; // For immediate feedback, actual auth state via useAuth
 }
 
 const initialState: RegisterFormState = {
@@ -77,7 +77,7 @@ function SubmitButton({ text }: { text: string }) {
 export default function RegisterForm({ formAction, title, description, submitButtonText, linkToLogin }: RegisterFormProps) {
   const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
-  // const { login: clientAuthLogin } = useAuth(); // Uncomment for auto-login
+  const router = useRouter();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
@@ -97,11 +97,9 @@ export default function RegisterForm({ formAction, title, description, submitBut
           description: state.message,
         });
         form.reset();
-        // Optional: Auto-login the user
-        // if (state.user) {
-        //   clientAuthLogin(state.user);
-        //   // router.push('/'); // Redirect after auto-login
-        // }
+        // Optional: Redirect to login or dashboard.
+        // Firebase Auth onAuthStateChanged should handle global state update.
+        router.push('/login?message=Cadastro%20realizado!%20Faça%20login.'); 
       } else {
         toast({
           title: "Erro de Cadastro",
@@ -116,14 +114,14 @@ export default function RegisterForm({ formAction, title, description, submitBut
           }
         }
         form.reset({
-          name: form.getValues('name'),
-          email: form.getValues('email'),
+          name: state.fields?.name || form.getValues('name'),
+          email: state.fields?.email || form.getValues('email'),
           password: '',
           confirmPassword: '',
         });
       }
     }
-  }, [state, toast, form /*, clientAuthLogin */]);
+  }, [state, toast, form, router]);
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl">

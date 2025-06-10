@@ -46,38 +46,31 @@ export interface Testimonial {
   role?: string;
 }
 
-export interface User {
-  id: string;
+// User data as stored in Firestore
+export interface UserFirestoreData {
+  id: string; // Should match Firebase Auth UID
   name: string;
-  email: string;
-  password: string; // In a real app, this would be a hashed password
+  email: string; // Stored for querying or display, but Auth is source of truth
   isAdmin: boolean;
-  following: string[]; // IDs of users this user follows
-  followers: string[]; // IDs of users who follow this user
-  avatarUrl?: string; // Optional avatar URL
+  followers: string[];
+  following: string[];
+  avatarUrl?: string;
   avatarHint?: string;
-  bio?: string; // Optional user bio
-  badges?: string[]; // Array of badge IDs
+  bio?: string;
+  badges?: string[];
+  createdAt?: any; // Firestore Timestamp for creation
+  // NO PASSWORD HERE
 }
 
-export interface AuthUser extends Omit<User, 'password'> {}
-
-export interface Post {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  content: string; // For now, simple text or basic HTML. Later, could be Markdown or structured content.
-  imageUrl: string;
-  imageHint?: string;
-  authorName: string;
-  authorAvatarUrl?: string;
-  authorAvatarHint?: string;
-  category?: string;
-  tags?: string[]; // Array of tags
-  publishedAt: string; // ISO date string e.g., "2024-07-28T10:00:00Z"
-  embedHtml?: string; 
+// User object used within the application, typically after auth
+export interface AuthUser {
+  id: string; // Firebase Auth UID
+  name: string | null; // Can be null if not set in profile or Firestore
+  email: string | null; // Firebase Auth email
+  isAdmin: boolean;
+  // You can add other frequently accessed, non-sensitive fields from Firestore here
 }
+
 
 // Badge System Types
 export interface BadgeCriteriaData {
@@ -85,7 +78,6 @@ export interface BadgeCriteriaData {
   userLikesCount: number;
   userFollowingCount: number;
   userFollowersCount: number;
-  // Add more counts as needed, e.g., favoritesCount
 }
 
 export interface Badge {
@@ -93,8 +85,8 @@ export interface Badge {
   name: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>; // Lucide icon component
-  color?: string; // Optional: Tailwind color class for the badge, e.g., "bg-blue-500 text-white"
-  criteria: (user: User, data: BadgeCriteriaData) => boolean;
+  color?: string;
+  criteria: (user: UserFirestoreData, data: BadgeCriteriaData) => boolean; // User type updated
 }
 
 // Type for displaying pending comments in admin moderation
@@ -113,7 +105,7 @@ export interface CategoryCount {
 export interface TopAccessoryInfo {
   id: string;
   name: string;
-  count: number; // Could be likes or comments count
+  count: number;
   imageUrl?: string;
 }
 
@@ -134,12 +126,12 @@ export interface AnalyticsData {
 
 // Site Settings Types
 export interface SocialLinkSetting {
-  platform: string; // e.g., 'Facebook', 'Instagram' - used as key/id
-  label: string; // User-friendly label, e.g., "Facebook"
+  platform: string;
+  label: string;
   url: string;
-  IconComponent: ComponentType<{ className?: string }>; // Lucide icon component for fallback
-  placeholderUrl: string; // Placeholder for the input field
-  customImageUrl?: string; // URL for custom uploaded image (e.g., data URI)
+  IconComponent: ComponentType<{ className?: string }>;
+  placeholderUrl: string;
+  customImageUrl?: string;
 }
 
 export interface SiteSettings {

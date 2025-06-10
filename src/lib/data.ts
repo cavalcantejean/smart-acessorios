@@ -1,8 +1,10 @@
 
-import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
-import { allBadges, generateBadgeCriteriaData } from './badges'; // Import badge definitions and criteria data generator
-import { Facebook, Instagram, Twitter, Film, MessageSquare, Send, MessageCircle, Ghost, AtSign, Mail, Youtube, PlaySquare, TicketPercent } from 'lucide-react';
+import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
+import { allBadges, generateBadgeCriteriaData } from './badges';
+import { Facebook, Instagram, Twitter, Film, MessageSquare, Send, MessageCircle, Ghost, AtSign, Mail, Youtube, PlaySquare } from 'lucide-react';
 import PinterestIcon from '@/components/icons/PinterestIcon';
+import { db } from './firebase'; // Import db for Firestore operations
+import { getDoc, doc } from 'firebase/firestore';
 
 
 let accessories: Accessory[] = [
@@ -18,11 +20,11 @@ let accessories: Accessory[] = [
     category: 'Chargers',
     aiSummary: 'A fast, 15W wireless charging stand with an ergonomic design for Qi-enabled devices, allowing portrait or landscape use during charging.',
     isDeal: true,
-    likedBy: ['user-1', 'admin-1', 'user-2'],
+    likedBy: ['user-1-mock-id', 'admin-1-mock-id', 'user-2-mock-id'], // Use mock IDs
     comments: [
-      { id: 'comment-1-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Ótimo carregador, muito prático!', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), status: 'approved' },
-      { id: 'comment-1-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Precisa de moderação este comentário?', createdAt: new Date(Date.now() - 3600000).toISOString(), status: 'pending_review' },
-      { id: 'comment-1-3', userId: 'admin-1', userName: 'Administrador', text: 'Concordo, excelente produto.', createdAt: new Date(Date.now() - 86400000).toISOString(), status: 'approved' },
+      { id: 'comment-1-1', userId: 'user-1-mock-id', userName: 'Usuário Comum', text: 'Ótimo carregador, muito prático!', createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), status: 'approved' },
+      { id: 'comment-1-2', userId: 'user-2-mock-id', userName: 'Outro Usuário', text: 'Precisa de moderação este comentário?', createdAt: new Date(Date.now() - 3600000).toISOString(), status: 'pending_review' },
+      { id: 'comment-1-3', userId: 'admin-1-mock-id', userName: 'Administrador', text: 'Concordo, excelente produto.', createdAt: new Date(Date.now() - 86400000).toISOString(), status: 'approved' },
     ],
     embedHtml: '<iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>',
   },
@@ -37,10 +39,10 @@ let accessories: Accessory[] = [
     price: '79.50',
     category: 'Audio',
     aiSummary: 'Bluetooth headphones with active noise cancellation, 30-hour playtime, and comfortable memory foam earcups for immersive audio.',
-    likedBy: ['user-1'],
+    likedBy: ['user-1-mock-id'],
     comments: [
-        { id: 'comment-2-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Esse fone é muito bom mas será que meu comentário passa pela moderação?', createdAt: new Date(Date.now() - 7200000).toISOString(), status: 'pending_review' },
-        { id: 'comment-2-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Cancelamento de ruído funciona bem.', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), status: 'approved' },
+        { id: 'comment-2-1', userId: 'user-1-mock-id', userName: 'Usuário Comum', text: 'Esse fone é muito bom mas será que meu comentário passa pela moderação?', createdAt: new Date(Date.now() - 7200000).toISOString(), status: 'pending_review' },
+        { id: 'comment-2-2', userId: 'user-2-mock-id', userName: 'Outro Usuário', text: 'Cancelamento de ruído funciona bem.', createdAt: new Date(Date.now() - 86400000 * 2).toISOString(), status: 'approved' },
     ],
     embedHtml: '',
   },
@@ -55,9 +57,9 @@ let accessories: Accessory[] = [
     price: '12.99',
     category: 'Cases',
     isDeal: true,
-    likedBy: ['admin-1'],
+    likedBy: ['admin-1-mock-id'],
     comments: [
-      { id: 'comment-3-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Capa bonita e protege bem.', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), status: 'approved' },
+      { id: 'comment-3-1', userId: 'user-1-mock-id', userName: 'Usuário Comum', text: 'Capa bonita e protege bem.', createdAt: new Date(Date.now() - 86400000 * 5).toISOString(), status: 'approved' },
     ],
     embedHtml: '',
   },
@@ -72,10 +74,10 @@ let accessories: Accessory[] = [
     price: '22.00',
     category: 'Power Banks',
     aiSummary: 'A compact 10000mAh power bank with dual USB ports and LED indicator for on-the-go charging.',
-    likedBy: ['user-1', 'admin-1'],
+    likedBy: ['user-1-mock-id', 'admin-1-mock-id'],
     comments: [
-       { id: 'comment-4-1', userId: 'admin-1', userName: 'Administrador', text: 'Excelente para viagens!', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), status: 'approved' },
-       { id: 'comment-4-2', userId: 'user-2', userName: 'Outro Usuário', text: 'Bom custo-benefício.', createdAt: new Date(Date.now() - 3600000 * 5).toISOString(), status: 'approved' },
+       { id: 'comment-4-1', userId: 'admin-1-mock-id', userName: 'Administrador', text: 'Excelente para viagens!', createdAt: new Date(Date.now() - 86400000 * 1).toISOString(), status: 'approved' },
+       { id: 'comment-4-2', userId: 'user-2-mock-id', userName: 'Outro Usuário', text: 'Bom custo-benefício.', createdAt: new Date(Date.now() - 3600000 * 5).toISOString(), status: 'approved' },
     ],
     embedHtml: '',
   },
@@ -90,7 +92,7 @@ let accessories: Accessory[] = [
     price: '45.90',
     category: 'Peripherals',
     aiSummary: 'High-precision gaming mouse with adjustable DPI, programmable buttons, and RGB lighting for performance and style.',
-    likedBy: ['user-2'],
+    likedBy: ['user-2-mock-id'],
     comments: [],
     embedHtml: '',
   },
@@ -105,133 +107,44 @@ let accessories: Accessory[] = [
     price: '59.99',
     category: 'Wearables',
     isDeal: true,
-    likedBy: ['user-1', 'user-2', 'admin-1'],
+    likedBy: ['user-1-mock-id', 'user-2-mock-id', 'admin-1-mock-id'],
     comments: [
-       { id: 'comment-6-1', userId: 'user-1', userName: 'Usuário Comum', text: 'Adorei o smartwatch, muito útil!', createdAt: new Date(Date.now() - 3600000 * 10).toISOString(), status: 'approved' },
+       { id: 'comment-6-1', userId: 'user-1-mock-id', userName: 'Usuário Comum', text: 'Adorei o smartwatch, muito útil!', createdAt: new Date(Date.now() - 3600000 * 10).toISOString(), status: 'approved' },
     ],
     embedHtml: '',
   }
 ];
 
 let coupons: Coupon[] = [
-  {
-    id: 'coupon1',
-    code: 'SUMMER20',
-    description: 'Get 20% off on all summer accessories.',
-    discount: '20% OFF',
-    expiryDate: '2024-08-31',
-    store: 'AccessoryStore',
-    applyUrl: 'https://example.com/store/summer-sale'
-  },
-  {
-    id: 'coupon2',
-    code: 'AUDIOFUN',
-    description: '15% discount on headphones and speakers.',
-    discount: '15% OFF',
-    expiryDate: '2024-09-15',
-    store: 'SoundGoodies',
-    applyUrl: 'https://example.com/audio'
-  },
-  {
-    id: 'coupon3',
-    code: 'FREESHIP',
-    description: 'Free shipping on orders over R$50.',
-    discount: 'Free Shipping',
-    store: 'GadgetHub'
-    // applyUrl intentionally left undefined for this one
-  },
+  { id: 'coupon1', code: 'SUMMER20', description: 'Get 20% off on all summer accessories.', discount: '20% OFF', expiryDate: '2024-08-31', store: 'AccessoryStore', applyUrl: 'https://example.com/store/summer-sale' },
+  { id: 'coupon2', code: 'AUDIOFUN', description: '15% discount on headphones and speakers.', discount: '15% OFF', expiryDate: '2024-09-15', store: 'SoundGoodies', applyUrl: 'https://example.com/audio' },
+  { id: 'coupon3', code: 'FREESHIP', description: 'Free shipping on orders over R$50.', discount: 'Free Shipping', store: 'GadgetHub' },
 ];
 
 const testimonials: Testimonial[] = [
-  {
-    id: 'testimonial1',
-    name: 'Ana Silva',
-    quote: 'Encontrei os melhores acessórios aqui! A seleção de ofertas do dia é incrível e os resumos de IA me ajudam a decidir rapidamente. Recomendo!',
-    role: 'Cliente Satisfeita',
-    avatarUrl: 'https://placehold.co/100x100.png',
-    avatarHint: 'woman portrait',
-  },
-  {
-    id: 'testimonial2',
-    name: 'Carlos Pereira',
-    quote: 'Os cupons promocionais são ótimos! Consegui um bom desconto na minha última compra de fones de ouvido. O site é fácil de navegar.',
-    role: 'Entusiasta de Gadgets',
-    avatarUrl: 'https://placehold.co/100x100.png',
-    avatarHint: 'man portrait',
-  },
-  {
-    id: 'testimonial3',
-    name: 'Juliana Costa',
-    quote: 'Adoro a variedade de produtos e a clareza das descrições. A funcionalidade de favoritar é muito útil para salvar itens que quero comprar depois.',
-    role: 'Compradora Online',
-    avatarUrl: 'https://placehold.co/100x100.png',
-    avatarHint: 'person smiling',
-  }
+  { id: 'testimonial1', name: 'Ana Silva', quote: 'Encontrei os melhores acessórios aqui! A seleção de ofertas do dia é incrível e os resumos de IA me ajudam a decidir rapidamente. Recomendo!', role: 'Cliente Satisfeita', avatarUrl: 'https://placehold.co/100x100.png', avatarHint: 'woman portrait' },
+  { id: 'testimonial2', name: 'Carlos Pereira', quote: 'Os cupons promocionais são ótimos! Consegui um bom desconto na minha última compra de fones de ouvido. O site é fácil de navegar.', role: 'Entusiasta de Gadgets', avatarUrl: 'https://placehold.co/100x100.png', avatarHint: 'man portrait' },
+  { id: 'testimonial3', name: 'Juliana Costa', quote: 'Adoro a variedade de produtos e a clareza das descrições. A funcionalidade de favoritar é muito útil para salvar itens que quero comprar depois.', role: 'Compradora Online', avatarUrl: 'https://placehold.co/100x100.png', avatarHint: 'person smiling' }
 ];
 
-export let mockUsers: User[] = [
-  { id: 'user-1', name: 'Usuário Comum', email: 'user@example.com', password: 'password123', isAdmin: false, followers: ['admin-1'], following: ['admin-1'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'user avatar', bio: 'Apenas um usuário comum explorando o mundo dos acessórios!', badges: [] },
-  { id: 'admin-1', name: 'Administrador', email: 'admin@example.com', password: 'adminpassword', isAdmin: true, followers: ['user-1'], following: ['user-1', 'user-2'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'admin avatar', bio: 'Gerenciando a plataforma SmartAcessorios.', badges: [] },
-  { id: 'user-2', name: 'Outro Usuário', email: 'existing@example.com', password: 'password456', isAdmin: false, followers: ['admin-1'], following: [], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'another user', bio: 'Entusiasta de tecnologia e gadgets.', badges: [] },
+// Mock users are for initial data or for non-Firebase Auth related user info display.
+// Passwords are no longer stored here. User creation is handled by Firebase Auth.
+export let mockUsers: UserFirestoreData[] = [
+  { id: 'user-1-mock-id', name: 'Usuário Comum', email: 'user@example.com', isAdmin: false, followers: ['admin-1-mock-id'], following: ['admin-1-mock-id'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'user avatar', bio: 'Apenas um usuário comum explorando o mundo dos acessórios!', badges: [] },
+  { id: 'admin-1-mock-id', name: 'Administrador', email: 'admin@example.com', isAdmin: true, followers: ['user-1-mock-id'], following: ['user-1-mock-id', 'user-2-mock-id'], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'admin avatar', bio: 'Gerenciando a plataforma SmartAcessorios.', badges: [] },
+  { id: 'user-2-mock-id', name: 'Outro Usuário', email: 'existing@example.com', isAdmin: false, followers: ['admin-1-mock-id'], following: [], avatarUrl: 'https://placehold.co/150x150.png', avatarHint: 'another user', bio: 'Entusiasta de tecnologia e gadgets.', badges: [] },
 ];
 
 let mockPosts: Post[] = [
-  {
-    id: 'post-1',
-    slug: 'guia-completo-para-carregadores-sem-fio',
-    title: 'Guia Completo para Carregadores Sem Fio: Tudo o que Você Precisa Saber',
-    excerpt: 'Descubra como funcionam os carregadores sem fio, os diferentes tipos disponíveis e como escolher o melhor para o seu smartphone.',
-    content: '<p>Os carregadores sem fio se tornaram um acessório indispensável para muitos usuários de smartphones. A conveniência de simplesmente colocar o telefone em uma base para carregar, sem se preocupar com cabos, é inegável. Mas como eles funcionam? Quais são os padrões? E como escolher o ideal para suas necessidades?</p><h3>Como Funciona o Carregamento Sem Fio?</h3><p>O carregamento sem fio, na maioria dos casos, utiliza o princípio da indução eletromagnética. Uma bobina transmissora no carregador cria um campo eletromagnético oscilante. Quando a bobina receptora no smartphone está próxima, esse campo induz uma corrente elétrica na bobina do telefone, que é então convertida em energia para carregar a bateria.</p><h3>Padrões de Carregamento</h3><p>O padrão mais comum e amplamente adotado é o <strong>Qi</strong> (pronuncia-se "tchi"), desenvolvido pelo Wireless Power Consortium (WPC). A maioria dos smartphones modernos com capacidade de carregamento sem fio é compatível com Qi. Existem outros padrões, mas o Qi domina o mercado de consumo.</p><h3>Tipos de Carregadores Sem Fio</h3><ul><li><strong>Pads (Almofadas):</strong> São superfícies planas onde você deita o telefone.</li><li><strong>Stands (Suportes):</strong> Permitem que o telefone fique em pé, ideal para visualização de notificações ou vídeos durante o carregamento.</li><li><strong>Carregadores Veiculares:</strong> Projetados para uso em carros, muitas vezes combinando suporte e carregamento.</li><li><strong>Power Banks com Carregamento Sem Fio:</strong> Baterias portáteis que também oferecem a funcionalidade de carregamento sem fio.</li></ul><h3>O que Considerar ao Escolher</h3><ol><li><strong>Potência (Watts):</strong> A velocidade de carregamento é medida em watts (W). Carregadores mais rápidos oferecem 10W, 15W ou até mais. Verifique a potência máxima suportada pelo seu smartphone.</li><li><strong>Compatibilidade:</strong> Certifique-se de que o carregador é compatível com o padrão Qi e com o seu dispositivo.</li><li><strong>Design e Formato:</strong> Escolha entre pad, stand ou outros formatos conforme sua preferência e uso.</li><li><strong>Recursos Adicionais:</strong> Alguns carregadores vêm com LEDs indicadores, ventoinhas para resfriamento (para carregamentos mais rápidos) ou capacidade de carregar múltiplos dispositivos (ex: telefone e fones de ouvido).</li><li><strong>Marca e Segurança:</strong> Opte por marcas conceituadas para garantir a segurança e a eficiência do carregamento, evitando superaquecimento ou danos ao dispositivo.</li></ol><p>Investir em um bom carregador sem fio pode simplificar muito o seu dia a dia. Com as informações certas, você pode fazer uma escolha informada e aproveitar ao máximo essa tecnologia.</p>',
-    imageUrl: 'https://placehold.co/800x450.png',
-    imageHint: 'blog wireless charging',
-    authorName: 'Equipe SmartAcessorios',
-    authorAvatarUrl: 'https://placehold.co/100x100.png',
-    authorAvatarHint: 'team avatar',
-    category: 'Tecnologia',
-    tags: ['carregadores sem fio', 'Qi', 'smartphones', 'tecnologia'],
-    publishedAt: '2024-07-28T10:00:00Z',
-    embedHtml: '<iframe width="560" height="315" src="https://www.youtube.com/embed/vCHy4qF1xSY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
-  },
-  {
-    id: 'post-2',
-    slug: '5-acessorios-essenciais-para-seu-smartphone-em-2024',
-    title: '5 Acessórios Essenciais para seu Smartphone em 2024',
-    excerpt: 'Maximizando a utilidade do seu smartphone com os acessórios certos. De power banks a fones de ouvido, veja nossa lista dos indispensáveis.',
-    content: '<p>Seu smartphone é uma ferramenta poderosa, mas com os acessórios certos, ele pode se tornar ainda mais versátil e indispensável. Em 2024, alguns acessórios se destacam pela sua utilidade e capacidade de aprimorar a experiência do usuário.</p><h3>1. Power Bank de Alta Capacidade com Carregamento Rápido</h3><p>Com o uso cada vez mais intenso dos smartphones, uma bateria externa confiável é crucial. Procure por modelos com pelo menos 10.000mAh e suporte a tecnologias de carregamento rápido como Power Delivery (PD) ou Quick Charge (QC).</p><h3>2. Fones de Ouvido Bluetooth com Cancelamento de Ruído</h3><p>Seja para trabalho, lazer ou deslocamento, fones de ouvido de qualidade são essenciais. Modelos TWS (True Wireless Stereo) com ANC (Active Noise Cancellation) oferecem liberdade de movimento e imersão sonora, bloqueando ruídos externos.</p><h3>3. Carregador de Parede GaN (Nitrito de Gálio)</h3><p>Os carregadores GaN são menores, mais eficientes e geram menos calor que os tradicionais. Muitos vêm com múltiplas portas, permitindo carregar seu smartphone, tablet e laptop simultaneamente com um único adaptador compacto.</p><h3>4. Película Protetora de Tela de Qualidade</h3><p>Proteger a tela do seu investimento é fundamental. Películas de vidro temperado ou hidrogel de boa qualidade podem prevenir arranhões e danos por impacto, mantendo a sensibilidade ao toque e a clareza da tela.</p><h3>5. Suporte Veicular com Carregamento Sem Fio</h3><p>Para quem dirige, um bom suporte veicular é indispensável para navegação e chamadas hands-free. Modelos com carregamento sem fio Qi integrado adicionam a conveniência de manter o celular carregado durante o trajeto.</p><p>Esses são apenas alguns exemplos, mas investir nesses acessórios pode transformar a maneira como você usa seu smartphone, tornando-o mais prático, durável e agradável no dia a dia.</p>',
-    imageUrl: 'https://placehold.co/800x450.png',
-    imageHint: 'blog smartphone accessories',
-    authorName: 'Redação Tech',
-    authorAvatarUrl: 'https://placehold.co/100x100.png',
-    authorAvatarHint: 'tech writer',
-    category: 'Dicas',
-    tags: ['acessórios', 'smartphones', 'dicas', '2024'],
-    publishedAt: '2024-07-25T14:30:00Z',
-    embedHtml: '',
-  },
-  {
-    id: 'post-3',
-    slug: 'entendendo-as-diferencas-entre-cabos-usb-c',
-    title: 'Entendendo as Diferenças Entre Cabos USB-C: Nem Todos São Iguais',
-    excerpt: 'USB-C é o novo padrão, mas você sabia que existem grandes diferenças entre os cabos? Aprenda a identificar o cabo certo para suas necessidades.',
-    content: '<p>O conector USB-C se tornou o padrão para a maioria dos dispositivos modernos, desde smartphones e laptops até fones de ouvido e periféricos. No entanto, nem todos os cabos USB-C são criados iguais. As diferenças podem impactar significativamente a velocidade de carregamento e a transferência de dados.</p><h3>O Conector vs. o Protocolo</h3><p>É importante entender que USB-C refere-se ao formato físico do conector. Os protocolos que ele suporta (como USB 2.0, USB 3.1 Gen 1, USB 3.1 Gen 2, USB4, Thunderbolt 3 e 4) determinam suas capacidades.</p><h3>Velocidade de Transferência de Dados</h3><ul><li><strong>USB 2.0:</strong> Muitos cabos USB-C baratos suportam apenas velocidades de USB 2.0 (até 480 Mbps). São adequados para carregamento básico e transferência de dados leves.</li><li><strong>USB 3.1 Gen 1 (ou USB 3.2 Gen 1x1):</strong> Oferece até 5 Gbps. Bom para discos rígidos externos e transferências de arquivos maiores.</li><li><strong>USB 3.1 Gen 2 (ou USB 3.2 Gen 2x1):</strong> Atinge até 10 Gbps. Ideal para SSDs externos rápidos e docking stations.</li><li><strong>USB 3.2 Gen 2x2:</strong> Pode chegar a 20 Gbps, mas requer dispositivos compatíveis em ambas as pontas.</li><li><strong>USB4 e Thunderbolt:</strong> Oferecem as maiores velocidades (até 40 Gbps) e podem suportar saída de vídeo e outros recursos avançados. Cabos Thunderbolt são geralmente mais caros e possuem um ícone de raio.</li></ul><h3>Capacidade de Carregamento (Power Delivery)</h3><p>A especificação USB Power Delivery (PD) permite que cabos USB-C forneçam significativamente mais energia do que os padrões USB anteriores. Para carregamento rápido, você precisa de um cabo que suporte USB PD e um carregador compatível.</p><ul><li>Cabos básicos podem suportar até 60W.</li><li>Cabos com E-Marker (um chip que comunica as capacidades do cabo) podem suportar 100W ou até 240W com a especificação USB PD 3.1 Extended Power Range (EPR).</li></ul><h3>Saída de Vídeo</h3><p>Alguns cabos USB-C suportam DisplayPort Alternate Mode, permitindo a transmissão de vídeo para monitores externos. Nem todos os cabos USB-C têm essa capacidade, especialmente os mais simples focados apenas em carregamento e dados USB 2.0.</p><h3>Como Escolher o Cabo Certo?</h3><ol><li><strong>Verifique as especificações:</strong> Procure por informações sobre a velocidade de transferência de dados (Gbps) e a capacidade de carregamento (W ou suporte a PD).</li><li><strong>Considere o uso:</strong> Para carregamento simples, um cabo básico pode ser suficiente. Para transferir arquivos grandes ou conectar a um monitor, você precisará de um cabo com especificações mais altas.</li><li><strong>Marca e Certificação:</strong> Cabos de marcas desconhecidas ou sem certificação podem não entregar o desempenho prometido ou até mesmo danificar seus dispositivos. Procure por certificações do USB-IF (USB Implementers Forum) se possível.</li></ol><p>Entender essas nuances ajuda a garantir que você está obtendo o máximo de seus dispositivos e evitando gargalos de desempenho ou carregamento lento por causa de um cabo inadequado.</p>',
-    imageUrl: 'https://placehold.co/800x450.png',
-    imageHint: 'blog usb c cables',
-    authorName: 'Dr. Conecta',
-    authorAvatarUrl: 'https://placehold.co/100x100.png',
-    authorAvatarHint: 'tech expert',
-    category: 'Guias',
-    tags: ['USB-C', 'cabos', 'tecnologia', 'guias', 'power delivery'],
-    publishedAt: '2024-07-22T09:15:00Z',
-    embedHtml: '',
-  }
+  { id: 'post-1', slug: 'guia-completo-para-carregadores-sem-fio', title: 'Guia Completo para Carregadores Sem Fio: Tudo o que Você Precisa Saber', excerpt: 'Descubra como funcionam os carregadores sem fio, os diferentes tipos disponíveis e como escolher o melhor para o seu smartphone.', content: '<p>Conteúdo do post sobre carregadores...</p>', imageUrl: 'https://placehold.co/800x450.png', imageHint: 'blog wireless charging', authorName: 'Equipe SmartAcessorios', authorAvatarUrl: 'https://placehold.co/100x100.png', authorAvatarHint: 'team avatar', category: 'Tecnologia', tags: ['carregadores sem fio', 'Qi'], publishedAt: '2024-07-28T10:00:00Z', embedHtml: '<iframe width="560" height="315" src="https://www.youtube.com/embed/vCHy4qF1xSY" allowfullscreen></iframe>', },
+  { id: 'post-2', slug: '5-acessorios-essenciais-para-seu-smartphone-em-2024', title: '5 Acessórios Essenciais para seu Smartphone em 2024', excerpt: 'Maximizando a utilidade do seu smartphone com os acessórios certos.', content: '<p>Conteúdo do post sobre 5 acessórios...</p>', imageUrl: 'https://placehold.co/800x450.png', imageHint: 'blog smartphone accessories', authorName: 'Redação Tech', authorAvatarUrl: 'https://placehold.co/100x100.png', authorAvatarHint: 'tech writer', category: 'Dicas', tags: ['acessórios', 'dicas'], publishedAt: '2024-07-25T14:30:00Z', embedHtml: '', },
+  { id: 'post-3', slug: 'entendendo-as-diferencas-entre-cabos-usb-c', title: 'Entendendo as Diferenças Entre Cabos USB-C', excerpt: 'Nem todos os cabos USB-C são iguais. Aprenda a identificar o cabo certo.', content: '<p>Conteúdo do post sobre cabos USB-C...</p>', imageUrl: 'https://placehold.co/800x450.png', imageHint: 'blog usb c cables', authorName: 'Dr. Conecta', authorAvatarUrl: 'https://placehold.co/100x100.png', authorAvatarHint: 'tech expert', category: 'Guias', tags: ['USB-C', 'cabos'], publishedAt: '2024-07-22T09:15:00Z', embedHtml: '', }
 ];
 
-// --- Site Settings Data ---
 let siteSettings: SiteSettings = {
   siteTitle: 'SmartAcessorios',
   siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-  siteLogoUrl: '', 
-  siteFaviconUrl: '', 
+  siteLogoUrl: '', siteFaviconUrl: '', 
   socialLinks: [
     { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", IconComponent: Facebook, placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
     { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", IconComponent: Instagram, placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
@@ -248,301 +161,134 @@ let siteSettings: SiteSettings = {
     { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", IconComponent: PlaySquare, placeholderUrl: "https://k.kwai.com/u/@seu_usuario", customImageUrl: "" }
   ]
 };
-// --- End Site Settings ---
 
-
-export function getSiteSettings(): SiteSettings {
-  return {
-    ...siteSettings,
-    socialLinks: siteSettings.socialLinks.map(link => ({ ...link }))
-  };
-}
-
-export function getBaseSocialLinkSettings(): SocialLinkSetting[] {
-    return siteSettings.socialLinks.map(link => ({ ...link }));
-}
-
-
+export function getSiteSettings(): SiteSettings { return { ...siteSettings, socialLinks: siteSettings.socialLinks.map(link => ({ ...link })) }; }
+export function getBaseSocialLinkSettings(): SocialLinkSetting[] { return siteSettings.socialLinks.map(link => ({ ...link }));}
 export function updateSiteSettings(newSettings: Partial<SiteSettings>): SiteSettings {
-  if (newSettings.siteTitle !== undefined) {
-    siteSettings.siteTitle = newSettings.siteTitle;
-  }
-  if (newSettings.siteDescription !== undefined) {
-    siteSettings.siteDescription = newSettings.siteDescription;
-  }
-  if (newSettings.siteLogoUrl !== undefined) {
-    siteSettings.siteLogoUrl = newSettings.siteLogoUrl;
-  }
-  if (newSettings.siteFaviconUrl !== undefined) {
-    siteSettings.siteFaviconUrl = newSettings.siteFaviconUrl;
-  }
-
+  if (newSettings.siteTitle !== undefined) siteSettings.siteTitle = newSettings.siteTitle;
+  if (newSettings.siteDescription !== undefined) siteSettings.siteDescription = newSettings.siteDescription;
+  if (newSettings.siteLogoUrl !== undefined) siteSettings.siteLogoUrl = newSettings.siteLogoUrl;
+  if (newSettings.siteFaviconUrl !== undefined) siteSettings.siteFaviconUrl = newSettings.siteFaviconUrl;
   if (newSettings.socialLinks) {
     siteSettings.socialLinks = siteSettings.socialLinks.map(currentLink => {
       const submittedLinkData = newSettings.socialLinks.find(sl => sl.platform === currentLink.platform);
-      return {
-        ...currentLink,
-        url: submittedLinkData?.url !== undefined ? submittedLinkData.url : currentLink.url,
-        customImageUrl: submittedLinkData?.customImageUrl !== undefined ? submittedLinkData.customImageUrl : currentLink.customImageUrl,
-      };
+      return { ...currentLink, url: submittedLinkData?.url ?? currentLink.url, customImageUrl: submittedLinkData?.customImageUrl ?? currentLink.customImageUrl, };
     });
   }
   return getSiteSettings();
 }
-// --- End Site Settings ---
 
-
-export function getUserById(id: string): User | undefined {
-  const user = mockUsers.find(user => user.id === id);
-  if (user) {
-    return {
-      ...user,
-      badges: user.badges || [], 
-    };
+// This function will now fetch from Firestore. The mockUsers array is for fallback or initial display.
+// In a real app, you'd likely remove mockUsers or use it only if Firestore fetch fails.
+export async function getUserById(id: string): Promise<UserFirestoreData | undefined> {
+  if (!db) {
+    console.warn("Firestore db instance not available in getUserById. Falling back to mock data.");
+    return mockUsers.find(user => user.id === id);
   }
-  return undefined;
-}
-
-export function getUserByEmail(email: string): User | undefined {
-  const user = mockUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
-  if (user) {
-    return {
-      ...user,
-      badges: user.badges || [],
-    };
+  try {
+    const userDocRef = doc(db, "usuarios", id);
+    const userDocSnap = await getDoc(userDocRef);
+    if (userDocSnap.exists()) {
+      return userDocSnap.data() as UserFirestoreData;
+    } else {
+      console.warn(`User document with ID ${id} not found in Firestore. Checking mock data.`);
+      return mockUsers.find(user => user.id === id); // Fallback for existing mock data
+    }
+  } catch (error) {
+    console.error("Error fetching user from Firestore in getUserById:", error);
+    return mockUsers.find(user => user.id === id); // Fallback on error
   }
-  return undefined;
 }
 
-export function addUser(user: User): boolean {
-  if (getUserByEmail(user.email)) {
-    return false; 
-  }
-  const newUserWithDefaults = {
-    ...user,
-    followers: [],
-    following: [],
-    badges: [],
-  };
-  mockUsers.push(newUserWithDefaults);
-  return true;
+// Kept for internal use if needed for other parts of the app, but not for auth.
+export function getUserByEmail(email: string): UserFirestoreData | undefined {
+  const lowercasedEmail = email.toLowerCase();
+  return mockUsers.find(user => user.email.toLowerCase() === lowercasedEmail);
 }
 
-export function getAllAccessories(): Accessory[] {
-  return accessories.map(acc => ({
-    ...acc,
-    comments: Array.isArray(acc.comments) ? acc.comments : [],
-  }));
-}
-
+export function getAllAccessories(): Accessory[] { return accessories.map(acc => ({ ...acc, comments: Array.isArray(acc.comments) ? acc.comments : [] })); }
 export function getAccessoryById(id: string): Accessory | undefined {
   const accessory = accessories.find(acc => acc.id === id);
-  if (accessory) {
-    return {
-      ...accessory,
-      comments: Array.isArray(accessory.comments) ? accessory.comments : [],
-    };
-  }
-  return undefined;
+  return accessory ? { ...accessory, comments: Array.isArray(accessory.comments) ? accessory.comments : [] } : undefined;
 }
 
 export function toggleLikeOnAccessory(accessoryId: string, userId: string): { likedBy: string[], likesCount: number } | null {
   const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
-  if (accessoryIndex === -1) {
-    return null;
-  }
+  if (accessoryIndex === -1) return null;
   const accessory = accessories[accessoryIndex];
   accessory.likedBy = accessory.likedBy || [];
   const userIndex = accessory.likedBy.indexOf(userId);
-
-  if (userIndex > -1) {
-    accessory.likedBy.splice(userIndex, 1); 
-  } else {
-    accessory.likedBy.push(userId); 
-  }
+  if (userIndex > -1) accessory.likedBy.splice(userIndex, 1);
+  else accessory.likedBy.push(userId);
   accessories[accessoryIndex] = { ...accessory };
   checkAndAwardBadges(userId); 
   return { likedBy: [...accessory.likedBy], likesCount: accessory.likedBy.length };
 }
 
-export function addCommentToAccessoryData(
-  accessoryId: string,
-  userId: string,
-  userName: string,
-  text: string,
-  status: 'approved' | 'pending_review' | 'rejected' = 'approved'
-): Comment | null {
+export function addCommentToAccessoryData(accessoryId: string, userId: string, userName: string, text: string, status: 'approved' | 'pending_review' | 'rejected' = 'approved'): Comment | null {
   const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
-  if (accessoryIndex === -1) {
-    return null;
-  }
-
-  if (!Array.isArray(accessories[accessoryIndex].comments)) {
-    accessories[accessoryIndex].comments = [];
-  }
-
-  const newComment: Comment = {
-    id: `comment-${accessoryId}-${Date.now()}`,
-    userId,
-    userName,
-    text,
-    createdAt: new Date().toISOString(),
-    status,
-  };
+  if (accessoryIndex === -1) return null;
+  if (!Array.isArray(accessories[accessoryIndex].comments)) accessories[accessoryIndex].comments = [];
+  const newComment: Comment = { id: `comment-${accessoryId}-${Date.now()}`, userId, userName, text, createdAt: new Date().toISOString(), status, };
   accessories[accessoryIndex].comments.push(newComment);
-  accessories[accessoryIndex] = {
-    ...accessories[accessoryIndex],
-    comments: [...accessories[accessoryIndex].comments]
-  };
-  if (status === 'approved') { 
-    checkAndAwardBadges(userId);
-  }
+  accessories[accessoryIndex] = { ...accessories[accessoryIndex], comments: [...accessories[accessoryIndex].comments] };
+  if (status === 'approved') checkAndAwardBadges(userId);
   return newComment;
 }
 
-
 export function getUniqueCategories(): string[] {
   const categoriesSet = new Set<string>();
-  accessories.forEach(acc => {
-    if (acc.category) {
-      categoriesSet.add(acc.category);
-    }
-  });
+  accessories.forEach(acc => { if (acc.category) categoriesSet.add(acc.category); });
   return Array.from(categoriesSet).sort();
 }
-
 export function getDailyDeals(): Accessory[] {
   const deals = accessories.filter(acc => acc.isDeal);
-  return deals.length > 0 ? deals : accessories.slice(0, 2).map(acc => ({
-    ...acc,
-  }));
+  return deals.length > 0 ? deals : accessories.slice(0, 2).map(acc => ({ ...acc }));
 }
-
-export function getCoupons(): Coupon[] {
-  return [...coupons].sort((a, b) => { // Return a copy and sort by expiry date (nulls last)
-    if (!a.expiryDate && !b.expiryDate) return 0;
-    if (!a.expiryDate) return 1;
-    if (!b.expiryDate) return -1;
-    return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
-  });
-}
-
-export function getCouponById(id: string): Coupon | undefined {
-  return coupons.find(c => c.id === id);
-}
-
+export function getCoupons(): Coupon[] { return [...coupons].sort((a, b) => { if (!a.expiryDate && !b.expiryDate) return 0; if (!a.expiryDate) return 1; if (!b.expiryDate) return -1; return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime(); }); }
+export function getCouponById(id: string): Coupon | undefined { return coupons.find(c => c.id === id); }
 export function addCoupon(couponData: Omit<Coupon, 'id'>): Coupon {
-  const newCoupon: Coupon = {
-    id: `coupon-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    ...couponData,
-    expiryDate: couponData.expiryDate || undefined,
-    store: couponData.store || undefined,
-    applyUrl: couponData.applyUrl || undefined,
-  };
-  coupons.unshift(newCoupon); 
-  return newCoupon;
+  const newCoupon: Coupon = { id: `coupon-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, ...couponData, expiryDate: couponData.expiryDate || undefined, store: couponData.store || undefined, applyUrl: couponData.applyUrl || undefined, };
+  coupons.unshift(newCoupon); return newCoupon;
 }
-
 export function updateCoupon(couponId: string, couponData: Partial<Omit<Coupon, 'id'>>): Coupon | null {
   const couponIndex = coupons.findIndex(c => c.id === couponId);
-  if (couponIndex === -1) {
-    return null;
-  }
-  const updatedCoupon = {
-    ...coupons[couponIndex],
-    ...couponData,
-    expiryDate: couponData.expiryDate === "" ? undefined : (couponData.expiryDate || coupons[couponIndex].expiryDate),
-    store: couponData.store === "" ? undefined : (couponData.store || coupons[couponIndex].store),
-    applyUrl: couponData.applyUrl === "" ? undefined : (couponData.applyUrl || coupons[couponIndex].applyUrl),
-  };
-  coupons[couponIndex] = updatedCoupon;
-  return updatedCoupon;
+  if (couponIndex === -1) return null;
+  const updatedCoupon = { ...coupons[couponIndex], ...couponData, expiryDate: couponData.expiryDate === "" ? undefined : (couponData.expiryDate || coupons[couponIndex].expiryDate), store: couponData.store === "" ? undefined : (couponData.store || coupons[couponIndex].store), applyUrl: couponData.applyUrl === "" ? undefined : (couponData.applyUrl || coupons[couponIndex].applyUrl), };
+  coupons[couponIndex] = updatedCoupon; return updatedCoupon;
 }
-
-export function deleteCoupon(couponId: string): boolean {
-  const initialLength = coupons.length;
-  coupons = coupons.filter(c => c.id !== couponId);
-  return coupons.length < initialLength;
-}
-
-
-export function getTestimonials(): Testimonial[] {
-  return testimonials;
-}
-
-export function getAllPosts(): Post[] {
-  return mockPosts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
-}
-
-export function getPostById(id: string): Post | undefined {
-  return mockPosts.find(post => post.id === id);
-}
-
-export function getPostBySlug(slug: string): Post | undefined {
-  return mockPosts.find(post => post.slug === slug);
-}
-
-export function getLatestPosts(count: number): Post[] {
-  return getAllPosts().slice(0, count);
-}
-
+export function deleteCoupon(couponId: string): boolean { const initialLength = coupons.length; coupons = coupons.filter(c => c.id !== couponId); return coupons.length < initialLength; }
+export function getTestimonials(): Testimonial[] { return testimonials; }
+export function getAllPosts(): Post[] { return mockPosts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()); }
+export function getPostById(id: string): Post | undefined { return mockPosts.find(post => post.id === id); }
+export function getPostBySlug(slug: string): Post | undefined { return mockPosts.find(post => post.slug === slug); }
+export function getLatestPosts(count: number): Post[] { return getAllPosts().slice(0, count); }
 export function addPost(postData: Omit<Post, 'id'>): Post {
-  const newPost: Post = {
-    id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    ...postData,
-    publishedAt: postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())
-                   ? new Date(postData.publishedAt).toISOString()
-                   : new Date().toISOString(),
-    tags: postData.tags || [],
-    embedHtml: postData.embedHtml || '', 
-  };
-  mockPosts.unshift(newPost);
-  return newPost;
+  const newPost: Post = { id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, ...postData, publishedAt: postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime()) ? new Date(postData.publishedAt).toISOString() : new Date().toISOString(), tags: postData.tags || [], embedHtml: postData.embedHtml || '', };
+  mockPosts.unshift(newPost); return newPost;
 }
-
 export function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>): Post | null {
   const postIndex = mockPosts.findIndex(p => p.id === postId);
-  if (postIndex === -1) {
-    return null;
-  }
-  const updatedPost = {
-    ...mockPosts[postIndex],
-    ...postData,
-    embedHtml: postData.embedHtml !== undefined ? postData.embedHtml : mockPosts[postIndex].embedHtml,
-  };
-  if (postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())) {
-    updatedPost.publishedAt = new Date(postData.publishedAt).toISOString();
-  } else if (postData.publishedAt) { 
-    updatedPost.publishedAt = mockPosts[postIndex].publishedAt;
-  }
-
-  mockPosts[postIndex] = updatedPost;
-  return updatedPost;
+  if (postIndex === -1) return null;
+  const updatedPost = { ...mockPosts[postIndex], ...postData, embedHtml: postData.embedHtml !== undefined ? postData.embedHtml : mockPosts[postIndex].embedHtml, };
+  if (postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())) { updatedPost.publishedAt = new Date(postData.publishedAt).toISOString(); } else if (postData.publishedAt) { updatedPost.publishedAt = mockPosts[postIndex].publishedAt; }
+  mockPosts[postIndex] = updatedPost; return updatedPost;
 }
+export function deletePost(postId: string): boolean { const initialLength = mockPosts.length; mockPosts = mockPosts.filter(p => p.id !== postId); return mockPosts.length < initialLength; }
 
-export function deletePost(postId: string): boolean {
-  const initialLength = mockPosts.length;
-  mockPosts = mockPosts.filter(p => p.id !== postId);
-  return mockPosts.length < initialLength;
-}
-
-
-export function toggleFollowUser(currentUserId: string, targetUserId: string): { isFollowing: boolean; targetFollowersCount: number } | null {
+export async function toggleFollowUser(currentUserId: string, targetUserId: string): Promise<{ isFollowing: boolean; targetFollowersCount: number } | null> {
+  // This function now needs to update Firestore documents.
+  // For simplicity, this mock will continue to update the mockUsers array.
+  // A real implementation would use Firestore transactions.
   const currentUserIndex = mockUsers.findIndex(u => u.id === currentUserId);
   const targetUserIndex = mockUsers.findIndex(u => u.id === targetUserId);
 
-  if (currentUserIndex === -1 || targetUserIndex === -1 || currentUserId === targetUserId) {
-    return null;
-  }
+  if (currentUserIndex === -1 || targetUserIndex === -1 || currentUserId === targetUserId) return null;
 
   const currentUser = mockUsers[currentUserIndex];
   const targetUser = mockUsers[targetUserIndex];
-
   currentUser.following = currentUser.following || [];
-  currentUser.followers = currentUser.followers || [];
-  targetUser.following = targetUser.following || [];
   targetUser.followers = targetUser.followers || [];
-
   const isCurrentlyFollowing = currentUser.following.includes(targetUserId);
 
   if (isCurrentlyFollowing) {
@@ -552,262 +298,82 @@ export function toggleFollowUser(currentUserId: string, targetUserId: string): {
     currentUser.following.push(targetUserId);
     targetUser.followers.push(currentUserId);
   }
-
   mockUsers[currentUserIndex] = { ...currentUser };
   mockUsers[targetUserIndex] = { ...targetUser };
-
-  checkAndAwardBadges(currentUserId);
-  checkAndAwardBadges(targetUserId);
-
-  return {
-    isFollowing: !isCurrentlyFollowing,
-    targetFollowersCount: targetUser.followers.length,
-  };
+  await checkAndAwardBadges(currentUserId); // Made async due to getUserById
+  await checkAndAwardBadges(targetUserId); // Made async
+  return { isFollowing: !isCurrentlyFollowing, targetFollowersCount: targetUser.followers.length, };
 }
 
-export function checkAndAwardBadges(userId: string): void {
+export async function checkAndAwardBadges(userId: string): Promise<void> {
   const userIndex = mockUsers.findIndex(u => u.id === userId);
-  if (userIndex === -1) {
-    console.warn(`User with ID ${userId} not found for badge checking.`);
-    return;
-  }
-
-  let user = mockUsers[userIndex];
+  if (userIndex === -1) { console.warn(`Mock user ${userId} not found for badge checking.`); return; }
+  
+  let user = mockUsers[userIndex]; // This is from mock data
+  // In a real app, you'd fetch the user's latest data from Firestore here if needed
+  // For badge criteria based on Firestore fields, ensure 'user' reflects that.
+  
   user.badges = Array.isArray(user.badges) ? user.badges : [];
-
-  const criteriaData = generateBadgeCriteriaData(user);
+  const criteriaData = generateBadgeCriteriaData(user); // Pass UserFirestoreData
   let badgesUpdated = false;
-
   allBadges.forEach(badge => {
     if (!user.badges?.includes(badge.id) && badge.criteria(user, criteriaData)) {
       user.badges?.push(badge.id);
       badgesUpdated = true;
-      console.log(`User ${user.name} awarded badge: ${badge.name}`);
     }
   });
-
-  if (badgesUpdated) {
-    mockUsers[userIndex] = { ...user, badges: [...(user.badges || [])] }; 
-  }
+  if (badgesUpdated) mockUsers[userIndex] = { ...user, badges: [...(user.badges || [])] };
 }
 
-export function getAllUsers(): User[] {
-  return mockUsers.map(user => ({
-    ...user,
-    badges: user.badges || [],
-  }));
-}
+// This now fetches all users from mock data. 
+// A real app would fetch from Firestore, potentially with pagination.
+export function getAllUsers(): UserFirestoreData[] { return mockUsers.map(user => ({ ...user, badges: user.badges || [] })); }
 
-export function toggleUserAdminStatus(userId: string): User | null {
+export function toggleUserAdminStatus(userId: string): UserFirestoreData | null {
   const userIndex = mockUsers.findIndex(u => u.id === userId);
-  if (userIndex === -1) {
-    return null;
-  }
+  if (userIndex === -1) return null;
   mockUsers[userIndex].isAdmin = !mockUsers[userIndex].isAdmin;
   mockUsers[userIndex] = { ...mockUsers[userIndex] };
+  // In a real app, you'd update the isAdmin field in Firestore here.
+  // e.g., await updateDoc(doc(db, "usuarios", userId), { isAdmin: mockUsers[userIndex].isAdmin });
   return mockUsers[userIndex];
 }
 
-
 export function getPendingComments(): PendingCommentDisplay[] {
   const pending: PendingCommentDisplay[] = [];
-  accessories.forEach(acc => {
-    (acc.comments || []).forEach(comment => {
-      if (comment.status === 'pending_review') {
-        pending.push({
-          comment: { ...comment }, 
-          accessoryId: acc.id,
-          accessoryName: acc.name,
-        });
-      }
-    });
-  });
+  accessories.forEach(acc => { (acc.comments || []).forEach(comment => { if (comment.status === 'pending_review') { pending.push({ comment: { ...comment }, accessoryId: acc.id, accessoryName: acc.name, }); } }); });
   return pending.sort((a, b) => new Date(b.comment.createdAt).getTime() - new Date(a.comment.createdAt).getTime());
 }
-
-export function updateCommentStatus(
-  accessoryId: string,
-  commentId: string,
-  newStatus: 'approved' | 'rejected'
-): Comment | null {
+export function updateCommentStatus(accessoryId: string, commentId: string, newStatus: 'approved' | 'rejected'): Comment | null {
   const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
-  if (accessoryIndex === -1) {
-    console.error(`Accessory with ID ${accessoryId} not found.`);
-    return null;
-  }
-
+  if (accessoryIndex === -1) return null;
   const accessory = accessories[accessoryIndex];
-  if (!accessory.comments) {
-    console.error(`Accessory ${accessoryId} has no comments array.`);
-    return null;
-  }
-
+  if (!accessory.comments) return null;
   const commentIndex = accessory.comments.findIndex(c => c.id === commentId);
-  if (commentIndex === -1) {
-    console.error(`Comment with ID ${commentId} not found in accessory ${accessoryId}.`);
-    return null;
-  }
-
+  if (commentIndex === -1) return null;
   accessory.comments[commentIndex].status = newStatus;
   const updatedComment = { ...accessory.comments[commentIndex] };
-
-  const updatedComments = [...accessory.comments];
-  updatedComments[commentIndex] = updatedComment;
+  const updatedComments = [...accessory.comments]; updatedComments[commentIndex] = updatedComment;
   accessories[accessoryIndex] = { ...accessory, comments: updatedComments };
-
-  if (newStatus === 'approved') {
-    checkAndAwardBadges(updatedComment.userId);
-  }
-
-  console.log(`Comment ${commentId} in accessory ${accessoryId} status updated to ${newStatus}. User: ${updatedComment.userId}`);
+  if (newStatus === 'approved') checkAndAwardBadges(updatedComment.userId);
   return updatedComment;
 }
 
-// --- Analytics Data Functions ---
-const getTotalUsersCount = (): number => mockUsers.length;
+const getTotalUsersCount = (): number => mockUsers.length; // This should reflect actual users in Firestore for real analytics
 const getTotalAccessoriesCount = (): number => accessories.length;
-const getTotalApprovedCommentsCount = (): number => {
-  return accessories.reduce((sum, acc) => {
-    return sum + (acc.comments?.filter(c => c.status === 'approved').length || 0);
-  }, 0);
-};
-
-const getAccessoriesPerCategory = (): CategoryCount[] => {
-  const counts: Record<string, number> = {};
-  accessories.forEach(acc => {
-    const category = acc.category || 'Sem Categoria';
-    counts[category] = (counts[category] || 0) + 1;
-  });
-  return Object.entries(counts).map(([category, count]) => ({ category, count }))
-    .sort((a,b) => b.count - a.count);
-};
-
-const getMostLikedAccessories = (limit: number = 5): TopAccessoryInfo[] => {
-  return [...accessories]
-    .sort((a, b) => (b.likedBy?.length || 0) - (a.likedBy?.length || 0))
-    .slice(0, limit)
-    .map(acc => ({
-      id: acc.id,
-      name: acc.name,
-      count: acc.likedBy?.length || 0,
-      imageUrl: acc.imageUrl,
-    }));
-};
-
-const getMostCommentedAccessories = (limit: number = 5): TopAccessoryInfo[] => {
-  return [...accessories]
-    .sort((a, b) => (b.comments?.filter(c => c.status === 'approved').length || 0) - (a.comments?.filter(c => c.status === 'approved').length || 0))
-    .slice(0, limit)
-    .map(acc => ({
-      id: acc.id,
-      name: acc.name,
-      count: acc.comments?.filter(c => c.status === 'approved').length || 0,
-      imageUrl: acc.imageUrl,
-    }));
-};
-
-const getRecentComments = (limit: number = 5): RecentCommentInfo[] => {
-  const allApprovedComments: RecentCommentInfo[] = [];
-  accessories.forEach(acc => {
-    (acc.comments || [])
-      .filter(c => c.status === 'approved')
-      .forEach(comment => {
-        allApprovedComments.push({
-          ...comment,
-          accessoryName: acc.name,
-          accessoryId: acc.id,
-        });
-      });
-  });
-  return allApprovedComments
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, limit);
-};
-
-
-export async function getAnalyticsData(): Promise<AnalyticsData> {
-  // Simulate async if needed, for now direct calls
-  return {
-    totalUsers: getTotalUsersCount(),
-    totalAccessories: getTotalAccessoriesCount(),
-    totalApprovedComments: getTotalApprovedCommentsCount(),
-    accessoriesPerCategory: getAccessoriesPerCategory(),
-    mostLikedAccessories: getMostLikedAccessories(),
-    mostCommentedAccessories: getMostCommentedAccessories(),
-    recentComments: getRecentComments(),
-  };
-}
-
-export function addAccessory(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'isDeal'> & { isDeal?: boolean }): Accessory {
-  const newAccessory: Accessory = {
-    id: `acc-${Date.now()}`,
-    name: accessoryData.name,
-    imageUrl: accessoryData.imageUrl,
-    imageHint: accessoryData.imageHint,
-    shortDescription: accessoryData.shortDescription,
-    fullDescription: accessoryData.fullDescription,
-    affiliateLink: accessoryData.affiliateLink,
-    price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : undefined,
-    category: accessoryData.category,
-    aiSummary: accessoryData.aiSummary,
-    isDeal: accessoryData.isDeal ?? false,
-    likedBy: [],
-    comments: [],
-    embedHtml: accessoryData.embedHtml,
-  };
-  accessories.unshift(newAccessory);
-  return newAccessory;
-}
-
+const getTotalApprovedCommentsCount = (): number => accessories.reduce((sum, acc) => sum + (acc.comments?.filter(c => c.status === 'approved').length || 0), 0);
+const getAccessoriesPerCategory = (): CategoryCount[] => { const counts: Record<string, number> = {}; accessories.forEach(acc => { const category = acc.category || 'Sem Categoria'; counts[category] = (counts[category] || 0) + 1; }); return Object.entries(counts).map(([category, count]) => ({ category, count })).sort((a,b) => b.count - a.count); };
+const getMostLikedAccessories = (limit: number = 5): TopAccessoryInfo[] => [...accessories].sort((a, b) => (b.likedBy?.length || 0) - (a.likedBy?.length || 0)).slice(0, limit).map(acc => ({ id: acc.id, name: acc.name, count: acc.likedBy?.length || 0, imageUrl: acc.imageUrl, }));
+const getMostCommentedAccessories = (limit: number = 5): TopAccessoryInfo[] => [...accessories].sort((a, b) => (b.comments?.filter(c => c.status === 'approved').length || 0) - (a.comments?.filter(c => c.status === 'approved').length || 0)).slice(0, limit).map(acc => ({ id: acc.id, name: acc.name, count: acc.comments?.filter(c => c.status === 'approved').length || 0, imageUrl: acc.imageUrl, }));
+const getRecentComments = (limit: number = 5): RecentCommentInfo[] => { const allApprovedComments: RecentCommentInfo[] = []; accessories.forEach(acc => { (acc.comments || []).filter(c => c.status === 'approved').forEach(comment => allApprovedComments.push({ ...comment, accessoryName: acc.name, accessoryId: acc.id, })); }); return allApprovedComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit); };
+export async function getAnalyticsData(): Promise<AnalyticsData> { return { totalUsers: getTotalUsersCount(), totalAccessories: getTotalAccessoriesCount(), totalApprovedComments: getTotalApprovedCommentsCount(), accessoriesPerCategory: getAccessoriesPerCategory(), mostLikedAccessories: getMostLikedAccessories(), mostCommentedAccessories: getMostCommentedAccessories(), recentComments: getRecentComments(), }; }
+export function addAccessory(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'isDeal'> & { isDeal?: boolean }): Accessory { const newAccessory: Accessory = { id: `acc-${Date.now()}`, name: accessoryData.name, imageUrl: accessoryData.imageUrl, imageHint: accessoryData.imageHint, shortDescription: accessoryData.shortDescription, fullDescription: accessoryData.fullDescription, affiliateLink: accessoryData.affiliateLink, price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : undefined, category: accessoryData.category, aiSummary: accessoryData.aiSummary, isDeal: accessoryData.isDeal ?? false, likedBy: [], comments: [], embedHtml: accessoryData.embedHtml, }; accessories.unshift(newAccessory); return newAccessory; }
 export function updateAccessory(accessoryId: string, accessoryData: Partial<Omit<Accessory, 'id' | 'likedBy' | 'comments'>>): Accessory | null {
   const accessoryIndex = accessories.findIndex(acc => acc.id === accessoryId);
-  if (accessoryIndex === -1) {
-    return null;
-  }
+  if (accessoryIndex === -1) return null;
   const updatedAccessoryData = { ...accessoryData };
-  if (updatedAccessoryData.price) {
-    updatedAccessoryData.price = updatedAccessoryData.price.toString().replace(',', '.');
-  }
-
-  accessories[accessoryIndex] = {
-    ...accessories[accessoryIndex],
-    ...updatedAccessoryData,
-    embedHtml: accessoryData.embedHtml !== undefined ? accessoryData.embedHtml : accessories[accessoryIndex].embedHtml, 
-  };
+  if (updatedAccessoryData.price) updatedAccessoryData.price = updatedAccessoryData.price.toString().replace(',', '.');
+  accessories[accessoryIndex] = { ...accessories[accessoryIndex], ...updatedAccessoryData, embedHtml: accessoryData.embedHtml !== undefined ? accessoryData.embedHtml : accessories[accessoryIndex].embedHtml, };
   return accessories[accessoryIndex];
 }
-
-export function deleteAccessory(accessoryId: string): boolean {
-  const initialLength = accessories.length;
-  accessories = accessories.filter(acc => acc.id !== accessoryId);
-  return accessories.length < initialLength;
-}
-
-// --- Helper function to generate placeholder data URI for testing ---
-export function generatePlaceholderDataUri(width: number, height: number, text: string = "Placeholder"): string {
-    if (typeof document === 'undefined') return `https://placehold.co/${width}x${height}.png?text=${encodeURIComponent(text)}`; // Fallback for server-side
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return `https://placehold.co/${width}x${height}.png?text=${encodeURIComponent(text)}`;
-
-    ctx.fillStyle = '#cccccc';
-    ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = '#333333';
-    ctx.font = `${Math.min(width / 4, height / 2)}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, width / 2, height / 2);
-    return canvas.toDataURL();
-}
-
-if (siteSettings.siteLogoUrl === '') {
-    // siteSettings.siteLogoUrl = generatePlaceholderDataUri(120, 40, "Logo");
-}
-if (siteSettings.siteFaviconUrl === '') {
-    // siteSettings.siteFaviconUrl = generatePlaceholderDataUri(32, 32, "Fav");
-}
-
-// --- End Helper ----
+export function deleteAccessory(accessoryId: string): boolean { const initialLength = accessories.length; accessories = accessories.filter(acc => acc.id !== accessoryId); return accessories.length < initialLength; }
