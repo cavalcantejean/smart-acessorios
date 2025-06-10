@@ -10,13 +10,14 @@ import {
 import { doc, getDoc } from 'firebase/firestore';
 import type { AuthUser, UserFirestoreData } from '@/lib/types';
 
-interface AuthContextType {
+export interface AuthContextType { // Exportando para uso em LoginForm
   user: AuthUser | null;
   firebaseUser: FirebaseUser | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isLoading: boolean;
   logout: () => Promise<void>;
+  refreshAuthUser: () => Promise<void>; // Mantido caso seja útil, mas não é o foco da correção atual
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,106 +25,102 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Começa como true
+  const [isLoading, setIsLoading] = useState(true);
+
+  const processAuthStateChange = useCallback(async (fbUser: FirebaseUser | null) => {
+    console.log("useAuth: processAuthStateChange INICIADO. fbUser UID:", fbUser ? fbUser.uid : "null");
+    setIsLoading(true); // Sempre define loading no início do processamento
+
+    try {
+      if (fbUser) {
+        console.log("useAuth: fbUser detectado em processAuthStateChange. UID:", fbUser.uid);
+        setFirebaseUser(fbUser);
+
+        console.log("useAuth: Buscando dados do Firestore para UID:", fbUser.uid);
+        const userDocRef = doc(db, "usuarios", fbUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          const firestoreData = userDocSnap.data() as UserFirestoreData;
+          const currentAuthUser: AuthUser = {
+            id: fbUser.uid,
+            email: fbUser.email,
+            name: firestoreData.name || fbUser.displayName || "Usuário",
+            isAdmin: firestoreData.isAdmin || false,
+          };
+          console.log(`useAuth: Dados do Firestore encontrados. Definindo authUser para UID: ${fbUser.uid}, Nome: ${currentAuthUser.name}, Admin: ${currentAuthUser.isAdmin}`);
+          setAuthUser(currentAuthUser);
+        } else {
+          console.warn(`useAuth: Usuário ${fbUser.uid} autenticado (Firebase Auth) mas SEM documento no Firestore. Estado inconsistente. Forçando logout.`);
+          await signOut(auth); // Isso irá disparar onAuthStateChanged novamente com fbUser = null
+          // Não definir authUser/firebaseUser como null aqui, signOut irá cuidar disso.
+        }
+      } else {
+        console.log("useAuth: Sem fbUser em processAuthStateChange (usuário deslogado ou estado inicial). Limpando estados authUser e firebaseUser.");
+        setAuthUser(null);
+        setFirebaseUser(null);
+      }
+    } catch (error) {
+      console.error("useAuth: ERRO CRÍTICO dentro de processAuthStateChange:", error);
+      setAuthUser(null);
+      setFirebaseUser(null);
+      if (auth.currentUser) {
+        console.log("useAuth: Tentando deslogar usuário Firebase devido a erro em processAuthStateChange.");
+        try {
+          await signOut(auth);
+        } catch (signOutError) {
+          console.error("useAuth: Erro ao tentar deslogar usuário Firebase após erro em processAuthStateChange:", signOutError);
+        }
+      }
+    } finally {
+      console.log("useAuth: processAuthStateChange - Bloco FINALLY. Definindo isLoading para FALSE.");
+      setIsLoading(false);
+    }
+  }, []); // useCallback para estabilizar a função
 
   useEffect(() => {
-    console.log("useAuth: useEffect for onAuthStateChanged setup running.");
+    console.log("useAuth: Configurando listener onAuthStateChanged.");
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
-      // Usar uma função assíncrona auto-invocável para lidar com operações assíncronas
-      // e garantir que o bloco finally para setIsLoading seja sempre chamado.
-      (async () => {
-        console.log("useAuth: onAuthStateChanged TRIGGERED. fbUser UID:", fbUser ? fbUser.uid : "null");
-        setIsLoading(true); // Define loading como true no início do processamento desta mudança de auth
-
-        try {
-          if (fbUser) {
-            console.log("useAuth: fbUser detected. Setting firebaseUser state for UID:", fbUser.uid);
-            setFirebaseUser(fbUser); // Define o estado do Firebase user
-
-            console.log("useAuth: Fetching Firestore data for UID:", fbUser.uid);
-            const userDocRef = doc(db, "usuarios", fbUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
-
-            if (userDocSnap.exists()) {
-              const firestoreData = userDocSnap.data() as UserFirestoreData;
-              const currentAuthUser: AuthUser = {
-                id: fbUser.uid,
-                email: fbUser.email, // E-mail do Firebase Auth
-                name: firestoreData.name || fbUser.displayName || "Usuário",
-                isAdmin: firestoreData.isAdmin || false,
-              };
-              console.log("useAuth: Firestore data found. Setting authUser state for UID:", fbUser.uid, "Name:", currentAuthUser.name, "IsAdmin:", currentAuthUser.isAdmin);
-              setAuthUser(currentAuthUser); // Define o estado do usuário específico da aplicação
-            } else {
-              console.warn(`useAuth: User ${fbUser.uid} authenticated (Firebase Auth) but NO Firestore document found. This is an inconsistent state. Forcing logout.`);
-              // Tenta deslogar para evitar estado inconsistente. Isso irá disparar onAuthStateChanged novamente.
-              await signOut(auth);
-              // Não é necessário definir authUser/firebaseUser como null aqui, pois o signOut irá re-disparar este callback
-              // e o próximo if (fbUser) será falso.
-            }
-          } else {
-            console.log("useAuth: No fbUser (user logged out or initial state without user). Clearing authUser and firebaseUser states.");
-            setAuthUser(null);
-            setFirebaseUser(null);
-          }
-        } catch (error) {
-          console.error("useAuth: CRITICAL ERROR within onAuthStateChanged async processing:", error);
-          // Tenta limpar o estado de autenticação em caso de erro para evitar estados inconsistentes
-          setAuthUser(null);
-          setFirebaseUser(null);
-          // Se ainda houver um usuário no Firebase Auth, tenta deslogá-lo
-          if (auth.currentUser) {
-            console.log("useAuth: Attempting to signOut Firebase user due to error in onAuthStateChanged.");
-            try {
-              await signOut(auth);
-            } catch (signOutError) {
-              console.error("useAuth: Error trying to signOut Firebase user after onAuthStateChanged error:", signOutError);
-            }
-          }
-        } finally {
-          // Este bloco é crucial e DEVE ser alcançado.
-          console.log("useAuth: onAuthStateChanged - finally block. Setting isLoading to FALSE.");
-          setIsLoading(false); // Garante que isLoading seja definido como false independentemente do caminho
-        }
-      })(); // Invoca imediatamente a função assíncrona
+      console.log("useAuth: onAuthStateChanged DISPARADO. fbUser UID:", fbUser ? fbUser.uid : "null");
+      processAuthStateChange(fbUser);
     });
 
-    // Cleanup
     return () => {
-      console.log("useAuth: Cleaning up onAuthStateChanged listener (AuthProvider unmounted).");
+      console.log("useAuth: Limpando listener onAuthStateChanged (AuthProvider desmontado).");
       unsubscribe();
     };
-  }, []); // O array de dependências vazio significa que este efeito executa uma vez na montagem e limpa na desmontagem
+  }, [processAuthStateChange]); // processAuthStateChange agora é uma dependência estável
 
   const logout = useCallback(async () => {
-    console.log("useAuth: logout function called.");
-    // Não definimos isLoading aqui, pois onAuthStateChanged irá lidar com isso quando o estado do usuário mudar para null.
-    // Definir isLoading aqui pode causar um flash de estado de carregamento desnecessário se onAuthStateChanged for rápido.
+    console.log("useAuth: Função logout chamada.");
     try {
       await signOut(auth);
-      console.log("useAuth: signOut successful. onAuthStateChanged will handle clearing user state and managing isLoading.");
-      // onAuthStateChanged será disparado por signOut, que então definirá authUser/firebaseUser para null
-      // e, eventualmente, setIsLoading(false) através de seu próprio bloco finally.
+      console.log("useAuth: signOut bem-sucedido. onAuthStateChanged irá lidar com a limpeza do estado e isLoading.");
+      // onAuthStateChanged será acionado, chamando processAuthStateChange com fbUser = null
     } catch (error) {
-      console.error("useAuth: Error during signOut: ", error);
-      // Se o signOut em si falhar, definimos isLoading como false para não ficar preso no estado de carregamento.
-      // Isso é uma recuperação, pois o estado de autenticação pode não ter mudado.
+      console.error("useAuth: Erro durante signOut: ", error);
+      // Se o signOut em si falhar, ainda definimos isLoading como false para evitar travamentos.
       setIsLoading(false);
     }
   }, []);
 
-  // Calcula isAuthenticated e isAdmin com base nos estados atuais, incluindo isLoading.
-  // Um usuário só está autenticado e seu status de admin é conhecido se o carregamento terminou.
+  // refreshAuthUser agora é mais uma forma de acionar a lógica de processAuthStateChange
+  const refreshAuthUser = useCallback(async () => {
+    console.log("useAuth: refreshAuthUser chamado.");
+    await processAuthStateChange(auth.currentUser);
+  }, [processAuthStateChange]);
+
+
   const isAuthenticated = !isLoading && !!authUser && !!firebaseUser;
   const isAdmin = !isLoading && (authUser?.isAdmin ?? false);
 
   if (typeof window !== 'undefined') {
-     console.log("useAuth: AuthProvider rendering/re-rendering. isLoading:", isLoading, "isAuthenticated:", isAuthenticated, "isAdmin:", isAdmin, "authUser ID:", authUser ? authUser.id : "null", "fbUser UID:", firebaseUser ? firebaseUser.uid : "null");
+    console.log(`useAuth: AuthProvider renderizando/re-renderizando. isLoading: ${isLoading}, isAuthenticated: ${isAuthenticated}, isAdmin: ${isAdmin}, authUser ID: ${authUser ? authUser.id : "null"}, fbUser UID: ${firebaseUser ? firebaseUser.uid : "null"}`);
   }
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { user: authUser, firebaseUser, isAuthenticated, isAdmin, isLoading, logout } },
+    { value: { user: authUser, firebaseUser, isAuthenticated, isAdmin, isLoading, logout, refreshAuthUser } },
     children
   );
 }
@@ -135,3 +132,4 @@ export function useAuth() {
   }
   return context;
 }
+

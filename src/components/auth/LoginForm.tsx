@@ -18,9 +18,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState, startTransition, useRef, useState } from "react";
+import { useEffect, useState, startTransition } from "react"; // Removed useActionState
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { auth } from '@/lib/firebase'; // Import Firebase auth instance
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Import signInWithEmailAndPassword
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
@@ -29,23 +31,22 @@ const loginFormSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
-export interface LoginFormState {
+// Interface de estado local para o formulário, já que não usamos mais useActionState para o login principal
+interface LocalFormState {
   message: string;
   success: boolean;
-  issues?: Record<string, string[] | undefined>;
-  fields?: {
-    email?: string;
-    password?: string;
-  };
+  isLoading: boolean; // Para controlar o estado de carregamento do submit do formulário
 }
 
-const initialState: LoginFormState = {
+const initialLocalState: LocalFormState = {
   message: "",
   success: false,
+  isLoading: false,
 };
 
 interface LoginFormProps {
-  formAction: (prevState: LoginFormState, formData: FormData) => Promise<LoginFormState>;
+  // formAction é mantido para compatibilidade, mas não será usado para o login principal do Firebase
+  formAction?: (prevState: any, formData: FormData) => Promise<any>; 
   title: string;
   description: string;
   submitButtonText: string;
@@ -65,51 +66,22 @@ function SubmitButtonInternal({ text, pending }: { text: string, pending: boolea
   );
 }
 
-export default function LoginForm({ formAction, title, description, submitButtonText, linkToRegister }: LoginFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState);
+export default function LoginForm({ title, description, submitButtonText, linkToRegister }: LoginFormProps) {
+  const [localFormState, setLocalFormState] = useState<LocalFormState>(initialLocalState);
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, user, refreshAuthUser } = useAuth(); // refreshAuthUser pode não ser mais necessário aqui
   const router = useRouter();
   const searchParams = useSearchParams();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      email: state?.fields?.email || "",
+      email: "",
       password: "",
     },
   });
 
-  useEffect(() => {
-    console.log("LoginForm: useEffect[state] disparado. Estado da action:", state);
-    if (state.message) {
-      setIsSubmitting(false); 
-      if (state.success) {
-        toast({
-          title: "Login Bem-Sucedido!",
-          description: state.message || "Aguarde, sincronizando dados...",
-        });
-        // O redirecionamento agora é tratado pelo useEffect abaixo, que observa o AuthContext.
-      } else {
-        toast({
-          title: "Erro de Login",
-          description: state.message || "Verifique os dados e tente novamente.",
-          variant: "destructive",
-        });
-        if (state.issues) {
-          for (const [fieldName, errors] of Object.entries(state.issues)) {
-            if (errors && errors.length > 0) {
-              form.setError(fieldName as keyof LoginFormValues, { type: 'server', message: errors.join(', ') });
-            }
-          }
-        }
-        form.reset({ email: state.fields?.email || form.getValues('email'), password: '' });
-      }
-    }
-  }, [state, toast, form]);
-
+  // useEffect para redirecionar se já estiver autenticado OU se o estado de autenticação mudar
   useEffect(() => {
     console.log(`LoginForm: useEffect[isAuthenticated, isAuthLoading, user] disparado. isAuthenticated: ${isAuthenticated}, isAuthLoading: ${isAuthLoading}, User: ${user?.name}`);
     if (!isAuthLoading && isAuthenticated && user) {
@@ -117,21 +89,49 @@ export default function LoginForm({ formAction, title, description, submitButton
       console.log("LoginForm: Autenticado e não carregando. Redirecionando para:", redirectTo);
       router.replace(redirectTo);
     } else if (!isAuthLoading && !isAuthenticated) {
-        console.log("LoginForm: Não autenticado e não carregando. Nenhuma ação de redirecionamento.");
+      console.log("LoginForm: Não autenticado e não carregando. Nenhuma ação de redirecionamento.");
     } else {
-        console.log("LoginForm: Ainda carregando autenticação ou estado de usuário não totalmente definido.");
+      console.log("LoginForm: Ainda carregando autenticação ou estado de usuário não totalmente definido.");
     }
   }, [isAuthenticated, isAuthLoading, user, router, searchParams]);
 
+  const handleFormSubmit = async (values: LoginFormValues) => {
+    console.log("LoginForm: handleFormSubmit iniciado com valores:", values);
+    setLocalFormState({ message: "", success: false, isLoading: true });
 
-  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (formRef.current) {
-      setIsSubmitting(true);
-      const formData = new FormData(formRef.current);
-      startTransition(() => {
-        dispatch(formData);
+    try {
+      const lowercasedEmail = values.email.toLowerCase();
+      console.log("LoginForm: Chamando signInWithEmailAndPassword no CLIENTE para:", lowercasedEmail);
+      await signInWithEmailAndPassword(auth, lowercasedEmail, values.password);
+      
+      // O sucesso aqui significa que o Firebase Auth no cliente foi bem-sucedido.
+      // onAuthStateChanged no useAuth deve pegar essa mudança.
+      console.log("LoginForm: signInWithEmailAndPassword NO CLIENTE bem-sucedido.");
+      toast({
+        title: "Login Bem-Sucedido!",
+        description: "Sincronizando seus dados...",
       });
+      setLocalFormState({ message: "Login bem-sucedido! Sincronizando...", success: true, isLoading: false });
+      // Não redirecionamos aqui. O useEffect acima, que escuta o useAuth, fará isso.
+
+    } catch (error: any) {
+      console.error("LoginForm: Erro no signInWithEmailAndPassword NO CLIENTE:", error);
+      let errorMessage = "Credenciais inválidas ou erro ao fazer login.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = "E-mail ou senha incorretos.";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Muitas tentativas de login falhadas. Tente novamente mais tarde."
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = "Esta conta de usuário foi desabilitada.";
+      }
+      
+      toast({
+        title: "Erro de Login",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      setLocalFormState({ message: errorMessage, success: false, isLoading: false });
+      form.reset({ email: values.email, password: '' });
     }
   };
 
@@ -142,15 +142,14 @@ export default function LoginForm({ formAction, title, description, submitButton
         <CardDescription>{description}</CardDescription>
         {searchParams.get('message') && (
           <p className="text-sm text-green-600 bg-green-50 p-3 rounded-md border border-green-200 mt-2">
-            {searchParams.get('message')}
+            {decodeURIComponent(searchParams.get('message')!)}
           </p>
         )}
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form
-            ref={formRef}
-            onSubmit={handleFormSubmit}
+            onSubmit={form.handleSubmit(handleFormSubmit)}
             className="space-y-4"
           >
             <FormField
@@ -184,9 +183,9 @@ export default function LoginForm({ formAction, title, description, submitButton
                 Esqueceu a senha?
               </Link>
             </div>
-            <SubmitButtonInternal text={submitButtonText} pending={isSubmitting} />
-            {state && !state.success && state.message && Object.keys(form.formState.errors).length === 0 && (
-              <p className="text-sm font-medium text-destructive text-center">{state.message}</p>
+            <SubmitButtonInternal text={submitButtonText} pending={localFormState.isLoading} />
+            {localFormState.message && !localFormState.success && !form.formState.isSubmitted && ( // Mostra erro geral se não houver erros de campo específicos
+              <p className="text-sm font-medium text-destructive text-center">{localFormState.message}</p>
             )}
           </form>
         </Form>
@@ -202,4 +201,3 @@ export default function LoginForm({ formAction, title, description, submitButton
     </Card>
   );
 }
-    
