@@ -52,7 +52,6 @@ interface LoginFormProps {
   linkToRegister?: { href: string; text: string; label: string; };
 }
 
-// SubmitButton agora é interno e usa o estado de pending local
 function SubmitButtonInternal({ text, pending }: { text: string, pending: boolean }) {
   return (
     <Button type="submit" className="w-full" disabled={pending}>
@@ -75,7 +74,6 @@ export default function LoginForm({ formAction, title, description, submitButton
   const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
@@ -87,15 +85,13 @@ export default function LoginForm({ formAction, title, description, submitButton
   useEffect(() => {
     console.log("LoginForm: useEffect[state] disparado. Estado da action:", state);
     if (state.message) {
-      setIsSubmitting(false); // Reset local pending state
+      setIsSubmitting(false); 
       if (state.success) {
         toast({
           title: "Login Bem-Sucedido!",
-          description: state.message || "Aguarde, você será redirecionado.",
+          description: state.message || "Aguarde, sincronizando dados...",
         });
-        // Não redirecione aqui. Deixe o useEffect abaixo lidar com isso
-        // com base na atualização do isAuthenticated do useAuth.
-        // form.reset(); // Opcional: resetar o formulário aqui ou após o redirecionamento.
+        // O redirecionamento agora é tratado pelo useEffect abaixo, que observa o AuthContext.
       } else {
         toast({
           title: "Erro de Login",
@@ -116,7 +112,7 @@ export default function LoginForm({ formAction, title, description, submitButton
 
   useEffect(() => {
     console.log(`LoginForm: useEffect[isAuthenticated, isAuthLoading, user] disparado. isAuthenticated: ${isAuthenticated}, isAuthLoading: ${isAuthLoading}, User: ${user?.name}`);
-    if (!isAuthLoading && isAuthenticated && user) { // Adicionada verificação de 'user'
+    if (!isAuthLoading && isAuthenticated && user) {
       const redirectTo = searchParams.get('redirect') || (user.isAdmin ? '/admin/dashboard' : '/dashboard');
       console.log("LoginForm: Autenticado e não carregando. Redirecionando para:", redirectTo);
       router.replace(redirectTo);

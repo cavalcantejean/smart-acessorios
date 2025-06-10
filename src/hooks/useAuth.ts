@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true); // Inicia o carregamento ao detectar mudança
 
       if (fbUser) {
-        setFirebaseUser(fbUser); // Define o usuário do Firebase imediatamente
+        setFirebaseUser(fbUser);
         console.log("useAuth: Firebase user found (UID:", fbUser.uid, "). Fetching Firestore data...");
         const userDocRef = doc(db, "usuarios", fbUser.uid);
         try {
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const firestoreData = userDocSnap.data() as UserFirestoreData;
             const currentAuthUser: AuthUser = {
               id: fbUser.uid,
-              email: fbUser.email,
+              email: fbUser.email, // Email do Firebase Auth
               name: firestoreData.name || fbUser.displayName || "Usuário",
               isAdmin: firestoreData.isAdmin || false,
             };
@@ -51,19 +51,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             console.warn(`useAuth: User ${fbUser.uid} authenticated but NO Firestore document found. Logging out.`);
             await signOut(auth); // Isso acionará onAuthStateChanged novamente com fbUser = null
-                                 // O estado authUser e firebaseUser será limpo no próximo ciclo
+            setAuthUser(null); // Limpa explicitamente
+            setFirebaseUser(null); // Limpa explicitamente
           }
         } catch (error) {
           console.error("useAuth: Error fetching user document from Firestore:", error);
-          await signOut(auth); // Log out em caso de erro ao buscar dados essenciais
+          await signOut(auth);
+          setAuthUser(null);
+          setFirebaseUser(null);
         }
       } else {
         console.log("useAuth: No Firebase user. Clearing auth state.");
         setFirebaseUser(null);
         setAuthUser(null);
       }
-      setIsLoading(false); // Finaliza o carregamento após todo o processamento
-      console.log("useAuth: isLoading set to false. isAuthenticated will be:", !!(fbUser && authUser)); // Log para depuração
+      // Esta é a mudança crucial: setIsLoading(false) deve ser chamado DEPOIS que authUser/firebaseUser são atualizados.
+      setIsLoading(false);
+      if (typeof window !== 'undefined') {
+        console.log("useAuth: onAuthStateChanged finished. isLoading:", false, "isAuthenticated:", !!(fbUser && authUser), "authUser:", authUser, "fbUser:", fbUser);
+      }
     });
 
     return () => {
@@ -71,29 +77,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribe();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Dependências vazias para rodar apenas na montagem e desmontagem
+  }, []);
 
   const logout = useCallback(async () => {
     console.log("useAuth: logout called.");
     setIsLoading(true);
     try {
       await signOut(auth);
+      console.log("useAuth: signOut successful. onAuthStateChanged will clear user state and set isLoading=false.");
       // onAuthStateChanged cuidará de definir user como null e isLoading como false
-      console.log("useAuth: signOut successful. onAuthStateChanged will clear user state.");
     } catch (error) {
       console.error("useAuth: Error signing out: ", error);
-      setIsLoading(false); // Garante que o estado de carregamento seja resetado em caso de erro
+      setIsLoading(false); // Garante que o estado de carregamento seja resetado em caso de erro no signOut
     }
   }, []);
 
-  // isAuthenticated é verdadeiro apenas se não estiver carregando E os objetos de usuário existirem
   const isAuthenticated = !isLoading && !!authUser && !!firebaseUser;
   const isAdmin = authUser?.isAdmin ?? false;
 
-  if(typeof window !== 'undefined'){
-    console.log("useAuth: AuthProvider rendering/re-rendering. isLoading:", isLoading, "isAuthenticated:", isAuthenticated, "isAdmin:", isAdmin, "authUser ID:", authUser ? authUser.id : "null", "fbUser UID:", firebaseUser ? firebaseUser.uid : "null");
+  if (typeof window !== 'undefined') {
+     console.log("useAuth: AuthProvider rendering/re-rendering. isLoading:", isLoading, "isAuthenticated:", isAuthenticated, "isAdmin:", isAdmin, "authUser ID:", authUser ? authUser.id : "null", "fbUser UID:", firebaseUser ? firebaseUser.uid : "null");
   }
-
 
   return React.createElement(
     AuthContext.Provider,
