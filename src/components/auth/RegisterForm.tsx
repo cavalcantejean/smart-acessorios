@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState, startTransition } from "react"; // Added startTransition
+import { useEffect, useActionState, startTransition } from "react";
 import { useFormStatus } from "react-dom";
 import type { AuthUser } from "@/lib/types";
 // import { useAuth } from '@/hooks/useAuth'; // Uncomment if auto-login after register is desired
@@ -155,7 +155,7 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 <FormItem>
                   <FormLabel>Nome Completo</FormLabel>
                   <FormControl>
-                    <Input placeholder="Seu Nome" {...field} />
+                    <Input placeholder="Seu Nome" {...field} autoComplete="name" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -168,7 +168,7 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="seu@email.com" {...field} />
+                    <Input type="email" placeholder="seu@email.com" {...field} autoComplete="email" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -181,7 +181,7 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 <FormItem>
                   <FormLabel>Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="•••••••• (mínimo 6 caracteres)" {...field} />
+                    <Input type="password" placeholder="•••••••• (mínimo 6 caracteres)" {...field} autoComplete="new-password" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -194,7 +194,7 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 <FormItem>
                   <FormLabel>Confirmar Senha</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+                    <Input type="password" placeholder="••••••••" {...field} autoComplete="new-password" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
