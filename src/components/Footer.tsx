@@ -1,11 +1,44 @@
 
-"use client"; 
+"use client";
 
 import Link from 'next/link';
-import Image from 'next/image';
+import Image, { type StaticImageData } from 'next/image';
 import { getSiteSettings } from '@/lib/data';
-import type { SiteSettings } from '@/lib/types';
+import type { SiteSettings, SocialLinkSetting } from '@/lib/types';
 import React, { useEffect, useState } from 'react';
+
+// Importa os ícones PNG locais
+import facebookIcon from '@/img/social/facebook.png';
+import instagramIcon from '@/img/social/instagram.png';
+// import twitterIcon from '@/img/social/twitter.png'; // Removido devido a erro de "Module not found"
+import tiktokIcon from '@/img/social/tiktok.png';
+import whatsappIcon from '@/img/social/whatsapp.png';
+import pinterestIcon from '@/img/social/pinterest.png';
+import telegramIcon from '@/img/social/telegram.png';
+import discordIcon from '@/img/social/discord.png';
+import snapchatIcon from '@/img/social/snapchat.png';
+import threadsIcon from '@/img/social/threads.png';
+import youtubeIcon from '@/img/social/youtube.png';
+import kwaiIcon from '@/img/social/kwai.png';
+// Adicione mais importações se tiver mais ícones
+
+// Mapeamento das strings de plataforma para os objetos de imagem importados
+const localIconMap: Record<string, StaticImageData | undefined> = {
+  Facebook: facebookIcon,
+  Instagram: instagramIcon,
+  // Twitter: twitterIcon, // Removido do mapa
+  TikTok: tiktokIcon,
+  WhatsApp: whatsappIcon,
+  Pinterest: pinterestIcon,
+  Telegram: telegramIcon,
+  Discord: discordIcon,
+  Snapchat: snapchatIcon,
+  Threads: threadsIcon,
+  YouTube: youtubeIcon,
+  Kwai: kwaiIcon,
+  // "Email" não tem um PNG local no seu exemplo, então será tratado pelo fallback IconComponent
+};
+
 
 export default function Footer() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -53,11 +86,41 @@ export default function Footer() {
             <div>
               <h3 className="text-lg font-semibold text-foreground mb-2">Siga-nos</h3>
               <div className="flex flex-wrap gap-4">
-                {socialLinksToRender.map(({ platform, label, url, customImageUrl }) => {
-                  const imageSrc = customImageUrl 
-                                   ? customImageUrl 
-                                   : `/img/social/${platform.toLowerCase()}.png`;
-                  
+                {socialLinksToRender.map((link) => {
+                  const { platform, label, url, customImageUrl, IconComponent } = link;
+                  let iconContent;
+
+                  const localIconSrc = localIconMap[platform];
+
+                  if (customImageUrl) {
+                    iconContent = (
+                      <Image
+                        src={customImageUrl}
+                        alt={`${label} icon`}
+                        width={24}
+                        height={24}
+                        className="h-6 w-6"
+                        unoptimized={customImageUrl.startsWith('data:')}
+                      />
+                    );
+                  } else if (localIconSrc) {
+                    iconContent = (
+                      <Image
+                        src={localIconSrc}
+                        alt={`${label} icon`}
+                        width={24}
+                        height={24}
+                        className="h-6 w-6"
+                      />
+                    );
+                  } else if (IconComponent) {
+                    // Fallback to Lucide icon if local PNG or custom image is not available
+                    iconContent = <IconComponent className="h-6 w-6" />;
+                  } else {
+                    // Fallback text if no icon is available at all
+                    iconContent = <span>{label.substring(0,2)}</span>;
+                  }
+
                   return (
                     <Link
                       key={platform}
@@ -66,15 +129,9 @@ export default function Footer() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-foreground/70 hover:text-primary transition-colors"
+                      title={label}
                     >
-                      <Image 
-                        src={imageSrc} 
-                        alt={`${label} icon`} 
-                        width={24} 
-                        height={24} 
-                        className="h-6 w-6" // Mantém o tamanho consistente
-                        unoptimized={customImageUrl && customImageUrl.startsWith('data:') ? true : undefined} // Evita otimização para data URIs
-                      />
+                      {iconContent}
                     </Link>
                   );
                 })}
