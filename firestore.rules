@@ -1,35 +1,32 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Função helper para verificar se o usuário é admin
-    // Para produção, considere usar Custom Claims para eficiência e segurança.
-    function isAdmin() {
-      // Em um ambiente de produção, NUNCA confie em um campo 'isAdmin' no documento do usuário
-      // para regras de segurança críticas sem proteção adicional (como Custom Claims via Firebase Auth).
-      // Esta função é apenas para o contexto do mock data.
-      // Para um sistema real, use Custom Claims: request.auth.token.admin == true
-      return request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
+    // Coleção de Usuários (usuarios) - TESTE ULTRA-SIMPLIFICADO
+    match /usuarios/{userId} {
+      // PERMITE QUALQUER CRIAÇÃO - APENAS PARA TESTE, INSEGURO PARA PRODUÇÃO
+      allow create: if true;
+
+      // Outras operações podem ser mantidas ou comentadas para o teste,
+      // mas o foco é garantir que 'create' funcione.
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow get: if true; // Permite leitura pública de perfis para teste
     }
 
-    // Coleção de Usuários (usuarios)
-    match /usuarios/{userId} {
-      // ATENÇÃO: Regra de criação simplificada para TESTE. INSEGURA PARA PRODUÇÃO.
-      allow create: if true; 
-
-      // Mantenha as outras regras como estavam ou simplifique-as também para teste se necessário.
-      // Por enquanto, vamos focar apenas na 'create'.
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow get: if true;
+    // Para isolar o problema, você pode comentar temporariamente as regras de outras coleções
+    // se o erro persistir.
+    /*
+    // Função helper para verificar se o usuário é admin
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
     }
 
     // Coleção de Acessórios (acessorios)
     match /acessorios/{accessoryId} {
       allow get, list: if true;
       allow create, delete, write: if isAdmin();
-      allow update: if request.auth != null || isAdmin(); // Simplificado para teste, refinar depois
+      allow update: if request.auth != null || isAdmin();
     }
 
     // Coleção de Posts do Blog (posts)
@@ -44,16 +41,17 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Configurações do Site (ex: um único documento 'global' em uma coleção 'siteConfig')
+    // Configurações do Site
     match /siteConfig/{configId} {
         allow get: if true;
         allow write: if isAdmin();
     }
 
-    // Se você tiver uma coleção de Testimonials (depoimentos)
+    // Coleção de Testimonials (depoimentos)
     match /testimonials/{testimonialId} {
         allow get, list: if true;
         allow create, update, delete: if isAdmin();
     }
+    */
   }
 }
