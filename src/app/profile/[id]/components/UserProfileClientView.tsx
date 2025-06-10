@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import UserListItem from "@/components/UserListItem";
-import { getUserById, getCommentsByUserId, getAccessoriesLikedByUser } from '@/lib/data'; // Import new data functions
+import { getUserById, getCommentsByUserId, getAccessoriesLikedByUser } from '@/lib/data';
 import { Separator } from '@/components/ui/separator';
 
 interface UserProfileClientViewProps {
@@ -45,14 +45,17 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
     .filter(badge => badge !== undefined) as BadgeType[];
 
   useEffect(() => {
+    console.log("UserProfileClientView: useEffect for followersCount. New profileUser.followers length:", profileUser.followers?.length);
     if (profileUser.followers) {
       setFollowersCount(profileUser.followers.length);
     }
   }, [profileUser.followers]);
   
   useEffect(() => {
+    console.log("UserProfileClientView: useEffect for follow lists. Dialog states:", { isFollowersDialogOpen, isFollowingDialogOpen });
     if (profileUser && (isFollowersDialogOpen || isFollowingDialogOpen)) {
       setIsLoadingFollowLists(true);
+      console.log("UserProfileClientView: Fetching follow lists...");
       
       const fetchedFollowers = (profileUser.followers || [])
         .map(id => getUserById(id))
@@ -65,19 +68,40 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
       setFollowersList(fetchedFollowers);
       setFollowingList(fetchedFollowing);
       setIsLoadingFollowLists(false);
+      console.log("UserProfileClientView: Follow lists fetched.");
     }
   }, [profileUser, isFollowersDialogOpen, isFollowingDialogOpen]);
 
   useEffect(() => {
-    if (profileUser.id) {
-      setIsLoadingActivity(true);
-      const comments = getCommentsByUserId(profileUser.id);
-      const likes = getAccessoriesLikedByUser(profileUser.id);
-      setRecentComments(comments);
-      setLikedAccessories(likes);
+    console.log("UserProfileClientView: Activity useEffect triggered. Profile User ID:", profileUser?.id);
+    if (!profileUser || !profileUser.id) {
+      console.warn("UserProfileClientView: profileUser or profileUser.id is missing. Clearing activity and stopping loading.");
+      setRecentComments([]);
+      setLikedAccessories([]);
       setIsLoadingActivity(false);
+      return;
     }
-  }, [profileUser.id]);
+
+    setIsLoadingActivity(true);
+    console.log("UserProfileClientView: Activity - setIsLoadingActivity(true)");
+    try {
+      console.log("UserProfileClientView: Activity - Fetching comments for user:", profileUser.id);
+      const comments = getCommentsByUserId(profileUser.id);
+      console.log("UserProfileClientView: Activity - Fetched comments count:", comments.length);
+      setRecentComments(comments);
+
+      console.log("UserProfileClientView: Activity - Fetching liked accessories for user:", profileUser.id);
+      const likes = getAccessoriesLikedByUser(profileUser.id);
+      console.log("UserProfileClientView: Activity - Fetched liked accessories count:", likes.length);
+      setLikedAccessories(likes);
+    } catch (error) {
+      console.error("UserProfileClientView: Activity - Error fetching activity data:", error);
+      // Mesmo em caso de erro, paramos o loading
+    } finally {
+      setIsLoadingActivity(false);
+      console.log("UserProfileClientView: Activity - setIsLoadingActivity(false) in finally block.");
+    }
+  }, [profileUser]); // Depender do objeto profileUser inteiro. Se ele for estável, o useEffect roda uma vez.
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -86,7 +110,9 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
   };
 
   const MAX_RECENT_COMMENTS = 3;
-  const MAX_LIKED_ITEMS = 4; // Display more liked items as they are smaller
+  const MAX_LIKED_ITEMS = 4;
+
+  console.log("UserProfileClientView: Rendering. isLoadingActivity:", isLoadingActivity);
 
   return (
     <AuthProviderClientComponent>
@@ -318,3 +344,4 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
     </AuthProviderClientComponent>
   );
 }
+
