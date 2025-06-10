@@ -1,7 +1,7 @@
 
 import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges'; // Import badge definitions and criteria data generator
-import { Facebook, Instagram, Twitter, Film, MessageSquare, Send, MessageCircle, Ghost, AtSign, Mail, Youtube, PlaySquare } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Film, MessageSquare, Send, MessageCircle, Ghost, AtSign, Mail, Youtube, PlaySquare, TicketPercent } from 'lucide-react';
 import PinterestIcon from '@/components/icons/PinterestIcon';
 
 
@@ -113,7 +113,7 @@ let accessories: Accessory[] = [
   }
 ];
 
-const coupons: Coupon[] = [
+let coupons: Coupon[] = [
   {
     id: 'coupon1',
     code: 'SUMMER20',
@@ -227,8 +227,8 @@ let mockPosts: Post[] = [
 let siteSettings: SiteSettings = {
   siteTitle: 'SmartAcessorios',
   siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-  siteLogoUrl: '', // Initialize with empty string or a default data URI if available
-  siteFaviconUrl: '', // Initialize with empty string or a default data URI
+  siteLogoUrl: '', 
+  siteFaviconUrl: '', 
   socialLinks: [
     { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", IconComponent: Facebook, placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
     { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", IconComponent: Instagram, placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
@@ -414,8 +414,51 @@ export function getDailyDeals(): Accessory[] {
 }
 
 export function getCoupons(): Coupon[] {
-  return coupons;
+  return [...coupons].sort((a, b) => { // Return a copy and sort by expiry date (nulls last)
+    if (!a.expiryDate && !b.expiryDate) return 0;
+    if (!a.expiryDate) return 1;
+    if (!b.expiryDate) return -1;
+    return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+  });
 }
+
+export function getCouponById(id: string): Coupon | undefined {
+  return coupons.find(c => c.id === id);
+}
+
+export function addCoupon(couponData: Omit<Coupon, 'id'>): Coupon {
+  const newCoupon: Coupon = {
+    id: `coupon-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    ...couponData,
+    // Ensure optional fields are handled
+    expiryDate: couponData.expiryDate || undefined,
+    store: couponData.store || undefined,
+  };
+  coupons.unshift(newCoupon); // Add to the beginning for "newest first" feel
+  return newCoupon;
+}
+
+export function updateCoupon(couponId: string, couponData: Partial<Omit<Coupon, 'id'>>): Coupon | null {
+  const couponIndex = coupons.findIndex(c => c.id === couponId);
+  if (couponIndex === -1) {
+    return null;
+  }
+  const updatedCoupon = {
+    ...coupons[couponIndex],
+    ...couponData,
+    expiryDate: couponData.expiryDate === "" ? undefined : (couponData.expiryDate || coupons[couponIndex].expiryDate),
+    store: couponData.store === "" ? undefined : (couponData.store || coupons[couponIndex].store),
+  };
+  coupons[couponIndex] = updatedCoupon;
+  return updatedCoupon;
+}
+
+export function deleteCoupon(couponId: string): boolean {
+  const initialLength = coupons.length;
+  coupons = coupons.filter(c => c.id !== couponId);
+  return coupons.length < initialLength;
+}
+
 
 export function getTestimonials(): Testimonial[] {
   return testimonials;
@@ -463,7 +506,7 @@ export function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>):
   };
   if (postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())) {
     updatedPost.publishedAt = new Date(postData.publishedAt).toISOString();
-  } else if (postData.publishedAt) {
+  } else if (postData.publishedAt) { // if it's an empty string or invalid, keep original
     updatedPost.publishedAt = mockPosts[postIndex].publishedAt;
   }
 
@@ -614,7 +657,70 @@ export function updateCommentStatus(
   return updatedComment;
 }
 
+// --- Analytics Data Functions ---
+const getTotalUsersCount = (): number => mockUsers.length;
+const getTotalAccessoriesCount = (): number => accessories.length;
+const getTotalApprovedCommentsCount = (): number => {
+  return accessories.reduce((sum, acc) => {
+    return sum + (acc.comments?.filter(c => c.status === 'approved').length || 0);
+  }, 0);
+};
+
+const getAccessoriesPerCategory = (): CategoryCount[] => {
+  const counts: Record<string, number> = {};
+  accessories.forEach(acc => {
+    const category = acc.category || 'Sem Categoria';
+    counts[category] = (counts[category] || 0) + 1;
+  });
+  return Object.entries(counts).map(([category, count]) => ({ category, count }))
+    .sort((a,b) => b.count - a.count);
+};
+
+const getMostLikedAccessories = (limit: number = 5): TopAccessoryInfo[] => {
+  return [...accessories]
+    .sort((a, b) => (b.likedBy?.length || 0) - (a.likedBy?.length || 0))
+    .slice(0, limit)
+    .map(acc => ({
+      id: acc.id,
+      name: acc.name,
+      count: acc.likedBy?.length || 0,
+      imageUrl: acc.imageUrl,
+    }));
+};
+
+const getMostCommentedAccessories = (limit: number = 5): TopAccessoryInfo[] => {
+  return [...accessories]
+    .sort((a, b) => (b.comments?.filter(c => c.status === 'approved').length || 0) - (a.comments?.filter(c => c.status === 'approved').length || 0))
+    .slice(0, limit)
+    .map(acc => ({
+      id: acc.id,
+      name: acc.name,
+      count: acc.comments?.filter(c => c.status === 'approved').length || 0,
+      imageUrl: acc.imageUrl,
+    }));
+};
+
+const getRecentComments = (limit: number = 5): RecentCommentInfo[] => {
+  const allApprovedComments: RecentCommentInfo[] = [];
+  accessories.forEach(acc => {
+    (acc.comments || [])
+      .filter(c => c.status === 'approved')
+      .forEach(comment => {
+        allApprovedComments.push({
+          ...comment,
+          accessoryName: acc.name,
+          accessoryId: acc.id,
+        });
+      });
+  });
+  return allApprovedComments
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit);
+};
+
+
 export async function getAnalyticsData(): Promise<AnalyticsData> {
+  // Simulate async if needed, for now direct calls
   return {
     totalUsers: getTotalUsersCount(),
     totalAccessories: getTotalAccessoriesCount(),
@@ -670,4 +776,33 @@ export function deleteAccessory(accessoryId: string): boolean {
   accessories = accessories.filter(acc => acc.id !== accessoryId);
   return accessories.length < initialLength;
 }
+
+// --- Helper function to generate placeholder data URI for testing ---
+export function generatePlaceholderDataUri(width: number, height: number, text: string = "Placeholder"): string {
+    if (typeof document === 'undefined') return `https://placehold.co/${width}x${height}.png?text=${encodeURIComponent(text)}`; // Fallback for server-side
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return `https://placehold.co/${width}x${height}.png?text=${encodeURIComponent(text)}`;
+
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = '#333333';
+    ctx.font = `${Math.min(width / 4, height / 2)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, width / 2, height / 2);
+    return canvas.toDataURL();
+}
+
+if (siteSettings.siteLogoUrl === '') {
+    // siteSettings.siteLogoUrl = generatePlaceholderDataUri(120, 40, "Logo");
+}
+if (siteSettings.siteFaviconUrl === '') {
+    // siteSettings.siteFaviconUrl = generatePlaceholderDataUri(32, 32, "Fav");
+}
+
+// --- End Helper ----
 

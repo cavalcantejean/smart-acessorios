@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText, Settings } from 'lucide-react'; // Added Settings icon
+import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText, Settings, TicketPercent } from 'lucide-react'; // Added TicketPercent
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
@@ -89,6 +89,21 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
+              <TicketPercent className="h-6 w-6 text-teal-500" />
+              Gerenciar Cupons
+            </CardTitle>
+            <CardDescription>Adicione, edite ou remova cupons promocionais.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/admin/coupons">Gerenciar Cupons</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
               <Users className="h-6 w-6 text-blue-500" />
               Gerenciar Usuários
             </CardTitle>
@@ -134,7 +149,7 @@ export default function AdminDashboardPage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
-              <Settings className="h-6 w-6 text-pink-500" /> {/* Changed icon */}
+              <Settings className="h-6 w-6 text-pink-500" />
               Configurações do Site
             </CardTitle>
             <CardDescription>Ajustes gerais e configurações da plataforma.</CardDescription>
@@ -150,3 +165,4 @@ export default function AdminDashboardPage() {
     </div>
   );
 }
+
