@@ -24,8 +24,9 @@ export async function createCouponAction(
   
   const dataToValidate = {
     ...rawFormData,
-    expiryDate: rawFormData.expiryDate || undefined, // Ensure empty strings become undefined for optional Zod schema
+    expiryDate: rawFormData.expiryDate || undefined, 
     store: rawFormData.store || undefined,
+    applyUrl: rawFormData.applyUrl || undefined,
   };
 
   const validatedFields = CouponFormSchema.safeParse(dataToValidate);
@@ -40,18 +41,18 @@ export async function createCouponAction(
   }
 
   try {
-    // Ensure expiryDate is passed correctly, or undefined if not set
     const couponInputData = {
       ...validatedFields.data,
       expiryDate: validatedFields.data.expiryDate || undefined,
       store: validatedFields.data.store || undefined,
+      applyUrl: validatedFields.data.applyUrl || undefined,
     };
 
     const newCoupon = addCoupon(couponInputData);
     if (newCoupon) {
       revalidatePath('/admin/coupons');
-      revalidatePath('/coupons'); // Revalidate public coupons page
-      revalidatePath('/'); // Revalidate homepage if coupons are shown there
+      revalidatePath('/coupons'); 
+      revalidatePath('/'); 
       return { 
         success: true, 
         message: `Cupom "${newCoupon.code}" criado com sucesso!`, 
@@ -76,6 +77,7 @@ export async function updateCouponAction(
     ...rawFormData,
     expiryDate: rawFormData.expiryDate || undefined,
     store: rawFormData.store || undefined,
+    applyUrl: rawFormData.applyUrl || undefined,
   };
   
   const validatedFields = CouponFormSchema.safeParse(dataToValidate);
@@ -94,6 +96,7 @@ export async function updateCouponAction(
       ...validatedFields.data,
       expiryDate: validatedFields.data.expiryDate || undefined,
       store: validatedFields.data.store || undefined,
+      applyUrl: validatedFields.data.applyUrl || undefined,
     };
 
     const updatedCoupon = updateCoupon(couponId, couponInputData);

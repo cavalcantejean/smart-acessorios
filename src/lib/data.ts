@@ -120,7 +120,8 @@ let coupons: Coupon[] = [
     description: 'Get 20% off on all summer accessories.',
     discount: '20% OFF',
     expiryDate: '2024-08-31',
-    store: 'AccessoryStore'
+    store: 'AccessoryStore',
+    applyUrl: 'https://example.com/store/summer-sale'
   },
   {
     id: 'coupon2',
@@ -128,7 +129,8 @@ let coupons: Coupon[] = [
     description: '15% discount on headphones and speakers.',
     discount: '15% OFF',
     expiryDate: '2024-09-15',
-    store: 'SoundGoodies'
+    store: 'SoundGoodies',
+    applyUrl: 'https://example.com/audio'
   },
   {
     id: 'coupon3',
@@ -136,6 +138,7 @@ let coupons: Coupon[] = [
     description: 'Free shipping on orders over R$50.',
     discount: 'Free Shipping',
     store: 'GadgetHub'
+    // applyUrl intentionally left undefined for this one
   },
 ];
 
@@ -430,11 +433,11 @@ export function addCoupon(couponData: Omit<Coupon, 'id'>): Coupon {
   const newCoupon: Coupon = {
     id: `coupon-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     ...couponData,
-    // Ensure optional fields are handled
     expiryDate: couponData.expiryDate || undefined,
     store: couponData.store || undefined,
+    applyUrl: couponData.applyUrl || undefined,
   };
-  coupons.unshift(newCoupon); // Add to the beginning for "newest first" feel
+  coupons.unshift(newCoupon); 
   return newCoupon;
 }
 
@@ -448,6 +451,7 @@ export function updateCoupon(couponId: string, couponData: Partial<Omit<Coupon, 
     ...couponData,
     expiryDate: couponData.expiryDate === "" ? undefined : (couponData.expiryDate || coupons[couponIndex].expiryDate),
     store: couponData.store === "" ? undefined : (couponData.store || coupons[couponIndex].store),
+    applyUrl: couponData.applyUrl === "" ? undefined : (couponData.applyUrl || coupons[couponIndex].applyUrl),
   };
   coupons[couponIndex] = updatedCoupon;
   return updatedCoupon;
@@ -506,7 +510,7 @@ export function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>):
   };
   if (postData.publishedAt && !isNaN(new Date(postData.publishedAt).getTime())) {
     updatedPost.publishedAt = new Date(postData.publishedAt).toISOString();
-  } else if (postData.publishedAt) { // if it's an empty string or invalid, keep original
+  } else if (postData.publishedAt) { 
     updatedPost.publishedAt = mockPosts[postIndex].publishedAt;
   }
 
@@ -805,4 +809,3 @@ if (siteSettings.siteFaviconUrl === '') {
 }
 
 // --- End Helper ----
-

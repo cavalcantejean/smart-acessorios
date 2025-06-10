@@ -5,9 +5,10 @@ import type { Coupon } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, CheckCircle, CalendarDays } from 'lucide-react';
+import { Copy, CheckCircle, CalendarDays, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface CouponCardProps {
   coupon: Coupon;
@@ -20,7 +21,6 @@ export default function CouponCard({ coupon }: CouponCardProps) {
 
   useEffect(() => {
     if (coupon.expiryDate) {
-      // Formata a data apenas no cliente
       setFormattedExpiryDate(new Date(coupon.expiryDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' }));
     }
   }, [coupon.expiryDate]);
@@ -33,7 +33,7 @@ export default function CouponCard({ coupon }: CouponCardProps) {
           title: 'Código Copiado!',
           description: `O código ${coupon.code} foi copiado para a área de transferência.`,
         });
-        setTimeout(() => setCopied(false), 2000); // Reset icon after 2 seconds
+        setTimeout(() => setCopied(false), 2000); 
       })
       .catch(err => {
         console.error('Falha ao copiar código: ', err);
@@ -56,13 +56,20 @@ export default function CouponCard({ coupon }: CouponCardProps) {
         </div>
         <CardDescription className="text-sm">{coupon.description}</CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow pb-4">
+      <CardContent className="flex-grow pb-4 space-y-3">
         <div className="flex items-center justify-between p-3 bg-background rounded-md border border-dashed">
           <span className="text-lg font-mono font-semibold text-accent">{coupon.code}</span>
           <Button variant="ghost" size="icon" onClick={handleCopyCode} aria-label="Copiar código do cupom">
             {copied ? <CheckCircle className="h-5 w-5 text-green-500" /> : <Copy className="h-5 w-5" />}
           </Button>
         </div>
+        {coupon.applyUrl && (
+          <Button asChild className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Link href={coupon.applyUrl} target="_blank" rel="noopener noreferrer">
+              Usar Cupom <ExternalLink className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        )}
       </CardContent>
       {coupon.expiryDate && (
         <CardFooter className="text-xs text-muted-foreground pt-0 pb-3">
@@ -75,4 +82,3 @@ export default function CouponCard({ coupon }: CouponCardProps) {
     </Card>
   );
 }
-

@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Calendar as CalendarIcon } from "lucide-react";
+import { Loader2, Save, Calendar as CalendarIcon, Link as LinkIcon } from "lucide-react";
 import { useActionState, useEffect, startTransition, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import type { Coupon } from "@/lib/types";
@@ -75,6 +75,7 @@ export default function CouponForm({
       discount: initialData?.discount || "",
       expiryDate: defaultExpiryDate,
       store: initialData?.store || "",
+      applyUrl: initialData?.applyUrl || "",
     },
   });
 
@@ -86,7 +87,7 @@ export default function CouponForm({
           router.push('/admin/coupons');
         }
         if (!initialData?.id) {
-          form.reset({ code: "", description: "", discount: "", expiryDate: "", store: "" });
+          form.reset({ code: "", description: "", discount: "", expiryDate: "", store: "", applyUrl: "" });
         }
       } else {
         toast({
@@ -209,6 +210,23 @@ export default function CouponForm({
             )}
           />
         </div>
+        <FormField
+            control={form.control}
+            name="applyUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>URL de Aplicação (Opcional)</FormLabel>
+                <div className="flex items-center gap-2">
+                   <LinkIcon className="h-5 w-5 text-muted-foreground" />
+                    <FormControl className="flex-grow">
+                        <Input type="url" placeholder="https://loja.com/carrinho?cupom=CODIGO" {...field} value={field.value || ""} />
+                    </FormControl>
+                </div>
+                <FormDescription>Link direto para a página onde o cupom pode ser aplicado (ex: página do produto ou carrinho).</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending} />
         {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
            <p className="text-sm font-medium text-destructive">{state.error}</p>

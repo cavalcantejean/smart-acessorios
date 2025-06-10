@@ -22,6 +22,7 @@ export const CouponFormSchema = z.object({
     message: "Data de validade inválida ou no passado. Use o formato YYYY-MM-DD ou deixe em branco."
   }),
   store: z.string().max(100, "O nome da loja não pode exceder 100 caracteres.").optional(),
+  applyUrl: z.string().url("URL de aplicação inválida. Use o formato https://...").optional().or(z.literal('')),
 });
 
 export type CouponFormValues = z.infer<typeof CouponFormSchema>;

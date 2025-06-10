@@ -34,6 +34,7 @@ export interface Coupon {
   discount: string;
   expiryDate?: string;
   store?: string; // Optional: name of the store or brand
+  applyUrl?: string; // Optional: URL where the coupon can be applied
 }
 
 export interface Testimonial {
