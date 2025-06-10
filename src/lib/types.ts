@@ -76,7 +76,7 @@ export interface Post {
   category?: string;
   tags?: string[]; // Array of tags
   publishedAt: string; // ISO date string e.g., "2024-07-28T10:00:00Z"
-  embedHtml?: string; // Novo campo para embed
+  embedHtml?: string; 
 }
 
 // Badge System Types
@@ -148,4 +148,20 @@ export interface SiteSettings {
   socialLinks: SocialLinkSetting[];
   siteLogoUrl?: string;
   siteFaviconUrl?: string;
+}
+
+// Error Reporting Types
+export type ErrorReportStatus = 'new' | 'seen' | 'resolved' | 'ignored';
+
+export interface ErrorReport {
+  id: string;
+  timestamp: string; // ISO date string
+  message: string;
+  source?: string; // URL or component name where error occurred
+  stackTrace?: string;
+  userId?: string;
+  userName?: string;
+  userAgent?: string; // Browser/OS info
+  status: ErrorReportStatus;
+  details?: Record<string, any>; // Any other relevant details
 }

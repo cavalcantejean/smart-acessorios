@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText, Settings, TicketPercent } from 'lucide-react'; // Added TicketPercent
+import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText, Settings, TicketPercent, Bug } from 'lucide-react'; // Added Bug
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
@@ -161,8 +161,22 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Bug className="h-6 w-6 text-red-500" />
+              Relatórios de Erros
+            </CardTitle>
+            <CardDescription>Visualize erros reportados na plataforma.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/admin/error-reports">Ver Relatórios de Erros</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );
 }
-

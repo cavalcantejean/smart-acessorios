@@ -1,5 +1,5 @@
 
-import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
+import type { Accessory, Coupon, Testimonial, User, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting, ErrorReport, ErrorReportStatus } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges'; // Import badge definitions and criteria data generator
 import { Facebook, Instagram, Twitter, Film, MessageSquare, Send, MessageCircle, Ghost, AtSign, Mail, Youtube, PlaySquare, TicketPercent } from 'lucide-react';
 import PinterestIcon from '@/components/icons/PinterestIcon';
@@ -248,6 +248,86 @@ let siteSettings: SiteSettings = {
     { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", IconComponent: PlaySquare, placeholderUrl: "https://k.kwai.com/u/@seu_usuario", customImageUrl: "" }
   ]
 };
+
+// --- Mock Error Reports ---
+let errorReports: ErrorReport[] = [
+  {
+    id: 'err-1',
+    timestamp: new Date(Date.now() - 86400000 * 1).toISOString(), // 1 day ago
+    message: 'Failed to fetch accessory details',
+    source: '/accessory/unknown-id',
+    stackTrace: 'Error: Network Error\n    at fetchAccessory (api.js:25)\n    at AccessoryPage (AccessoryPage.tsx:30)',
+    userId: 'user-1',
+    userName: 'Usuário Comum',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36',
+    status: 'new',
+    details: { statusCode: 500, apiEndpoint: '/api/accessories/unknown-id' }
+  },
+  {
+    id: 'err-2',
+    timestamp: new Date(Date.now() - 3600000 * 5).toISOString(), // 5 hours ago
+    message: 'Cannot read property "name" of undefined',
+    source: 'CheckoutProcess.tsx:112',
+    stackTrace: 'TypeError: Cannot read property "name" of undefined\n    at CheckoutProcess (CheckoutProcess.tsx:112)\n    at handleCheckout (CartPage.tsx:88)',
+    userId: 'user-2',
+    userName: 'Outro Usuário',
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+    status: 'seen',
+  },
+  {
+    id: 'err-3',
+    timestamp: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+    message: 'Login timed out',
+    source: 'AuthService.ts:45',
+    stackTrace: 'TimeoutError: Login request timed out after 30000ms\n    at login (AuthService.ts:45)',
+    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36',
+    status: 'resolved',
+    details: { attempt: 3 }
+  },
+  {
+    id: 'err-4',
+    timestamp: new Date().toISOString(),
+    message: 'Could not parse JSON response from /api/coupons',
+    source: 'CouponService.fetchCoupons',
+    stackTrace: 'SyntaxError: Unexpected token < in JSON at position 0\n at JSON.parse (<anonymous>)\n at CouponService.fetchCoupons (couponService.js:22:21)',
+    userId: 'admin-1',
+    userName: 'Administrador',
+    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36',
+    status: 'new',
+  },
+];
+
+export function getAllErrorReports(): ErrorReport[] {
+  return [...errorReports].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+export function getErrorReportById(id: string): ErrorReport | undefined {
+  return errorReports.find(err => err.id === id);
+}
+
+export function updateErrorReportStatus(reportId: string, newStatus: ErrorReportStatus): ErrorReport | null {
+  const reportIndex = errorReports.findIndex(err => err.id === reportId);
+  if (reportIndex === -1) {
+    return null;
+  }
+  errorReports[reportIndex].status = newStatus;
+  errorReports[reportIndex] = { ...errorReports[reportIndex] }; // Ensure new object for reactivity if needed elsewhere
+  return errorReports[reportIndex];
+}
+
+// SIMULATED: In a real app, this would be called by a global error handler in the client
+export function logClientError(errorData: Omit<ErrorReport, 'id' | 'timestamp' | 'status'>): ErrorReport {
+  const newReport: ErrorReport = {
+    id: `err-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: new Date().toISOString(),
+    status: 'new',
+    ...errorData,
+  };
+  errorReports.unshift(newReport); // Add to the beginning to appear as newest
+  return newReport;
+}
+// --- End Mock Error Reports ---
+
 
 export function getSiteSettings(): SiteSettings {
   return {
