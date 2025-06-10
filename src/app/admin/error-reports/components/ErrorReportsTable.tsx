@@ -235,5 +235,3 @@ export default function ErrorReportsTable({ initialErrorReports }: ErrorReportsT
     </>
   );
 }
-
-    
