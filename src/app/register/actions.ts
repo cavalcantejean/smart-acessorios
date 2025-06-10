@@ -96,14 +96,28 @@ export async function registerUserAction(
     };
 
   } catch (error) {
-    console.error("Error during Firestore registration:", error);
-    let errorMessage = "Não foi possível registrar o usuário. Tente novamente.";
+    console.error("--- Firestore Registration Error ---");
+    console.error("Timestamp:", new Date().toISOString());
+    console.error("Input Data:", { name, email: lowercasedEmail }); // Log input that led to error
     if (error instanceof Error) {
-        // You might want to check for specific Firebase error codes here
-        // e.g., if (error.code === '...') { /* handle specific error */ }
+        console.error("Error Name:", error.name);
+        console.error("Error Message:", error.message);
+        console.error("Error Stack:", error.stack);
+        // Specific Firebase error properties
+        if ('code' in error) {
+          console.error("Firebase Error Code:", (error as any).code);
+        }
+    } else {
+        console.error("Raw Error Object:", error);
     }
+    console.error("--- End Firestore Registration Error ---");
+
+    let clientErrorMessage = "Não foi possível registrar o usuário. Tente novamente.";
+    // Potentially customize clientErrorMessage based on specific Firebase error codes if desired later
+    // For example: if ((error as any).code === 'permission-denied') clientErrorMessage = "Permissão negada ao tentar registrar no banco de dados."
+
     return {
-      message: errorMessage,
+      message: clientErrorMessage,
       success: false,
       fields: { name, email: lowercasedEmail },
       user: null,
