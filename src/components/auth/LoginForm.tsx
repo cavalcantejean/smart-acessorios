@@ -18,10 +18,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, LogIn } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState, startTransition } from "react";
+import { useEffect, useActionState, startTransition, useRef } from "react"; // Added useRef
 import { useFormStatus } from "react-dom";
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation'; // For redirection
+import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Por favor, insira um e-mail válido." }),
@@ -36,9 +36,8 @@ export interface LoginFormState {
   issues?: Record<string, string[] | undefined>;
   fields?: {
     email?: string;
-    password?: string; // Keep for re-filling on error
+    password?: string; 
   };
-  // user?: AuthUser | null; // No longer need to pass user from action
 }
 
 const initialState: LoginFormState = {
@@ -71,14 +70,16 @@ function SubmitButton({ text }: { text: string }) {
 export default function LoginForm({ formAction, title, description, submitButtonText, linkToRegister }: LoginFormProps) {
   const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
-  const { isAuthenticated, isLoading } = useAuth(); // Get auth state
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth(); 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const formRef = useRef<HTMLFormElement>(null); // Ref for the form
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
       email: state?.fields?.email || "",
-      password: "", // Always clear password field for security
+      password: "", 
     },
   });
 
@@ -89,11 +90,8 @@ export default function LoginForm({ formAction, title, description, submitButton
           title: "Sucesso!",
           description: state.message,
         });
-        // Redirection will be handled by the main auth state listener (useAuth)
-        // or you can explicitly redirect here after a short delay if onAuthStateChanged is too slow.
-        // For now, let's assume useAuth handles it.
-        form.reset({ email: '', password: ''});
-        // router.push('/dashboard'); // Or let useAuth redirect
+        // Redirection is now primarily handled by the useEffect below watching isAuthenticated
+        // form.reset({ email: '', password: ''}); // Reset might be too soon if redirection is slow
       } else {
         toast({
           title: "Erro de Login",
@@ -107,42 +105,45 @@ export default function LoginForm({ formAction, title, description, submitButton
             }
           }
         }
-        // Re-fill email, clear password
         form.reset({ email: state.fields?.email || form.getValues('email'), password: '' });
       }
     }
   }, [state, toast, form]);
 
-  // Redirect if user becomes authenticated (e.g., after successful login action)
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      const searchParams = new URLSearchParams(window.location.search);
+    if (!isAuthLoading && isAuthenticated) {
       const redirectTo = searchParams.get('redirect') || '/dashboard';
+      console.log("LoginForm: Authenticated, redirecting to", redirectTo);
       router.replace(redirectTo);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isAuthLoading, router, searchParams]);
 
+  // Handle form submission using a ref to the form and form.getValues()
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); // Prevent default form submission
+    const formData = new FormData(formRef.current!); // Get FormData from the form element
+    startTransition(() => {
+      dispatch(formData);
+    });
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl">
       <CardHeader>
         <CardTitle className="text-2xl font-headline">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
+        {searchParams.get('message') && (
+            <p className="text-sm text-green-600 bg-green-50 p-3 rounded-md border border-green-200 mt-2">
+                {searchParams.get('message')}
+            </p>
+        )}
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form
-            action={dispatch}
+            ref={formRef} // Assign ref to the form
+            onSubmit={form.handleSubmit(() => handleFormSubmit(new Event('submit') as any))} // Use RHF's handleSubmit for validation
             className="space-y-4" 
-            onSubmit={form.handleSubmit(() => {
-                const formData = new FormData();
-                const values = form.getValues();
-                formData.append('email', values.email);
-                formData.append('password', values.password);
-                startTransition(() => {
-                  dispatch(formData);
-                });
-            })}
           >
             <FormField
               control={form.control}

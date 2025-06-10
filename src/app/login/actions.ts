@@ -3,9 +3,10 @@
 
 import type { LoginFormState } from '@/components/auth/LoginForm';
 import { z } from 'zod';
-import { auth } from '@/lib/firebase'; // Firebase Auth
+import { auth, db } from '@/lib/firebase'; // Firebase Auth
 import { signInWithEmailAndPassword } from 'firebase/auth';
-// No need for AuthUser type here, as onAuthStateChanged will handle user state update.
+import { doc, getDoc } from 'firebase/firestore';
+import type { UserFirestoreData } from '@/lib/types';
 
 const LoginSchema = z.object({
   email: z.string().email({ message: "E-mail inválido." }),
@@ -28,7 +29,6 @@ export async function loginUserAction(
       fields: {
         email: formData.get('email')?.toString() || '',
       },
-      // user: null, // Not needed as onAuthStateChanged handles user state
     };
   }
 
@@ -37,8 +37,8 @@ export async function loginUserAction(
 
   console.log("Attempting Firebase Auth Login:", { email: lowercasedEmail });
 
-  if (!auth) {
-    console.error("!!! CRITICAL: Firebase 'auth' instance is not available in loginUserAction. Login aborted. !!!");
+  if (!auth || !db) {
+    console.error("!!! CRITICAL: Firebase 'auth' or 'db' instance is not available in loginUserAction. Login aborted. !!!");
     return {
       message: "Erro crítico na configuração de autenticação. Contate o suporte.",
       success: false,
@@ -47,16 +47,24 @@ export async function loginUserAction(
   }
 
   try {
-    await signInWithEmailAndPassword(auth, lowercasedEmail, password);
-    // If signInWithEmailAndPassword succeeds, onAuthStateChanged in useAuth hook
-    // will detect the new user and update the global auth state.
-    // The user's name and isAdmin status will be fetched by useAuth from Firestore.
+    const userCredential = await signInWithEmailAndPassword(auth, lowercasedEmail, password);
+    const firebaseUser = userCredential.user;
     
-    console.log(`Firebase Auth Login successful for ${lowercasedEmail}.`);
+    // After successful Firebase Auth, fetch isAdmin status from Firestore
+    // This is to provide immediate feedback if an admin logs in, though useAuth will also fetch this.
+    const userDocRef = doc(db, "usuarios", firebaseUser.uid);
+    const userDocSnap = await getDoc(userDocRef);
+    let isAdmin = false;
+    if (userDocSnap.exists()) {
+      const firestoreData = userDocSnap.data() as UserFirestoreData;
+      isAdmin = firestoreData.isAdmin || false;
+    }
+
+    console.log(`Firebase Auth Login successful for ${lowercasedEmail}. Is Admin: ${isAdmin}`);
+    
     return { 
-      message: `Login bem-sucedido! Redirecionando...`, 
+      message: `Login bem-sucedido! Redirecionando... ${isAdmin ? '(Admin)' : ''}`, 
       success: true,
-      // No need to return user object here.
     };
   } catch (error: any) {
     console.error("Firebase Auth Login Error:", error);
@@ -65,8 +73,9 @@ export async function loginUserAction(
       errorMessage = "E-mail ou senha incorretos.";
     } else if (error.code === 'auth/too-many-requests') {
         errorMessage = "Muitas tentativas de login falhadas. Tente novamente mais tarde."
+    } else if (error.code === 'auth/user-disabled') {
+        errorMessage = "Esta conta de usuário foi desabilitada.";
     }
-    // Handle other specific Firebase Auth errors as needed
     return { 
         message: errorMessage, 
         success: false,
@@ -74,3 +83,4 @@ export async function loginUserAction(
     };
   }
 }
+

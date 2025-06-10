@@ -4,47 +4,162 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Coleção 'usuarios'
+    // USUARIOS Collection
+    // Path: /usuarios/{userId}
     match /usuarios/{userId} {
-      // DEBUGGING RULE: Very permissive create rule.
-      // Allows creation if the document ID in the path matches the 'id' field in the data.
-      // This is INSECURE for production.
-      allow create: if request.resource.data.id == userId;
+      // CREATE:
+      // - User must be authenticated (request.auth.uid must exist).
+      // - The {userId} in the path must match the authenticated user's UID.
+      // - The 'id' field in the document data must also match the authenticated user's UID.
+      // - 'name' and 'email' fields must be strings and not empty.
+      // - 'email' in the document must match the authenticated user's token email.
+      // - 'isAdmin' must either be false or not present at all during creation.
+      // - 'followers', 'following', 'badges' must be lists (arrays).
+      // - 'createdAt' must be a server timestamp.
+      // - Only allow specific fields to be written on creation.
+      allow create: if request.auth.uid == userId &&
+                       request.resource.data.id == request.auth.uid &&
+                       request.resource.data.name is string &&
+                       request.resource.data.name.size() > 0 &&
+                       request.resource.data.email is string &&
+                       request.resource.data.email == request.auth.token.email &&
+                       (request.resource.data.isAdmin == false || !('isAdmin' in request.resource.data)) &&
+                       request.resource.data.followers is list &&
+                       request.resource.data.following is list &&
+                       request.resource.data.badges is list &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.keys().hasOnly(['id', 'name', 'email', 'isAdmin', 'followers', 'following', 'badges', 'createdAt', 'avatarUrl', 'avatarHint', 'bio']);
 
-      // Qualquer usuário autenticado pode ler perfis.
+      // READ:
+      // - Any authenticated user can read any user's profile.
       allow read: if request.auth.uid != null;
 
-      // Usuário só pode atualizar seu próprio documento.
-      // Não pode se auto-promover a admin.
-      // Não pode mudar ID ou email via update aqui.
+      // UPDATE:
+      // - User must be authenticated.
+      // - User can only update their own document.
+      // - Cannot change 'id', 'email', 'createdAt'.
+      // - 'isAdmin' cannot be changed by the user unless it's already true (admin changing others is a separate rule/scenario).
+      //   Or, if they are changing it to false (admin demoting themselves - edge case, usually handled by another admin).
+      // - 'name', 'avatarUrl', 'avatarHint', 'bio' must be strings.
+      // - 'followers', 'following', 'badges' must be lists.
+      // - Check for allowed fields to update.
       allow update: if request.auth.uid == userId &&
                        request.resource.data.id == resource.data.id &&
                        request.resource.data.email == resource.data.email &&
-                       (request.resource.data.isAdmin == resource.data.isAdmin || request.resource.data.isAdmin == false);
+                       request.resource.data.createdAt == resource.data.createdAt &&
+                       (request.resource.data.isAdmin == resource.data.isAdmin || resource.data.isAdmin == true || request.resource.data.isAdmin == false) && // Simplification: user cannot change isAdmin unless an admin does it.
+                       request.resource.data.name is string &&
+                       request.resource.data.avatarUrl is string &&
+                       request.resource.data.avatarHint is string &&
+                       request.resource.data.bio is string &&
+                       request.resource.data.followers is list &&
+                       request.resource.data.following is list &&
+                       request.resource.data.badges is list &&
+                       request.resource.data.keys().hasOnly(['id', 'name', 'email', 'isAdmin', 'followers', 'following', 'badges', 'createdAt', 'avatarUrl', 'avatarHint', 'bio']);
+                       // More granular update rules (e.g. for followers/following arrays) might be needed if users can directly modify these.
+                       // Currently, followers/following are managed by server actions.
 
-      // Usuário só pode deletar sua própria conta.
+      // DELETE:
+      // - User can only delete their own document.
       allow delete: if request.auth.uid == userId;
     }
 
-    // Regra para permitir a query de verificação de e-mail (list) na coleção 'usuarios'.
-    // Esta regra se aplica à coleção como um todo para operações de listagem.
-    match /usuarios/{document=**} {
-      // DEBUGGING: Permite que qualquer um liste documentos da coleção 'usuarios'.
-      // Necessário para a query `where("email", "==", ...)` funcionar durante o registro.
-      // INSECURE FOR PRODUCTION.
-      allow list: if true;
-      allow get: if true; // Também permitir get para consistência durante o debug
+    // ACCESSORIES Collection
+    // Path: /accessories/{accessoryId}
+    match /accessories/{accessoryId} {
+      // READ:
+      // - Publicly readable.
+      allow read: if true;
+
+      // CREATE (Admin only):
+      // - User must be authenticated.
+      // - User must be an admin (checked via custom claim or Firestore field).
+      // - Validate required fields.
+      function isAdmin() {
+        return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
+      }
+      allow create: if request.auth.uid != null && isAdmin() &&
+                       request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                       request.resource.data.shortDescription is string && request.resource.data.shortDescription.size() > 0 &&
+                       request.resource.data.fullDescription is string && request.resource.data.fullDescription.size() > 0 &&
+                       request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() > 0 &&
+                       request.resource.data.affiliateLink is string && request.resource.data.affiliateLink.size() > 0 &&
+                       request.resource.data.likedBy is list && request.resource.data.likedBy.size() == 0 && // Should start empty
+                       request.resource.data.comments is list && request.resource.data.comments.size() == 0; // Should start empty
+
+
+      // UPDATE (Admin for most fields, specific rules for 'likedBy'):
+      // - Admin can update most fields.
+      // - Any authenticated user can update 'likedBy' array by adding/removing their own UID.
+      allow update: if request.auth.uid != null && (
+                      (isAdmin() && request.resource.data.keys().hasAll(['name', 'shortDescription', 'fullDescription', 'imageUrl', 'affiliateLink', 'price', 'category', 'aiSummary', 'isDeal', 'likedBy', 'comments', 'imageHint', 'embedHtml'])) ||
+                      (request.resource.data.likedBy.toSet().difference(resource.data.likedBy.toSet()).hasOnly([request.auth.uid]) ||
+                       resource.data.likedBy.toSet().difference(request.resource.data.likedBy.toSet()).hasOnly([request.auth.uid])) &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy']) // Ensure only likedBy is changed by non-admins
+                     );
+
+      // DELETE (Admin only):
+      allow delete: if request.auth.uid != null && isAdmin();
+
+      // COMMENTS Subcollection
+      // Path: /accessories/{accessoryId}/comments/{commentId}
+      match /comments/{commentId} {
+        // READ:
+        // - Publicly readable (comments are part of accessory details).
+        allow read: if true;
+
+        // CREATE:
+        // - User must be authenticated.
+        // - 'userId' in comment must match authenticated user's UID.
+        // - 'userName' must be a string.
+        // - 'text' must be a string and not empty.
+        // - 'createdAt' must be a server timestamp.
+        // - 'status' must be 'pending_review' or 'approved' (as set by server action).
+        allow create: if request.auth.uid != null &&
+                         request.resource.data.userId == request.auth.uid &&
+                         request.resource.data.userName is string &&
+                         request.resource.data.text is string && request.resource.data.text.size() > 0 &&
+                         request.resource.data.createdAt == request.time &&
+                         (request.resource.data.status == 'pending_review' || request.resource.data.status == 'approved') &&
+                         request.resource.data.keys().hasOnly(['id', 'userId', 'userName', 'text', 'createdAt', 'status']);
+
+        // UPDATE (Admin only - for changing status):
+        // - User must be authenticated and an admin.
+        // - Can only update 'status' field.
+        allow update: if request.auth.uid != null && isAdmin() &&
+                         request.resource.data.keys().hasOnly(['status']) &&
+                         (request.resource.data.status == 'approved' || request.resource.data.status == 'rejected' || request.resource.data.status == 'pending_review');
+                         // And other fields remain unchanged
+                         // request.resource.data.id == resource.data.id && ... etc. for all other fields
+
+        // DELETE (Admin only):
+        allow delete: if request.auth.uid != null && isAdmin();
+      }
     }
 
-    // Outras coleções (ex: accessories)
-    match /accessories/{accessoryId} {
+    // Add rules for other collections like 'posts', 'coupons', 'siteSettings'
+    // These would typically be admin-only for create, update, delete, and public for read.
+
+    match /posts/{postId} {
       allow read: if true;
-      // Escrita em 'accessories' (create, update, delete) deve ser restrita a admins.
-      // Isso requer custom claims ou uma função de admin separada.
-      // Exemplo (requer custom claim 'admin' no token do usuário):
-      // allow write: if request.auth.token.admin == true;
+      allow create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
     }
+
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    match /siteSettings/main { // Assuming a single document for site settings
+        allow read: if true;
+        allow write: if request.auth.uid != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    // Example for a 'testimonials' collection if it exists (currently in mock data)
+    // match /testimonials/{testimonialId} {
+    //   allow read: if true;
+    //   allow create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
+    // }
+
   }
 }
-
-    
