@@ -1,6 +1,6 @@
 
 import { getSiteSettings } from '@/lib/data';
-import type { SiteSettings } from '@/lib/types';
+import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; // Keep SocialLinkSetting for currentSettings
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
@@ -19,7 +19,6 @@ export interface SocialLinkFormData {
   platform: string;
   label: string;
   url: string;
-  // IconComponent: React.ComponentType<{ className?: string }>; // Removed
   placeholderUrl: string;
   customImageUrl?: string;
 }
@@ -34,21 +33,24 @@ export interface SettingsFormDataForClient {
 
 
 export default async function SiteSettingsPage() {
-  const currentSettings = getSiteSettings(); 
+  const currentSettings: SiteSettings = getSiteSettings(); 
   
   const initialDataForForm: SettingsFormDataForClient = {
     siteTitle: currentSettings.siteTitle,
     siteDescription: currentSettings.siteDescription,
     siteLogoUrl: currentSettings.siteLogoUrl || '',
     siteFaviconUrl: currentSettings.siteFaviconUrl || '',
-    socialLinks: currentSettings.socialLinks.map(link => ({
-      platform: link.platform,
-      label: link.label, 
-      url: link.url || '',
-      placeholderUrl: link.placeholderUrl, 
-      // IconComponent: link.IconComponent, // Removed: Cannot pass component constructors
-      customImageUrl: link.customImageUrl || '',
-    })),
+    socialLinks: currentSettings.socialLinks.map(linkWithIcon => {
+      // Destructure to explicitly exclude IconComponent
+      const { IconComponent, ...linkDataForClient } = linkWithIcon;
+      return {
+        platform: linkDataForClient.platform,
+        label: linkDataForClient.label,
+        url: linkDataForClient.url || '',
+        placeholderUrl: linkDataForClient.placeholderUrl,
+        customImageUrl: linkDataForClient.customImageUrl || '',
+      };
+    }),
   };
 
   return (
