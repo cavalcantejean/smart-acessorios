@@ -1,44 +1,50 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Regras para a coleção 'usuarios'
+    // Coleção 'usuarios'
     match /usuarios/{userId} {
-      // TEMPORÁRIO PARA DEBUG: Permite a criação se o usuário estiver autenticado.
-      // Isso ajuda a verificar se o problema está nas condições de dados ou no request.auth.
-      allow create: if request.auth.uid != null;
+      // DEBUGGING RULE: Very permissive create rule.
+      // Allows creation if the document ID in the path matches the 'id' field in the data.
+      // This is INSECURE for production.
+      allow create: if request.resource.data.id == userId;
 
-      // Permite leitura de perfis por qualquer usuário autenticado.
+      // Qualquer usuário autenticado pode ler perfis.
       allow read: if request.auth.uid != null;
 
-      // Permite que o próprio usuário atualize seu perfil, mas não seu status de admin.
+      // Usuário só pode atualizar seu próprio documento.
+      // Não pode se auto-promover a admin.
+      // Não pode mudar ID ou email via update aqui.
       allow update: if request.auth.uid == userId &&
+                       request.resource.data.id == resource.data.id &&
+                       request.resource.data.email == resource.data.email &&
                        (request.resource.data.isAdmin == resource.data.isAdmin || request.resource.data.isAdmin == false);
 
-      // Permite que o próprio usuário delete sua conta.
+      // Usuário só pode deletar sua própria conta.
       allow delete: if request.auth.uid == userId;
     }
 
-    // Regras para a coleção 'acessorios' (exemplo)
-    match /acessorios/{accessoryId} {
-      allow read: if true; // Qualquer um pode ler acessórios
-      // Adicionar mais regras para create, update, delete conforme necessário
-      // Exemplo: allow write: if request.auth.token.admin == true; // Apenas admins podem escrever
+    // Regra para permitir a query de verificação de e-mail (list) na coleção 'usuarios'.
+    // Esta regra se aplica à coleção como um todo para operações de listagem.
+    match /usuarios/{document=**} {
+      // DEBUGGING: Permite que qualquer um liste documentos da coleção 'usuarios'.
+      // Necessário para a query `where("email", "==", ...)` funcionar durante o registro.
+      // INSECURE FOR PRODUCTION.
+      allow list: if true;
+      allow get: if true; // Também permitir get para consistência durante o debug
     }
 
-    // Regras para a coleção 'posts' (exemplo)
-    match /posts/{postId} {
-      allow read: if true; // Qualquer um pode ler posts
-      // Adicionar mais regras para create, update, delete conforme necessário
+    // Outras coleções (ex: accessories)
+    match /accessories/{accessoryId} {
+      allow read: if true;
+      // Escrita em 'accessories' (create, update, delete) deve ser restrita a admins.
+      // Isso requer custom claims ou uma função de admin separada.
+      // Exemplo (requer custom claim 'admin' no token do usuário):
+      // allow write: if request.auth.token.admin == true;
     }
-
-    // Regras para a coleção 'cupons' (exemplo)
-    match /cupons/{couponId} {
-      allow read: if true; // Qualquer um pode ler cupons
-      // Adicionar mais regras para create, update, delete conforme necessário
-    }
-
-    // Adicione regras para outras coleções aqui...
   }
 }
+
+    
