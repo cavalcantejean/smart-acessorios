@@ -128,7 +128,7 @@ export default function ErrorReportsTable({ initialErrorReports }: ErrorReportsT
                       {formatDate(report.timestamp)}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium max-w-[300px] truncate" title={report.message}>
+                  <TableCell className="font-medium max-w-[300px] truncate" title={report.message || undefined}>
                     {report.message}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-xs max-w-[200px] truncate" title={report.source || undefined}>
