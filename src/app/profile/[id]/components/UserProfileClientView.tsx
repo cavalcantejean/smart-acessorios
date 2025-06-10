@@ -1,30 +1,70 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import type { User, Badge as BadgeType } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UserCircle, Users, UserCheck, Rss, Award } from 'lucide-react';
+import { ArrowLeft, UserCircle, Users, UserCheck, Rss, Award, Loader2 } from 'lucide-react';
 import FollowButton from '@/components/FollowButton';
 import { toggleFollowAction } from '../../actions';
 import { AuthProviderClientComponent } from '@/components/AuthProviderClientComponent';
 import { getBadgeById } from '@/lib/badges'; 
 import { Badge as ShadBadge } from '@/components/ui/badge'; 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import UserListItem from "@/components/UserListItem";
+import { getUserById } from '@/lib/data'; // Import getUserById
 
 interface UserProfileClientViewProps {
   profileUser: User;
 }
 
 export default function UserProfileClientView({ profileUser }: UserProfileClientViewProps) {
-  const followersCount = profileUser.followers?.length ?? 0;
-  const followingCount = profileUser.following?.length ?? 0;
+  const initialFollowersCount = profileUser.followers?.length ?? 0;
+  const initialFollowingCount = profileUser.following?.length ?? 0;
+
+  const [followersCount, setFollowersCount] = useState(initialFollowersCount);
+  
+  // State for dialogs and lists
+  const [followersList, setFollowersList] = useState<User[]>([]);
+  const [followingList, setFollowingList] = useState<User[]>([]);
+  const [isLoadingFollowLists, setIsLoadingFollowLists] = useState(false);
+  const [isFollowersDialogOpen, setIsFollowersDialogOpen] = useState(false);
+  const [isFollowingDialogOpen, setIsFollowingDialogOpen] = useState(false);
 
   const earnedBadges = (profileUser.badges || [])
     .map(badgeId => getBadgeById(badgeId))
-    .filter(badge => badge !== undefined) as BadgeType[]; // Cast to BadgeType[]
+    .filter(badge => badge !== undefined) as BadgeType[];
+
+  useEffect(() => {
+    // Update followers count if it changes via FollowButton
+    if (profileUser.followers) {
+      setFollowersCount(profileUser.followers.length);
+    }
+  }, [profileUser.followers]);
+  
+  useEffect(() => {
+    if (profileUser && (isFollowersDialogOpen || isFollowingDialogOpen)) {
+      setIsLoadingFollowLists(true);
+      
+      const fetchedFollowers = (profileUser.followers || [])
+        .map(id => getUserById(id))
+        .filter(u => u !== undefined) as User[];
+
+      const fetchedFollowing = (profileUser.following || [])
+        .map(id => getUserById(id))
+        .filter(u => u !== undefined) as User[];
+
+      setFollowersList(fetchedFollowers);
+      setFollowingList(fetchedFollowing);
+      setIsLoadingFollowLists(false);
+    }
+  }, [profileUser, isFollowersDialogOpen, isFollowingDialogOpen]);
+
 
   return (
     <AuthProviderClientComponent>
@@ -59,14 +99,69 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="flex justify-around text-center">
-                <div>
-                  <p className="text-2xl font-bold">{followersCount}</p>
-                  <p className="text-sm text-muted-foreground">Seguidores</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{followingCount}</p>
-                  <p className="text-sm text-muted-foreground">Seguindo</p>
-                </div>
+                <Dialog open={isFollowersDialogOpen} onOpenChange={setIsFollowersDialogOpen}>
+                  <DialogTrigger asChild>
+                    <button className="text-left hover:opacity-80 transition-opacity">
+                      <p className="text-2xl font-bold">{followersCount}</p>
+                      <p className="text-sm text-muted-foreground">Seguidores</p>
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Seguidores</DialogTitle>
+                      <DialogDescription>
+                        Pessoas que seguem {profileUser.name}.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="h-[300px] pr-3 -mr-3">
+                      {isLoadingFollowLists ? (
+                         <div className="flex justify-center items-center h-full">
+                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                         </div>
+                      ) : followersList.length > 0 ? (
+                        <div className="space-y-1 py-1">
+                          {followersList.map(follower => (
+                            <UserListItem key={follower.id} user={follower} onDialogClose={() => setIsFollowersDialogOpen(false)} />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-10">Nenhum seguidor ainda.</p>
+                      )}
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={isFollowingDialogOpen} onOpenChange={setIsFollowingDialogOpen}>
+                  <DialogTrigger asChild>
+                     <button className="text-left hover:opacity-80 transition-opacity">
+                      <p className="text-2xl font-bold">{initialFollowingCount}</p>
+                      <p className="text-sm text-muted-foreground">Seguindo</p>
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Seguindo</DialogTitle>
+                      <DialogDescription>
+                        Pessoas que {profileUser.name} segue.
+                      </DialogDescription>
+                    </DialogHeader>
+                     <ScrollArea className="h-[300px] pr-3 -mr-3">
+                       {isLoadingFollowLists ? (
+                         <div className="flex justify-center items-center h-full">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                         </div>
+                       ) : followingList.length > 0 ? (
+                        <div className="space-y-1 py-1">
+                          {followingList.map(followedUser => (
+                            <UserListItem key={followedUser.id} user={followedUser} onDialogClose={() => setIsFollowingDialogOpen(false)}/>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-10">{profileUser.name} não segue ninguém ainda.</p>
+                      )}
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {isAuthenticated && currentUser && currentUser.id !== profileUser.id && (
@@ -75,7 +170,7 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
                     currentUserId={currentUser.id}
                     targetUserId={profileUser.id}
                     initialIsFollowing={currentUser.following?.includes(profileUser.id) ?? false}
-                    initialFollowersCount={followersCount}
+                    initialFollowersCount={initialFollowersCount} // Pass initial to FollowButton for its own logic
                     formAction={toggleFollowAction}
                   />
                 </div>
@@ -133,5 +228,3 @@ export default function UserProfileClientView({ profileUser }: UserProfileClient
     </AuthProviderClientComponent>
   );
 }
-
-    
