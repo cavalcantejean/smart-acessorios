@@ -7,11 +7,13 @@ import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import { getSiteSettings } from '@/lib/data';
+import type { SiteSettings } from '@/lib/types'; // Import SiteSettings type
 import NavigationProgress from '@/components/NavigationProgress';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-const siteSettings = getSiteSettings();
+// Fetch siteSettings once at the module level for use in generateMetadata and RootLayout
+const siteSettings: SiteSettings = getSiteSettings();
 
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
@@ -37,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5',
+  themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5', // Assuming you might store theme color in socialLinks or a dedicated field
 };
 
 export default function RootLayout({
@@ -47,14 +49,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
+      {/* No explicit <head> tag here; Next.js generates it from generateMetadata */}
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
           <NavigationProgress />
-          <Header siteLogoUrl={siteSettings.siteLogoUrl} />
+          {/* Pass necessary settings to Header and Footer */}
+          <Header siteLogoUrl={siteSettings.siteLogoUrl} siteTitle={siteSettings.siteTitle} />
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}
           </main>
-          <Footer />
+          <Footer siteSettings={siteSettings} />
           <Toaster />
         </AuthProvider>
       </body>

@@ -6,36 +6,34 @@ import { Button } from '@/components/ui/button';
 import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText, UserCircle, Home } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getUniqueCategories } from '@/lib/data'; // getSiteSettings removido daqui se não for usado para outras coisas
+import { getUniqueCategories } from '@/lib/data';
 import { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import logoSrc from '@/img/logo.png'; // Fallback static logo
+import logoSrc from '@/img/logo.png';
+import { useIsMobile } from '@/hooks/use-mobile'; // Import the modified hook
 
 interface MobileNavProps {
   siteLogoUrl?: string;
-  siteTitle?: string; // Adicionada a prop siteTitle
+  siteTitle?: string;
 }
 
-export default function MobileNav({ siteLogoUrl, siteTitle }: MobileNavProps) { // siteTitle agora é uma prop
+export default function MobileNav({ siteLogoUrl, siteTitle }: MobileNavProps) {
   const [categories, setCategories] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, isAdmin, logout, isLoading: isLoadingAuth } = useAuth();
-  // Removido: const siteSettings = getSiteSettings();
+  const isMobile = useIsMobile(); // Use the modified hook
 
   const currentLogoSrc = siteLogoUrl && siteLogoUrl.startsWith('data:image') ? siteLogoUrl : logoSrc;
-  const logoAltText = siteTitle ? `${siteTitle} Logo` : "SmartAcessorios Logo"; // Usa a prop siteTitle
+  const logoAltText = siteTitle ? `${siteTitle} Logo` : "SmartAcessorios Logo";
 
   useEffect(() => {
+    // This can still fetch categories, as it doesn't affect initial mismatched render
     setCategories(getUniqueCategories());
   }, []);
-
-  useEffect(() => {
-    // No need to close on pathname change if links handle it
-  }, [pathname]);
 
   const handleLinkClick = () => setIsOpen(false);
   const handleLogoutClick = () => {
@@ -51,13 +49,19 @@ export default function MobileNav({ siteLogoUrl, siteTitle }: MobileNavProps) { 
   const categoryLinkClasses = (category: string) => {
     const categoryPath = `/products?category=${encodeURIComponent(category)}`;
     let currentPathWithQuery = pathname;
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') { // Check for window as this runs client-side now
       currentPathWithQuery += window.location.search;
     }
     
     return cn("flex items-center justify-between w-full text-left p-3 rounded-md hover:bg-muted transition-colors",
        currentPathWithQuery === categoryPath ? "bg-muted font-semibold" : ""
     );
+  }
+
+  // Crucial for hydration: Do not render the button if isMobile is undefined (server/initial client)
+  // or if isMobile is false (desktop, where MobileNav shouldn't appear anyway).
+  if (isMobile === undefined || isMobile === false) {
+    return null; 
   }
 
   if (isLoadingAuth) {
@@ -79,7 +83,7 @@ export default function MobileNav({ siteLogoUrl, siteTitle }: MobileNavProps) { 
           <Link href="/" className="flex items-center" onClick={handleLinkClick}>
             <Image
               src={currentLogoSrc} 
-              alt={logoAltText} // Usa o logoAltText atualizado
+              alt={logoAltText}
               width={120}
               height={30}
               priority={true}
