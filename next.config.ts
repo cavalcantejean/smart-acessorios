@@ -31,18 +31,20 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => { // `dev` tells if it's in development mode
+    console.log(`[Next.js Webpack Config] Running for: ${isServer ? 'server' : 'client'}, Dev: ${dev}`);
     if (!isServer) {
-      // Prevent Node.js specific modules from being bundled on the client
+      console.log('[Next.js Webpack Config] Applying client-side fallbacks...');
       config.resolve.fallback = {
-        ...config.resolve.fallback,
-        child_process: false,
-        fs: false,
-        os: false,
-        path: false,
-        net: false, // google-auth-library might also try to use 'net' or 'tls'
-        tls: false,
+        ...(config.resolve.fallback || {}), // Ensures we're spreading an object
+        "child_process": false,
+        "fs": false,
+        "os": false,
+        "path": false,
+        "net": false,
+        "tls": false,
       };
+      console.log('[Next.js Webpack Config] Client fallbacks applied:', JSON.stringify(config.resolve.fallback));
     }
     // Important: return the modified config
     return config;
