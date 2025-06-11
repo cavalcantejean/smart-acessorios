@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import { getSiteSettings } from '@/lib/data';
-import NavigationProgress from '@/components/NavigationProgress'; // Ensured import
+import NavigationProgress from '@/components/NavigationProgress';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -26,7 +26,6 @@ export async function generateMetadata(): Promise<Metadata> {
     description: siteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
     icons: {
       icon: siteSettings.siteFaviconUrl || '/favicon.ico',
-      // Any explicit manifest or apple-touch-icon links were previously removed.
     },
     applicationName: siteSettings.siteTitle || 'SmartAcessorios',
     appleWebApp: {
@@ -48,7 +47,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
-      {/* No explicit <head> tag here. Next.js handles its generation. */}
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
           <NavigationProgress />
