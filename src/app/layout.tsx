@@ -52,14 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
-      <head>
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        {/* Os comentários sobre theme-color e Apple PWA foram movidos para fora da tag <head> para maior segurança, */}
-        {/* já que generateMetadata e viewport cuidam dessas configurações. */}
-      </head>
+      <head><link rel="manifest" href="/manifest.json" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" /><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" /></head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
           <NavigationProgress />

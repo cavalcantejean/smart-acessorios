@@ -18,12 +18,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload, Sparkles } from "lucide-react"; // Added Sparkles
+import { Loader2, Save, Upload, Sparkles } from "lucide-react";
 import { useActionState, useEffect, startTransition, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import type { Accessory } from "@/lib/types";
 import type { AccessoryActionResult } from "@/app/admin/accessories/actions";
-import { generateDescriptionWithAIAction } from "@/app/admin/accessories/actions"; // Import new AI action
+import { generateDescriptionWithAIAction } from "@/app/admin/accessories/actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -48,7 +48,6 @@ function SubmitButton({ text, pending }: { text: string; pending: boolean }) {
   );
 }
 
-// Helper function to resize and compress image to JPEG data URI
 const processImageFile = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.7): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -89,6 +88,22 @@ const processImageFile = (file: File, maxWidth: number = 800, maxHeight: number 
     reader.readAsDataURL(file);
   });
 };
+
+const isValidHttpUrl = (string: string | null | undefined): boolean => {
+  if (!string) return false;
+  let url;
+  try {
+    url = new URL(string);
+  } catch (_) {
+    return false;
+  }
+  return url.protocol === "http:" || url.protocol === "https:";
+};
+
+const isLikelyDataURL = (string: string | null | undefined): boolean => {
+  if (!string) return false;
+  return string.startsWith("data:image/");
+}
 
 
 export default function AccessoryForm({
@@ -140,17 +155,17 @@ export default function AccessoryForm({
           title: "Sucesso!",
           description: state.message,
         });
-        if (state.accessory && !initialData) { // Redirect only on successful creation
+        if (state.accessory && !initialData) { 
           router.push('/admin/accessories'); 
-        } else if (state.accessory && initialData) { // For updates, could also redirect or just show success
-            // router.push(`/admin/accessories/\${state.accessory.id}/edit`); // Option to stay on edit
+        } else if (state.accessory && initialData) { 
+            // router.push(`/admin/accessories/\${state.accessory.id}/edit`); 
         }
         
-        if (!initialData) { // Reset form only on creation
+        if (!initialData) { 
            form.reset();
            setImagePreview(null);
            setAiPrompt("");
-           if(fileInputRef.current) fileInputRef.current.value = ""; // Clear file input
+           if(fileInputRef.current) fileInputRef.current.value = ""; 
         }
       } else {
         toast({
@@ -180,7 +195,7 @@ export default function AccessoryForm({
       } catch (error) {
         console.error("Error processing image:", error);
         toast({ title: "Erro de Imagem", description: "Falha ao processar imagem.", variant: "destructive" });
-        setImagePreview(initialData?.imageUrl || null); // Revert to initial on error
+        setImagePreview(initialData?.imageUrl || null); 
         form.setValue("imageUrl", initialData?.imageUrl || "", { shouldValidate: true });
       } finally {
         setIsProcessingImage(false);
@@ -224,7 +239,8 @@ export default function AccessoryForm({
       dispatch(formData);
     });
   };
-
+  
+  const displayableImagePreview = imagePreview && (isValidHttpUrl(imagePreview) || isLikelyDataURL(imagePreview)) ? imagePreview : null;
 
   return (
     <Form {...form}>
@@ -368,12 +384,12 @@ export default function AccessoryForm({
                   )}
                 />
              </div>
-             {imagePreview && (
+             {displayableImagePreview && (
               <div className="space-y-2">
                 <FormLabel className="text-sm font-normal text-muted-foreground">Pré-visualização</FormLabel>
                 <div className="relative aspect-video w-full max-w-sm border rounded-md overflow-hidden bg-muted">
                   <Image
-                    src={imagePreview}
+                    src={displayableImagePreview}
                     alt="Pré-visualização da imagem do acessório"
                     fill
                     style={{ objectFit: 'contain' }}
