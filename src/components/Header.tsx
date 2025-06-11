@@ -8,9 +8,11 @@ import MobileNav from './MobileNav';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from './ui/button';
 import logoSrc from '@/img/logo.png'; // Fallback static logo
+// Removido: import { getSiteSettings } from '@/lib/data';
 
 interface HeaderProps {
   siteLogoUrl?: string;
+  siteTitle?: string; // Adicionada a prop siteTitle
 }
 
 function AuthDependentLinks() {
@@ -69,24 +71,23 @@ function AuthDependentLinks() {
   );
 }
 
-
-export default function Header({ siteLogoUrl }: HeaderProps) {
+export default function Header({ siteLogoUrl, siteTitle }: HeaderProps) { // siteTitle agora é uma prop
   const currentLogoSrc = siteLogoUrl && siteLogoUrl.startsWith('data:image') ? siteLogoUrl : logoSrc;
-  const logoAltText = siteSettings.siteTitle ? `${siteSettings.siteTitle} Logo` : "SmartAcessorios Logo";
-  const siteSettings = getSiteSettings();
-
+  const logoAltText = siteTitle ? `${siteTitle} Logo` : "SmartAcessorios Logo"; // Usa a prop siteTitle
+  // Removida a linha: const siteSettings = getSiteSettings();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-primary text-primary-foreground shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center">
           <div className="md:hidden mr-2">
-            <MobileNav siteLogoUrl={siteLogoUrl} />
+            {/* Passa siteTitle e siteLogoUrl para MobileNav */}
+            <MobileNav siteLogoUrl={siteLogoUrl} siteTitle={siteTitle} /> 
           </div>
           <Link href="/" className="flex items-center gap-2">
             <Image
               src={currentLogoSrc}
-              alt={logoAltText}
+              alt={logoAltText} // Usa o logoAltText atualizado
               width={120} 
               height={30}
               priority={true}
@@ -120,5 +121,3 @@ export default function Header({ siteLogoUrl }: HeaderProps) {
     </header>
   );
 }
-
-    

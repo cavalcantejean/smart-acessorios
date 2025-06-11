@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText, UserCircle, Home } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getUniqueCategories, getSiteSettings } from '@/lib/data';
+import { getUniqueCategories } from '@/lib/data'; // getSiteSettings removido daqui se não for usado para outras coisas
 import { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';
@@ -16,18 +16,18 @@ import logoSrc from '@/img/logo.png'; // Fallback static logo
 
 interface MobileNavProps {
   siteLogoUrl?: string;
+  siteTitle?: string; // Adicionada a prop siteTitle
 }
 
-export default function MobileNav({ siteLogoUrl }: MobileNavProps) {
+export default function MobileNav({ siteLogoUrl, siteTitle }: MobileNavProps) { // siteTitle agora é uma prop
   const [categories, setCategories] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, isAdmin, logout, isLoading: isLoadingAuth } = useAuth();
-  const siteSettings = getSiteSettings();
+  // Removido: const siteSettings = getSiteSettings();
 
   const currentLogoSrc = siteLogoUrl && siteLogoUrl.startsWith('data:image') ? siteLogoUrl : logoSrc;
-  const logoAltText = siteSettings.siteTitle ? `${siteSettings.siteTitle} Logo` : "SmartAcessorios Logo";
-
+  const logoAltText = siteTitle ? `${siteTitle} Logo` : "SmartAcessorios Logo"; // Usa a prop siteTitle
 
   useEffect(() => {
     setCategories(getUniqueCategories());
@@ -79,7 +79,7 @@ export default function MobileNav({ siteLogoUrl }: MobileNavProps) {
           <Link href="/" className="flex items-center" onClick={handleLinkClick}>
             <Image
               src={currentLogoSrc} 
-              alt={logoAltText}
+              alt={logoAltText} // Usa o logoAltText atualizado
               width={120}
               height={30}
               priority={true}
@@ -200,5 +200,3 @@ export default function MobileNav({ siteLogoUrl }: MobileNavProps) {
     </Sheet>
   );
 }
-
-    
