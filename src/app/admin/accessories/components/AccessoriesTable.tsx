@@ -30,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Timestamp } from 'firebase/firestore';
+import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 
 interface AccessoriesTableProps {
   initialAccessories: Accessory[];
@@ -60,6 +61,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
   const [deleteState, handleDeleteAction, isDeletePending] = useActionState(deleteAccessoryAction, initialActionState);
   const { toast } = useToast();
   const [accessoryToDelete, setAccessoryToDelete] = useState<Accessory | null>(null);
+  const { user: authUser } = useAuth(); // Get authenticated user for userId
 
   useEffect(() => {
     setAccessories(initialAccessories);
@@ -72,7 +74,6 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
           title: "Sucesso!",
           description: deleteState.message,
         });
-        // Optimistically remove or wait for revalidation
          if (accessoryToDelete) {
            setAccessories(prev => prev.filter(acc => acc.id !== accessoryToDelete.id));
          }
@@ -88,12 +89,15 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
   }, [deleteState, toast, accessoryToDelete]);
 
   const handleDeleteConfirm = () => {
-    if (accessoryToDelete) {
+    if (accessoryToDelete && authUser && authUser.id) {
       const formData = new FormData();
       formData.append('accessoryId', accessoryToDelete.id);
+      formData.append('userId', authUser.id); // Add userId for admin check in action
       startTransition(() => {
         handleDeleteAction(formData);
       });
+    } else if (!authUser?.id) {
+        toast({ title: "Erro de Autenticação", description: "ID do usuário não encontrado. Faça login novamente.", variant: "destructive"});
     }
   };
 
@@ -199,7 +203,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
               <AlertDialogCancel disabled={isDeletePending}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
-                disabled={isDeletePending}
+                disabled={isDeletePending || !authUser?.id}
                 className="bg-destructive hover:bg-destructive/90"
               >
                 {isDeletePending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

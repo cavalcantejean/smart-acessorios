@@ -1,7 +1,8 @@
 
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting, CommentWithAccessoryInfo } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges';
-import { db } from './firebase';
+import { db } from './firebase'; // SDK Cliente
+import { adminDb } from './firebase-admin'; // SDK Admin
 import {
   collection,
   doc,
@@ -20,7 +21,7 @@ import {
   arrayUnion,
   arrayRemove,
   runTransaction
-} from 'firebase/firestore';
+} from 'firebase/firestore'; // Importações do SDK Cliente
 
 // --- Helper Functions for Firestore ---
 const convertTimestampToISO = (timestamp: Timestamp | undefined): string | undefined => {
@@ -79,9 +80,9 @@ const testimonials: Testimonial[] = [
 export function getTestimonials(): Testimonial[] { return testimonials; }
 
 
-// --- User Management (Firestore) ---
+// --- User Management (Firestore - Client SDK for reads, Admin SDK could be used for admin ops) ---
 export async function getUserById(id: string): Promise<UserFirestoreData | undefined> {
-  if (!db) { console.error("Firestore db instance not available in getUserById."); return undefined; }
+  if (!db) { console.error("Firestore client db instance not available in getUserById."); return undefined; }
   try {
     const userDocRef = doc(db, "usuarios", id);
     const userDocSnap = await getDoc(userDocRef);
@@ -90,8 +91,8 @@ export async function getUserById(id: string): Promise<UserFirestoreData | undef
       return {
         ...data,
         id: userDocSnap.id,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
+        createdAt: data.createdAt, // Mantém como Timestamp
+        updatedAt: data.updatedAt, // Mantém como Timestamp
       } as UserFirestoreData;
     }
     return undefined;
@@ -102,10 +103,10 @@ export async function getUserById(id: string): Promise<UserFirestoreData | undef
 }
 
 export async function getAllUsers(): Promise<UserFirestoreData[]> {
-  if (!db) { console.error("Firestore db instance not available in getAllUsers."); return []; }
+  if (!db) { console.error("Firestore client db instance not available in getAllUsers."); return []; }
   try {
-    const usersCollection = collection(db, "usuarios");
-    const usersSnapshot = await getDocs(query(usersCollection, orderBy("name")));
+    const usersCollectionRef = collection(db, "usuarios");
+    const usersSnapshot = await getDocs(query(usersCollectionRef, orderBy("name")));
     return usersSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as UserFirestoreData));
   } catch (error) {
     console.error("Error fetching all users from Firestore:", error);
@@ -113,8 +114,10 @@ export async function getAllUsers(): Promise<UserFirestoreData[]> {
   }
 }
 
+// toggleFollowUser and toggleUserAdminStatus should ideally use Admin SDK if they are admin-only operations
+// or enforce rules if client-callable. For now, keeping client SDK for toggleFollow, needs rules.
 export async function toggleFollowUser(currentUserId: string, targetUserId: string): Promise<{ isFollowing: boolean; targetFollowersCount: number } | null> {
-  if (!db) { console.error("Firestore db instance not available in toggleFollowUser."); return null; }
+  if (!db) { console.error("Firestore client db instance not available in toggleFollowUser."); return null; }
   if (currentUserId === targetUserId) return null;
 
   const currentUserDocRef = doc(db, "usuarios", currentUserId);
@@ -151,8 +154,8 @@ export async function toggleFollowUser(currentUserId: string, targetUserId: stri
       }
     });
 
-    await checkAndAwardBadges(currentUserId);
-    await checkAndAwardBadges(targetUserId);
+    await checkAndAwardBadges(currentUserId); // Assumes getUserById uses client SDK
+    await checkAndAwardBadges(targetUserId);  // Assumes getUserById uses client SDK
     return { isFollowing, targetFollowersCount: finalFollowersCount };
   } catch (error) {
     console.error("Error in toggleFollowUser transaction:", error);
@@ -161,28 +164,31 @@ export async function toggleFollowUser(currentUserId: string, targetUserId: stri
 }
 
 export async function toggleUserAdminStatus(userId: string): Promise<UserFirestoreData | null> {
-  if (!db) { console.error("Firestore db instance not available in toggleUserAdminStatus."); return null; }
-  const userDocRef = doc(db, "usuarios", userId);
+  // This should ideally use Admin SDK if called from an admin panel
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in toggleUserAdminStatus."); return null; }
+  const userDocRef = adminDb.collection("usuarios").doc(userId);
   try {
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) return null;
+    const userDoc = await userDocRef.get();
+    if (!userDoc.exists) return null;
     const currentIsAdmin = userDoc.data()?.isAdmin || false;
-    await updateDoc(userDocRef, { isAdmin: !currentIsAdmin, updatedAt: serverTimestamp() });
-    const updatedUserDoc = await getDoc(userDocRef);
+    await userDocRef.update({ isAdmin: !currentIsAdmin, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    const updatedUserDoc = await userDocRef.get();
     return { id: updatedUserDoc.id, ...updatedUserDoc.data() } as UserFirestoreData;
   } catch (error) {
-    console.error("Error toggling user admin status:", error);
+    console.error("Error toggling user admin status with Admin SDK:", error);
     return null;
   }
 }
 
-// --- Accessory Management (Firestore) ---
-const accessoriesCollection = collection(db, "acessorios");
+// --- Accessory Management ---
+// Reads can use client SDK, writes by admin should use Admin SDK
+
+const accessoriesClientCollection = collection(db, "acessorios");
 
 export async function getAllAccessories(): Promise<Accessory[]> {
-  if (!db) { console.error("Firestore db instance not available in getAllAccessories."); return []; }
+  if (!db) { console.error("Firestore client db instance not available in getAllAccessories."); return []; }
   try {
-    const accessoriesSnapshot = await getDocs(query(accessoriesCollection, orderBy("createdAt", "desc")));
+    const accessoriesSnapshot = await getDocs(query(accessoriesClientCollection, orderBy("createdAt", "desc")));
     return accessoriesSnapshot.docs.map(docSnap => ({
       id: docSnap.id,
       ...docSnap.data(),
@@ -195,7 +201,7 @@ export async function getAllAccessories(): Promise<Accessory[]> {
 }
 
 export async function getAccessoryById(id: string): Promise<Accessory | undefined> {
-  if (!db) { console.error("Firestore db instance not available in getAccessoryById."); return undefined; }
+  if (!db) { console.error("Firestore client db instance not available in getAccessoryById."); return undefined; }
   try {
     const accessoryDocRef = doc(db, "acessorios", id);
     const accessoryDocSnap = await getDoc(accessoryDocRef);
@@ -209,90 +215,86 @@ export async function getAccessoryById(id: string): Promise<Accessory | undefine
   }
 }
 
-export async function addAccessory(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
-  if (!db) {
-    console.error("[Data:addAccessory] Firestore db instance not available.");
-    throw new Error("Firestore db instance not available in addAccessory.");
+// Renamed original addAccessory to addAccessoryWithClientSDK - NOT FOR ADMIN USE FROM SERVER ACTION
+// export async function addAccessoryWithClientSDK(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
+//   // ... (implementation using client 'db')
+// }
+
+// New function using Firebase Admin SDK
+export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
+  if (!adminDb) {
+    console.error("[Data:addAccessoryWithAdmin] Firebase Admin SDK (adminDb) is not initialized.");
+    throw new Error("Firebase Admin SDK (adminDb) is not initialized in addAccessoryWithAdmin.");
   }
   const newAccessoryData = {
     ...accessoryData,
-    price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : null, // Use null for empty price
+    price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : null,
     likedBy: [],
     comments: [],
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(), // Use admin serverTimestamp
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(), // Use admin serverTimestamp
     category: accessoryData.category || null,
     imageHint: accessoryData.imageHint || null,
     aiSummary: accessoryData.aiSummary || null,
     embedHtml: accessoryData.embedHtml || null,
-    isDeal: accessoryData.isDeal || false, // Ensure isDeal has a default
+    isDeal: accessoryData.isDeal || false,
   };
-
-  console.log("[Data:addAccessory] Dados preparados para enviar ao Firestore:", JSON.stringify(newAccessoryData, null, 2));
-
+  console.log("[Data:addAccessoryWithAdmin] Data prepared for Firestore (Admin SDK):", JSON.stringify(newAccessoryData, null, 2));
   try {
-    const docRef = await addDoc(accessoriesCollection, newAccessoryData);
-    console.log("[Data:addAccessory] Documento adicionado com ID:", docRef.id);
-    // Re-fetch the document to get server-generated timestamps if absolutely needed,
-    // or construct the return object with placeholder timestamps for immediate feedback.
-    const createdAccessory: Accessory = {
+    const docRef = await adminDb.collection('acessorios').add(newAccessoryData);
+    console.log("[Data:addAccessoryWithAdmin] Document added with ID:", docRef.id);
+    // Firestore Timestamps from admin.firestore.FieldValue.serverTimestamp() are handled correctly by SDK
+    return {
       id: docRef.id,
-      name: newAccessoryData.name,
-      shortDescription: newAccessoryData.shortDescription,
-      fullDescription: newAccessoryData.fullDescription,
-      imageUrl: newAccessoryData.imageUrl,
-      imageHint: newAccessoryData.imageHint || undefined,
-      affiliateLink: newAccessoryData.affiliateLink,
+      ...accessoryData, // Return original data plus ID
       price: newAccessoryData.price || undefined,
       category: newAccessoryData.category || undefined,
-      isDeal: newAccessoryData.isDeal,
+      imageHint: newAccessoryData.imageHint || undefined,
       aiSummary: newAccessoryData.aiSummary || undefined,
       embedHtml: newAccessoryData.embedHtml || undefined,
+      isDeal: newAccessoryData.isDeal,
       likedBy: [],
       comments: [],
-      createdAt: Timestamp.now(), // Placeholder, o valor real é gerado pelo servidor
-      updatedAt: Timestamp.now(), // Placeholder
-    };
-    return createdAccessory;
+      // Timestamps will be populated correctly on read or by Firestore itself
+    } as Accessory;
   } catch (error: any) {
-    console.error("[Data:addAccessory] Erro DETALHADO durante addDoc:", error);
-    if (error.code) {
-        console.error("Código do erro Firestore:", error.code);
-        console.error("Mensagem do erro Firestore:", error.message);
-    }
-    throw error; // Re-lança o erro para ser tratado pela action
+    console.error("[Data:addAccessoryWithAdmin] Detailed error during addDoc (Admin SDK):", error);
+    throw error;
   }
 }
 
+
+// updateAccessory and deleteAccessory should also be adapted if they are admin-only server actions
 export async function updateAccessory(accessoryId: string, accessoryData: Partial<Omit<Accessory, 'id' | 'likedBy' | 'comments'>>): Promise<Accessory | null> {
-  if (!db) { console.error("Firestore db instance not available in updateAccessory."); return null; }
-  const accessoryDocRef = doc(db, "acessorios", accessoryId);
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updateAccessory."); return null; }
+  const accessoryDocRef = adminDb.collection("acessorios").doc(accessoryId);
   try {
-    const updateData = { ...accessoryData, updatedAt: serverTimestamp() };
+    const updateData: any = { ...accessoryData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
     if (updateData.price) updateData.price = updateData.price.toString().replace(',', '.');
-    await updateDoc(accessoryDocRef, updateData);
-    const updatedDoc = await getDoc(accessoryDocRef);
+    await accessoryDocRef.update(updateData);
+    const updatedDoc = await accessoryDocRef.get();
     return { id: updatedDoc.id, ...updatedDoc.data() } as Accessory;
   } catch (error) {
-    console.error(`Error updating accessory ${accessoryId}:`, error);
+    console.error(`Error updating accessory ${accessoryId} with Admin SDK:`, error);
     return null;
   }
 }
 
 export async function deleteAccessory(accessoryId: string): Promise<boolean> {
-  if (!db) { console.error("Firestore db instance not available in deleteAccessory."); return false; }
-  const accessoryDocRef = doc(db, "acessorios", accessoryId);
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in deleteAccessory."); return false; }
+  const accessoryDocRef = adminDb.collection("acessorios").doc(accessoryId);
   try {
-    await deleteDoc(accessoryDocRef);
+    await accessoryDocRef.delete();
     return true;
   } catch (error) {
-    console.error(`Error deleting accessory ${accessoryId}:`, error);
+    console.error(`Error deleting accessory ${accessoryId} with Admin SDK:`, error);
     return false;
   }
 }
 
+// toggleLikeOnAccessory and addCommentToAccessoryData are client-initiated, so client SDK is fine here, assuming rules allow.
 export async function toggleLikeOnAccessory(accessoryId: string, userId: string): Promise<{ likedBy: string[], likesCount: number } | null> {
-  if (!db) { console.error("Firestore db instance not available in toggleLikeOnAccessory."); return null; }
+  if (!db) { console.error("Firestore client db instance not available in toggleLikeOnAccessory."); return null; }
   const accessoryDocRef = doc(db, "acessorios", accessoryId);
   try {
     let newLikedBy: string[] = [];
@@ -323,7 +325,7 @@ export async function addCommentToAccessoryData(
   text: string,
   status: 'approved' | 'pending_review' | 'rejected' = 'approved'
 ): Promise<Comment | null> {
-  if (!db) { console.error("Firestore db instance not available in addCommentToAccessoryData."); return null; }
+  if (!db) { console.error("Firestore client db instance not available in addCommentToAccessoryData."); return null; }
   const accessoryDocRef = doc(db, "acessorios", accessoryId);
   try {
     const newComment: Omit<Comment, 'id' | 'createdAt'> & { createdAt: any } = { 
@@ -343,7 +345,7 @@ export async function addCommentToAccessoryData(
     if (status === 'approved') {
       await checkAndAwardBadges(userId);
     }
-    return { ...commentWithId, createdAt: Timestamp.now() }; 
+    return { ...commentWithId, createdAt: Timestamp.now() } as Comment; 
   } catch (error) {
     console.error(`Error adding comment to accessory ${accessoryId}:`, error);
     return null;
@@ -351,13 +353,14 @@ export async function addCommentToAccessoryData(
 }
 
 export async function updateCommentStatus(accessoryId: string, commentId: string, newStatus: 'approved' | 'rejected'): Promise<Comment | null> {
-  if (!db) { console.error("Firestore db instance not available in updateCommentStatus."); return null; }
-  const accessoryDocRef = doc(db, "acessorios", accessoryId);
+  // This is an admin operation, should use Admin SDK.
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updateCommentStatus."); return null; }
+  const accessoryDocRef = adminDb.collection("acessorios").doc(accessoryId);
   try {
     let updatedCommentData: Comment | null = null;
-    await runTransaction(db, async (transaction) => {
+    await adminDb.runTransaction(async (transaction) => {
       const accessoryDoc = await transaction.get(accessoryDocRef);
-      if (!accessoryDoc.exists()) throw "Document does not exist!";
+      if (!accessoryDoc.exists) throw "Document does not exist!";
       
       const commentsArray = (accessoryDoc.data()?.comments || []) as Comment[];
       const commentIndex = commentsArray.findIndex(c => c.id === commentId);
@@ -365,25 +368,24 @@ export async function updateCommentStatus(accessoryId: string, commentId: string
       if (commentIndex === -1) throw "Comment not found in array";
 
       const newCommentsArray = commentsArray.map((c, index) =>
-        index === commentIndex ? { ...c, status: newStatus, updatedAt: Timestamp.now() } : c 
+        index === commentIndex ? { ...c, status: newStatus, updatedAt: admin.firestore.FieldValue.serverTimestamp() } : c 
       );
       
-      transaction.update(accessoryDocRef, { comments: newCommentsArray, updatedAt: serverTimestamp() });
+      transaction.update(accessoryDocRef, { comments: newCommentsArray, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
       updatedCommentData = newCommentsArray[commentIndex];
     });
 
     if (updatedCommentData && newStatus === 'approved') {
-      await checkAndAwardBadges(updatedCommentData.userId);
+      await checkAndAwardBadges(updatedCommentData.userId); // checkAndAwardBadges needs to handle admin context or use client SDK after ensuring user exists.
     }
     return updatedCommentData;
   } catch (error) {
-    console.error(`Error updating status for comment ${commentId} on accessory ${accessoryId}:`, error);
+    console.error(`Error updating status for comment ${commentId} on accessory ${accessoryId} with Admin SDK:`, error);
     return null;
   }
 }
 
-
-// --- Utility Functions (may need Firestore integration if they rely on data previously in arrays) ---
+// --- Utility Functions (continue using client SDK for reads) ---
 export async function getUniqueCategories(): Promise<string[]> {
   const accessoriesList = await getAllAccessories(); 
   const categoriesSet = new Set<string>();
@@ -392,16 +394,16 @@ export async function getUniqueCategories(): Promise<string[]> {
 }
 
 export async function getDailyDeals(): Promise<Accessory[]> {
-  if (!db) { console.error("Firestore db instance not available in getDailyDeals."); return []; }
+  if (!db) { console.error("Firestore client db instance not available in getDailyDeals."); return []; }
   let deals: Accessory[] = [];
   try {
-    const dealsQuery = query(accessoriesCollection, where("isDeal", "==", true), orderBy("createdAt", "desc"), limit(6));
+    const dealsQuery = query(accessoriesClientCollection, where("isDeal", "==", true), orderBy("createdAt", "desc"), limit(6));
     const dealsSnapshot = await getDocs(dealsQuery);
     deals = dealsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
     
     if (deals.length === 0) {
       console.log("No specific deals found, attempting fallback query for latest accessories.");
-      const fallbackQuery = query(accessoriesCollection, orderBy("createdAt", "desc"), limit(2));
+      const fallbackQuery = query(accessoriesClientCollection, orderBy("createdAt", "desc"), limit(2));
       const fallbackSnapshot = await getDocs(fallbackQuery);
       deals = fallbackSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
     }
@@ -414,7 +416,7 @@ export async function getDailyDeals(): Promise<Accessory[]> {
     if (deals.length === 0) {
         try {
             console.log("Error in primary deals query, attempting fallback for latest 2 accessories.");
-            const fallbackQuery = query(accessoriesCollection, orderBy("createdAt", "desc"), limit(2));
+            const fallbackQuery = query(accessoriesClientCollection, orderBy("createdAt", "desc"), limit(2));
             const fallbackSnapshot = await getDocs(fallbackQuery);
             deals = fallbackSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
         } catch (fallbackError) {
@@ -425,26 +427,29 @@ export async function getDailyDeals(): Promise<Accessory[]> {
   return deals;
 }
 
-// --- Coupon Management (Firestore) ---
-const couponsCollection = collection(db, "cupons");
+// --- Coupon Management (Admin SDK for writes, client SDK for reads) ---
+const couponsClientCollection = collection(db, "cupons");
 
 export async function getCoupons(): Promise<Coupon[]> {
-  if (!db) { console.error("Firestore db instance not available in getCoupons."); return []; }
+  if (!db) { console.error("Firestore client db instance not available in getCoupons."); return []; }
   try {
     const today = Timestamp.now();
-    const q = query(couponsCollection, orderBy("expiryDate", "asc")); 
+    const q = query(couponsClientCollection, orderBy("expiryDate", "asc")); 
     const couponsSnapshot = await getDocs(q);
     
     const allCoupons = couponsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Coupon));
     
     return allCoupons.filter(coupon => {
       if (!coupon.expiryDate) return true; 
-      return coupon.expiryDate.toDate() >= today.toDate(); 
+      const expiryDate = coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate() : new Date(coupon.expiryDate as any);
+      return expiryDate >= today.toDate(); 
     }).sort((a,b) => { 
         if (!a.expiryDate && !b.expiryDate) return 0;
         if (!a.expiryDate) return 1;
         if (!b.expiryDate) return -1;
-        return a.expiryDate.toMillis() - b.expiryDate.toMillis();
+        const dateA = a.expiryDate instanceof Timestamp ? a.expiryDate.toMillis() : new Date(a.expiryDate as any).getTime();
+        const dateB = b.expiryDate instanceof Timestamp ? b.expiryDate.toMillis() : new Date(b.expiryDate as any).getTime();
+        return dateA - dateB;
     });
   } catch (error) {
     console.error("Error fetching coupons from Firestore:", error);
@@ -453,7 +458,7 @@ export async function getCoupons(): Promise<Coupon[]> {
 }
 
 export async function getCouponById(id: string): Promise<Coupon | undefined> {
-   if (!db) { console.error("Firestore db instance not available in getCouponById."); return undefined; }
+   if (!db) { console.error("Firestore client db instance not available in getCouponById."); return undefined; }
   try {
     const couponDocRef = doc(db, "cupons", id);
     const couponDocSnap = await getDoc(couponDocRef);
@@ -468,60 +473,60 @@ export async function getCouponById(id: string): Promise<Coupon | undefined> {
 }
 
 export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt'>): Promise<Coupon> {
-  if (!db) { throw new Error("Firestore db instance not available in addCoupon."); }
-  const newCouponData = {
+  if (!adminDb) { throw new Error("Firebase Admin SDK (adminDb) is not initialized in addCoupon."); }
+  const newCouponData: any = {
     ...couponData,
-    expiryDate: couponData.expiryDate ? Timestamp.fromDate(new Date(couponData.expiryDate as any)) : undefined, 
-    store: couponData.store || undefined,
-    applyUrl: couponData.applyUrl || undefined,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    expiryDate: couponData.expiryDate ? admin.firestore.Timestamp.fromDate(new Date(couponData.expiryDate as any)) : null, 
+    store: couponData.store || null,
+    applyUrl: couponData.applyUrl || null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
-  const docRef = await addDoc(couponsCollection, newCouponData);
-  return { id: docRef.id, ...newCouponData } as unknown as Coupon;
+  const docRef = await adminDb.collection('cupons').add(newCouponData);
+  return { id: docRef.id, ...couponData, expiryDate: newCouponData.expiryDate } as Coupon; // Adjust return type
 }
 
 export async function updateCoupon(couponId: string, couponData: Partial<Omit<Coupon, 'id'>>): Promise<Coupon | null> {
-  if (!db) { console.error("Firestore db instance not available in updateCoupon."); return null; }
-  const couponDocRef = doc(db, "cupons", couponId);
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updateCoupon."); return null; }
+  const couponDocRef = adminDb.collection("cupons").doc(couponId);
   try {
-    const updateData: Record<string, any> = { ...couponData, updatedAt: serverTimestamp() };
+    const updateData: Record<string, any> = { ...couponData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
     if (couponData.expiryDate === "") {
         updateData.expiryDate = null; 
     } else if (couponData.expiryDate) {
-        updateData.expiryDate = Timestamp.fromDate(new Date(couponData.expiryDate as any));
+        updateData.expiryDate = admin.firestore.Timestamp.fromDate(new Date(couponData.expiryDate as any));
     }
     if (couponData.store === "") updateData.store = null;
     if (couponData.applyUrl === "") updateData.applyUrl = null;
 
-    await updateDoc(couponDocRef, updateData);
-    const updatedDoc = await getDoc(couponDocRef);
+    await couponDocRef.update(updateData);
+    const updatedDoc = await couponDocRef.get();
     return { id: updatedDoc.id, ...updatedDoc.data() } as Coupon;
   } catch (error) {
-    console.error(`Error updating coupon ${couponId}:`, error);
+    console.error(`Error updating coupon ${couponId} with Admin SDK:`, error);
     return null;
   }
 }
 
 export async function deleteCoupon(couponId: string): Promise<boolean> {
-  if (!db) { console.error("Firestore db instance not available in deleteCoupon."); return false; }
-  const couponDocRef = doc(db, "cupons", couponId);
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in deleteCoupon."); return false; }
+  const couponDocRef = adminDb.collection("cupons").doc(couponId);
   try {
-    await deleteDoc(couponDocRef);
+    await couponDocRef.delete();
     return true;
   } catch (error) {
-    console.error(`Error deleting coupon ${couponId}:`, error);
+    console.error(`Error deleting coupon ${couponId} with Admin SDK:`, error);
     return false;
   }
 }
 
-// --- Post Management (Firestore) ---
-const postsCollection = collection(db, "posts");
+// --- Post Management (Admin SDK for writes, client SDK for reads) ---
+const postsClientCollection = collection(db, "posts");
 
 export async function getAllPosts(): Promise<Post[]> {
-  if (!db) { console.error("Firestore db instance not available in getAllPosts."); return []; }
+  if (!db) { console.error("Firestore client db instance not available in getAllPosts."); return []; }
   try {
-    const postsSnapshot = await getDocs(query(postsCollection, orderBy("publishedAt", "desc")));
+    const postsSnapshot = await getDocs(query(postsClientCollection, orderBy("publishedAt", "desc")));
     return postsSnapshot.docs.map(docSnap => ({
       id: docSnap.id,
       ...docSnap.data(),
@@ -534,7 +539,7 @@ export async function getAllPosts(): Promise<Post[]> {
 }
 
 export async function getPostById(id: string): Promise<Post | undefined> {
-  if (!db) { console.error("Firestore db instance not available in getPostById."); return undefined; }
+  if (!db) { console.error("Firestore client db instance not available in getPostById."); return undefined; }
   try {
     const postDocRef = doc(db, "posts", id);
     const postDocSnap = await getDoc(postDocRef);
@@ -549,9 +554,9 @@ export async function getPostById(id: string): Promise<Post | undefined> {
 }
 
 export async function getPostBySlug(slug: string): Promise<Post | undefined> {
-  if (!db) { console.error("Firestore db instance not available in getPostBySlug."); return undefined; }
+  if (!db) { console.error("Firestore client db instance not available in getPostBySlug."); return undefined; }
   try {
-    const q = query(postsCollection, where("slug", "==", slug), limit(1));
+    const q = query(postsClientCollection, where("slug", "==", slug), limit(1));
     const postSnapshot = await getDocs(q);
     if (!postSnapshot.empty) {
       const docSnap = postSnapshot.docs[0];
@@ -565,9 +570,9 @@ export async function getPostBySlug(slug: string): Promise<Post | undefined> {
 }
 
 export async function getLatestPosts(count: number): Promise<Post[]> {
-  if (!db) { console.error("Firestore db instance not available in getLatestPosts."); return []; }
+  if (!db) { console.error("Firestore client db instance not available in getLatestPosts."); return []; }
   try {
-    const q = query(postsCollection, orderBy("publishedAt", "desc"), limit(count));
+    const q = query(postsClientCollection, orderBy("publishedAt", "desc"), limit(count));
     const postsSnapshot = await getDocs(q);
     return postsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), tags: docSnap.data().tags || [] } as Post));
   } catch (error) {
@@ -577,55 +582,58 @@ export async function getLatestPosts(count: number): Promise<Post[]> {
 }
 
 export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>): Promise<Post> {
-  if (!db) { throw new Error("Firestore db instance not available in addPost."); }
-  const newPostData = {
+  if (!adminDb) { throw new Error("Firebase Admin SDK (adminDb) is not initialized in addPost."); }
+  const newPostData: any = {
     ...postData,
-    publishedAt: postData.publishedAt ? Timestamp.fromDate(new Date(postData.publishedAt as any)) : Timestamp.now(),
+    publishedAt: postData.publishedAt ? admin.firestore.Timestamp.fromDate(new Date(postData.publishedAt as any)) : admin.firestore.Timestamp.now(),
     tags: postData.tags || [],
     embedHtml: postData.embedHtml || '',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
-  const docRef = await addDoc(postsCollection, newPostData);
-  return { id: docRef.id, ...newPostData } as unknown as Post;
+  const docRef = await adminDb.collection('posts').add(newPostData);
+  return { id: docRef.id, ...postData, publishedAt: newPostData.publishedAt } as Post; // Adjust return
 }
 
 export async function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>): Promise<Post | null> {
-  if (!db) { console.error("Firestore db instance not available in updatePost."); return null; }
-  const postDocRef = doc(db, "posts", postId);
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updatePost."); return null; }
+  const postDocRef = adminDb.collection("posts").doc(postId);
   try {
-    const updateData: Record<string, any> = { ...postData, updatedAt: serverTimestamp() };
+    const updateData: Record<string, any> = { ...postData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
     if (postData.publishedAt) {
-        updateData.publishedAt = Timestamp.fromDate(new Date(postData.publishedAt as any));
+        updateData.publishedAt = admin.firestore.Timestamp.fromDate(new Date(postData.publishedAt as any));
     }
     if (postData.tags && !Array.isArray(postData.tags)) { 
         updateData.tags = (postData.tags as unknown as string).split(',').map(t => t.trim()).filter(t => t);
     }
-    await updateDoc(postDocRef, updateData);
-    const updatedDoc = await getDoc(postDocRef);
+    await postDocRef.update(updateData);
+    const updatedDoc = await postDocRef.get();
     return { id: updatedDoc.id, ...updatedDoc.data() } as Post;
   } catch (error) {
-    console.error(`Error updating post ${postId}:`, error);
+    console.error(`Error updating post ${postId} with Admin SDK:`, error);
     return null;
   }
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
-  if (!db) { console.error("Firestore db instance not available in deletePost."); return false; }
-  const postDocRef = doc(db, "posts", postId);
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in deletePost."); return false; }
+  const postDocRef = adminDb.collection("posts").doc(postId);
   try {
-    await deleteDoc(postDocRef);
+    await postDocRef.delete();
     return true;
   } catch (error) {
-    console.error(`Error deleting post ${postId}:`, error);
+    console.error(`Error deleting post ${postId} with Admin SDK:`, error);
     return false;
   }
 }
 
-// --- Badge System (Needs Firestore integration for user badge updates) ---
+// --- Badge System (Needs client SDK for user data read if checkAndAwardBadges is client-callable, or needs Admin SDK for user data read if fully server-side) ---
 export async function checkAndAwardBadges(userId: string): Promise<void> {
-  if (!db) { console.error("Firestore db instance not available for badge checking."); return; }
-  const user = await getUserById(userId);
+  // This function might be called from client-side (e.g., after a like/comment) or server-side.
+  // If called server-side in a context without client auth, it needs admin SDK to read user.
+  // For simplicity here, assuming it might be called where client 'db' is appropriate.
+  if (!db) { console.error("Firestore client db instance not available for badge checking."); return; }
+  const user = await getUserById(userId); // Uses client SDK
   if (!user) { console.warn(`User ${userId} not found for badge checking.`); return; }
 
   const criteriaData = await generateBadgeCriteriaData(user); 
@@ -640,21 +648,22 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
   }
 
   if (badgesUpdated) {
-    const userDocRef = doc(db, "usuarios", userId);
+    const userDocRef = doc(db, "usuarios", userId); // Use client 'db'
     try {
       await updateDoc(userDocRef, { badges: userBadges, updatedAt: serverTimestamp() });
       console.log(`Badges updated for user ${userId}. New badges: ${userBadges.join(', ')}`);
     } catch (error) {
-      console.error(`Error updating badges for user ${userId} in Firestore:`, error);
+      console.error(`Error updating badges for user ${userId} in Firestore (client SDK):`, error);
     }
   }
 }
 
-
-// --- Moderation (Firestore) ---
+// --- Moderation (Admin SDK) ---
 export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
-  if (!db) { console.error("Firestore db instance not available in getPendingComments."); return []; }
-  const allAccessories = await getAllAccessories();
+  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in getPendingComments."); return []; }
+  const allAccessoriesSnapshot = await adminDb.collection('acessorios').orderBy("createdAt", "desc").get();
+  const allAccessories = allAccessoriesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
+  
   const pending: PendingCommentDisplay[] = [];
   allAccessories.forEach(acc => {
     (acc.comments || []).forEach(comment => {
@@ -662,7 +671,7 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
         pending.push({
           comment: {
             ...comment,
-            createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt : Timestamp.fromDate(new Date(comment.createdAt as any)),
+            createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt : admin.firestore.Timestamp.fromDate(new Date(comment.createdAt as any)),
           },
           accessoryId: acc.id,
           accessoryName: acc.name,
@@ -670,49 +679,65 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
       }
     });
   });
+  // @ts-ignore
   return pending.sort((a, b) => b.comment.createdAt.toMillis() - a.comment.createdAt.toMillis());
 }
 
 
-// --- Analytics Data (Firestore) ---
+// --- Analytics Data (Admin SDK for secure counts and reads) ---
 const getTotalUsersCount = async (): Promise<number> => {
-  if (!db) return 0;
-  const snapshot = await getDocs(collection(db, "usuarios"));
-  return snapshot.size;
+  if (!adminDb) return 0;
+  const snapshot = await adminDb.collection("usuarios").count().get();
+  return snapshot.data().count;
 };
 const getTotalAccessoriesCount = async (): Promise<number> => {
-  if (!db) return 0;
-  const snapshot = await getDocs(accessoriesCollection);
-  return snapshot.size;
+  if (!adminDb) return 0;
+  const snapshot = await adminDb.collection("acessorios").count().get();
+  return snapshot.data().count;
 };
 const getTotalApprovedCommentsCount = async (): Promise<number> => {
-  const accessoriesList = await getAllAccessories();
+  if (!adminDb) return 0;
+  const accessoriesSnapshot = await adminDb.collection('acessorios').get();
+  const accessoriesList = accessoriesSnapshot.docs.map(d => d.data() as Accessory);
   return accessoriesList.reduce((sum, acc) => sum + (acc.comments?.filter(c => c.status === 'approved').length || 0), 0);
 };
 const getAccessoriesPerCategory = async (): Promise<CategoryCount[]> => {
-  const accessoriesList = await getAllAccessories();
+  if (!adminDb) return [];
+  const accessoriesSnapshot = await adminDb.collection('acessorios').get();
+  const accessoriesList = accessoriesSnapshot.docs.map(d => d.data() as Accessory);
   const counts: Record<string, number> = {};
   accessoriesList.forEach(acc => { const category = acc.category || 'Sem Categoria'; counts[category] = (counts[category] || 0) + 1; });
   return Object.entries(counts).map(([category, count]) => ({ category, count })).sort((a,b) => b.count - a.count);
 };
 const getMostLikedAccessories = async (topN: number = 5): Promise<TopAccessoryInfo[]> => {
-  const accessoriesList = await getAllAccessories();
-  return [...accessoriesList]
-    .sort((a, b) => (b.likedBy?.length || 0) - (a.likedBy?.length || 0))
+  if (!adminDb) return [];
+  const accessoriesSnapshot = await adminDb.collection('acessorios').orderBy("likedBy.length", "desc").limit(topN).get(); // Approximation if likedBy is array
+  // A true sort by array length requires client-side processing or different data model
+  const accessoriesList = accessoriesSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Accessory));
+  return accessoriesList
+    .sort((a,b) => (b.likedBy?.length || 0) - (a.likedBy?.length || 0))
     .slice(0, topN)
     .map(acc => ({ id: acc.id, name: acc.name, count: acc.likedBy?.length || 0, imageUrl: acc.imageUrl }));
 };
 const getMostCommentedAccessories = async (topN: number = 5): Promise<TopAccessoryInfo[]> => {
-  const accessoriesList = await getAllAccessories();
-  return [...accessoriesList]
-    .sort((a, b) => (b.comments?.filter(c => c.status === 'approved').length || 0) - (a.comments?.filter(c => c.status === 'approved').length || 0))
+   if (!adminDb) return [];
+  const accessoriesSnapshot = await adminDb.collection('acessorios').get();
+  const accessoriesList = accessoriesSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Accessory));
+  return accessoriesList
+    .map(acc => ({
+        ...acc,
+        approvedCommentCount: acc.comments?.filter(c => c.status === 'approved').length || 0
+    }))
+    .sort((a, b) => b.approvedCommentCount - a.approvedCommentCount)
     .slice(0, topN)
-    .map(acc => ({ id: acc.id, name: acc.name, count: acc.comments?.filter(c => c.status === 'approved').length || 0, imageUrl: acc.imageUrl }));
+    .map(acc => ({ id: acc.id, name: acc.name, count: acc.approvedCommentCount, imageUrl: acc.imageUrl }));
 };
 const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]> => {
-  const allAccessoriesList = await getAllAccessories();
+  if (!adminDb) return [];
+  const accessoriesSnapshot = await adminDb.collection('acessorios').get();
+  const accessoriesList = accessoriesSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Accessory));
   const allApprovedComments: RecentCommentInfo[] = [];
-  allAccessoriesList.forEach(acc => {
+  accessoriesList.forEach(acc => {
     (acc.comments || [])
       .filter(c => c.status === 'approved')
       .forEach(comment => {
@@ -728,6 +753,7 @@ const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]>
         });
       });
   });
+  // @ts-ignore
   return allApprovedComments
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) 
     .slice(0, topN);
@@ -745,9 +771,9 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   };
 }
 
-// --- Functions for User Profile Activity Page (Firestore) ---
+// --- Functions for User Profile Activity Page (Firestore - Client SDK is fine here) ---
 export async function getCommentsByUserId(userId: string): Promise<CommentWithAccessoryInfo[]> {
-  if (!db) { console.error("Firestore db instance not available in getCommentsByUserId."); return []; }
+  if (!db) { console.error("Firestore client db instance not available in getCommentsByUserId."); return []; }
   const userComments: CommentWithAccessoryInfo[] = [];
   const allAccessoriesList = await getAllAccessories(); 
 
@@ -767,13 +793,14 @@ export async function getCommentsByUserId(userId: string): Promise<CommentWithAc
         });
       });
   });
+  // @ts-ignore
   return userComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export async function getAccessoriesLikedByUser(userId: string): Promise<Accessory[]> {
-  if (!db) { console.error("Firestore db instance not available in getAccessoriesLikedByUser."); return []; }
+  if (!db) { console.error("Firestore client db instance not available in getAccessoriesLikedByUser."); return []; }
   try {
-    const q = query(accessoriesCollection, where("likedBy", "array-contains", userId), orderBy("createdAt", "desc"));
+    const q = query(accessoriesClientCollection, where("likedBy", "array-contains", userId), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
   } catch (error) {

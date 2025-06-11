@@ -26,6 +26,7 @@ import type { AccessoryActionResult } from "@/app/admin/accessories/actions";
 import { generateDescriptionWithAIAction } from "@/app/admin/accessories/actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useAuth } from "@/hooks/useAuth"; // Import useAuth
 
 interface AccessoryFormProps {
   formAction: (prevState: AccessoryActionResult | null, formData: FormData) => Promise<AccessoryActionResult>;
@@ -122,6 +123,7 @@ export default function AccessoryForm({
   
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const { user: authUser, isAuthenticated } = useAuth(); // Get authenticated user
 
 
   const form = useForm<AccessoryFormValues>({
@@ -155,18 +157,15 @@ export default function AccessoryForm({
           title: "Sucesso!",
           description: state.message,
         });
-        // Check if it's a create operation (no initialData or no initialData.id)
         if (state.accessory && !initialData) { 
           console.log("AccessoryForm: Create success, attempting redirect to /admin/accessories");
           router.push('/admin/accessories'); 
-           form.reset(); // Reset form fields
-           setImagePreview(null); // Clear image preview
-           setAiPrompt(""); // Clear AI prompt
-           if(fileInputRef.current) fileInputRef.current.value = ""; // Clear file input
+           form.reset(); 
+           setImagePreview(null); 
+           setAiPrompt(""); 
+           if(fileInputRef.current) fileInputRef.current.value = ""; 
         } else if (state.accessory && initialData) { 
-            // This is an update, no redirect.
-            // Optionally, you might want to refresh data or re-fetch:
-            // router.refresh(); 
+            // Update
         }
       } else {
         toast({
@@ -226,6 +225,10 @@ export default function AccessoryForm({
   };
 
   const processForm = (data: AccessoryFormValues) => {
+    if (!isAuthenticated || !authUser?.id) {
+      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador para realizar esta ação.", variant: "destructive" });
+      return;
+    }
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -236,6 +239,8 @@ export default function AccessoryForm({
         }
       }
     });
+    formData.append('userId', authUser.id); // Adiciona o ID do usuário logado
+    
     startTransition(() => {
       dispatch(formData);
     });
@@ -247,7 +252,7 @@ export default function AccessoryForm({
     <Form {...form}>
       <form
         ref={formRef}
-        action={dispatch}
+        action={dispatch} // A ação já está vinculada, onSumbit apenas prepara e chama dispatch
         onSubmit={form.handleSubmit(processForm)}
         className="space-y-8"
       >
@@ -405,7 +410,6 @@ export default function AccessoryForm({
           </p>
         </div>
 
-
         <FormField
           control={form.control}
           name="imageHint"
@@ -516,5 +520,3 @@ export default function AccessoryForm({
     </Form>
   );
 }
-
-    
