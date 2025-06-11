@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { UserFirestoreData as User, Badge as BadgeType, Accessory, CommentWithAccessoryInfo } from '@/lib/types';
+import type { UserFirestoreData as User, Badge as BadgeType, Accessory, CommentWithAccessoryInfo, Comment } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,10 +14,10 @@ import { AuthProviderClientComponent } from '@/components/AuthProviderClientComp
 import { getBadgeById } from '@/lib/badges';
 import { Badge as ShadBadge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // DialogClose removed due to form conflicts
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import UserListItem from "@/components/UserListItem";
-import { getUserById, getCommentsByUserId, getAccessoriesLikedByUser } from '@/lib/data'; // All now async
+import { getUserById, getCommentsByUserId, getAccessoriesLikedByUser } from '@/lib/data';
 import { Separator } from '@/components/ui/separator';
 import { Timestamp } from 'firebase/firestore';
 
@@ -57,14 +57,12 @@ export default function UserProfileClientView({ profileUser: initialProfileUser 
     .map(badgeId => getBadgeById(badgeId))
     .filter(badge => badge !== undefined) as BadgeType[];
 
-  // Helper to convert Timestamp to string for ClientUser
   const prepareUserForClient = (user: User): ClientUser => ({
     ...user,
     createdAt: user.createdAt instanceof Timestamp ? user.createdAt.toDate().toISOString() : user.createdAt as any,
     updatedAt: user.updatedAt instanceof Timestamp ? user.updatedAt.toDate().toISOString() : user.updatedAt as any,
   });
 
-  // Helper to convert Timestamps in Accessory
   const prepareAccessoryForClientList = (accessory: Accessory): ClientAccessory => ({
     ...accessory,
     createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : accessory.createdAt as any,
@@ -113,7 +111,7 @@ export default function UserProfileClientView({ profileUser: initialProfileUser 
           getCommentsByUserId(profileUser.id),
           getAccessoriesLikedByUser(profileUser.id)
         ]);
-        setRecentComments(commentsData); // Assuming getCommentsByUserId already returns with string dates
+        setRecentComments(commentsData);
         setLikedAccessories(likedAccData.map(prepareAccessoryForClientList));
       } catch (error) {
         console.error("Error fetching user activity:", error);
@@ -215,13 +213,13 @@ export default function UserProfileClientView({ profileUser: initialProfileUser 
                 </Dialog>
               </div>
 
-              {isAuthenticated && currentUser && currentUser.id !== profileUser.id && ( // Show follow button if not viewing own profile
+              {isAuthenticated && currentUser && currentUser.id !== profileUser.id && (
                 <div className="flex justify-center pt-4">
                   <FollowButton
                     currentUserId={currentUser.id}
                     targetUserId={profileUser.id}
                     initialIsFollowing={currentUser.following?.includes(profileUser.id) ?? false}
-                    initialFollowersCount={followersCount} // Pass the state variable
+                    initialFollowersCount={followersCount}
                     formAction={toggleFollowAction}
                   />
                 </div>
@@ -297,3 +295,5 @@ export default function UserProfileClientView({ profileUser: initialProfileUser 
     </AuthProviderClientComponent>
   );
 }
+
+    

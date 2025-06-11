@@ -72,30 +72,30 @@ function AuthDependentLinks() {
 
 export default function Header({ siteLogoUrl }: HeaderProps) {
   const currentLogoSrc = siteLogoUrl && siteLogoUrl.startsWith('data:image') ? siteLogoUrl : logoSrc;
-  const logoAltText = siteLogoUrl ? "Site Logo" : "SmartAcessorios Logo";
+  const logoAltText = siteSettings.siteTitle ? `${siteSettings.siteTitle} Logo` : "SmartAcessorios Logo";
+  const siteSettings = getSiteSettings();
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-primary text-primary-foreground shadow-sm">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Grupo de itens à esquerda: Ícone do Menu Mobile (apenas mobile) e Logo */}
         <div className="flex items-center">
-          <div className="md:hidden mr-2"> {/* Container do MobileNav movido para a esquerda */}
+          <div className="md:hidden mr-2">
             <MobileNav siteLogoUrl={siteLogoUrl} />
           </div>
           <Link href="/" className="flex items-center gap-2">
             <Image
               src={currentLogoSrc}
               alt={logoAltText}
-              width={siteLogoUrl ? 120 : 239} 
-              height={siteLogoUrl ? 30 : 40}  
+              width={120} 
+              height={30}
               priority={true}
               className="h-8 w-auto" 
-              style={{maxHeight: '40px', objectFit: 'contain'}} 
+              style={{maxHeight: '40px', objectFit: 'contain', width: 'auto'}}
             />
           </Link>
         </div>
         
-        {/* Navegação Desktop permanece à direita */}
         <nav className="hidden md:flex items-center gap-2 text-xs sm:text-sm lg:gap-4">
           <Link href="/products" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <ShoppingBag className="h-4 w-4" />
@@ -120,3 +120,5 @@ export default function Header({ siteLogoUrl }: HeaderProps) {
     </header>
   );
 }
+
+    

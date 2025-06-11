@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText, UserCircle, Home } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getUniqueCategories } from '@/lib/data';
+import { getUniqueCategories, getSiteSettings } from '@/lib/data';
 import { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';
@@ -23,9 +23,11 @@ export default function MobileNav({ siteLogoUrl }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const { user, isAuthenticated, isAdmin, logout, isLoading: isLoadingAuth } = useAuth();
+  const siteSettings = getSiteSettings();
 
   const currentLogoSrc = siteLogoUrl && siteLogoUrl.startsWith('data:image') ? siteLogoUrl : logoSrc;
-  const logoAltText = siteLogoUrl ? "Site Logo" : "SmartAcessorios Logo";
+  const logoAltText = siteSettings.siteTitle ? `${siteSettings.siteTitle} Logo` : "SmartAcessorios Logo";
+
 
   useEffect(() => {
     setCategories(getUniqueCategories());
@@ -78,11 +80,11 @@ export default function MobileNav({ siteLogoUrl }: MobileNavProps) {
             <Image
               src={currentLogoSrc} 
               alt={logoAltText}
-              width={siteLogoUrl ? 120 : 239}
-              height={siteLogoUrl ? 30 : 40}
+              width={120}
+              height={30}
               priority={true}
               className="h-10 w-auto"
-              style={{maxHeight: '40px', objectFit: 'contain'}}
+              style={{maxHeight: '40px', objectFit: 'contain', width: 'auto'}}
             />
           </Link>
         </SheetHeader>
@@ -198,3 +200,5 @@ export default function MobileNav({ siteLogoUrl }: MobileNavProps) {
     </Sheet>
   );
 }
+
+    
