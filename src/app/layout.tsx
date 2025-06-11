@@ -46,7 +46,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
-      <head><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" /><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" /></head>
+      {/* A tag <head> explícita foi removida. Next.js a gerenciará. */}
+      {/* As fontes do Google (Inter) são carregadas via next/font/google e aplicadas via className na tag html e CSS. */}
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
           <NavigationProgress />
