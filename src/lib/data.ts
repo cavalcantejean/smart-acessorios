@@ -1,8 +1,6 @@
 
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting, CommentWithAccessoryInfo } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges';
-// Removed Lucide Icon imports that were specific to the old SocialLinkSetting.IconComponent structure
-// They will be imported directly in Footer.tsx as needed
 import { db } from './firebase';
 import {
   collection,
@@ -38,9 +36,9 @@ const convertTimestampToStringForDisplay = (timestamp: Timestamp | undefined): s
 let siteSettings: SiteSettings = {
   siteTitle: 'SmartAcessorios',
   siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-  siteLogoUrl: '', 
+  siteLogoUrl: '',
   siteFaviconUrl: '',
-  socialLinks: [ // IconComponent property REMOVED from these objects
+  socialLinks: [
     { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
     { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
     { platform: "Twitter", label: "X (Twitter)", url: "https://x.com/Smart_acessorio", placeholderUrl: "https://x.com/seu_usuario", customImageUrl: "" },
@@ -92,7 +90,6 @@ export async function getUserById(id: string): Promise<UserFirestoreData | undef
       return {
         ...data,
         id: userDocSnap.id,
-        // Ensure date fields are Timestamps or converted if needed for consistency
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
       } as UserFirestoreData;
@@ -142,13 +139,11 @@ export async function toggleFollowUser(currentUserId: string, targetUserId: stri
       targetUserData.followers = targetUserData.followers || [];
 
       if (currentUserData.following.includes(targetUserId)) {
-        // Unfollow
         transaction.update(currentUserDocRef, { following: arrayRemove(targetUserId), updatedAt: serverTimestamp() });
         transaction.update(targetUserDocRef, { followers: arrayRemove(currentUserId), updatedAt: serverTimestamp() });
         isFollowing = false;
         finalFollowersCount = (targetUserData.followers.length || 1) - 1;
       } else {
-        // Follow
         transaction.update(currentUserDocRef, { following: arrayUnion(targetUserId), updatedAt: serverTimestamp() });
         transaction.update(targetUserDocRef, { followers: arrayUnion(currentUserId), updatedAt: serverTimestamp() });
         isFollowing = true;
@@ -173,7 +168,7 @@ export async function toggleUserAdminStatus(userId: string): Promise<UserFiresto
     if (!userDoc.exists()) return null;
     const currentIsAdmin = userDoc.data()?.isAdmin || false;
     await updateDoc(userDocRef, { isAdmin: !currentIsAdmin, updatedAt: serverTimestamp() });
-    const updatedUserDoc = await getDoc(userDocRef); // Re-fetch to get updated data
+    const updatedUserDoc = await getDoc(userDocRef);
     return { id: updatedUserDoc.id, ...updatedUserDoc.data() } as UserFirestoreData;
   } catch (error) {
     console.error("Error toggling user admin status:", error);
@@ -191,7 +186,7 @@ export async function getAllAccessories(): Promise<Accessory[]> {
     return accessoriesSnapshot.docs.map(docSnap => ({
       id: docSnap.id,
       ...docSnap.data(),
-      comments: docSnap.data().comments || [], // Ensure comments is an array
+      comments: docSnap.data().comments || [],
     } as Accessory));
   } catch (error) {
     console.error("Error fetching all accessories from Firestore:", error);
@@ -215,17 +210,58 @@ export async function getAccessoryById(id: string): Promise<Accessory | undefine
 }
 
 export async function addAccessory(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
-  if (!db) { throw new Error("Firestore db instance not available in addAccessory."); }
+  if (!db) {
+    console.error("[Data:addAccessory] Firestore db instance not available.");
+    throw new Error("Firestore db instance not available in addAccessory.");
+  }
   const newAccessoryData = {
     ...accessoryData,
-    price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : undefined,
+    price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : null, // Use null for empty price
     likedBy: [],
     comments: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    category: accessoryData.category || null,
+    imageHint: accessoryData.imageHint || null,
+    aiSummary: accessoryData.aiSummary || null,
+    embedHtml: accessoryData.embedHtml || null,
+    isDeal: accessoryData.isDeal || false, // Ensure isDeal has a default
   };
-  const docRef = await addDoc(accessoriesCollection, newAccessoryData);
-  return { id: docRef.id, ...newAccessoryData } as unknown as Accessory; // Cast needed due to serverTimestamp
+
+  console.log("[Data:addAccessory] Dados preparados para enviar ao Firestore:", JSON.stringify(newAccessoryData, null, 2));
+
+  try {
+    const docRef = await addDoc(accessoriesCollection, newAccessoryData);
+    console.log("[Data:addAccessory] Documento adicionado com ID:", docRef.id);
+    // Re-fetch the document to get server-generated timestamps if absolutely needed,
+    // or construct the return object with placeholder timestamps for immediate feedback.
+    const createdAccessory: Accessory = {
+      id: docRef.id,
+      name: newAccessoryData.name,
+      shortDescription: newAccessoryData.shortDescription,
+      fullDescription: newAccessoryData.fullDescription,
+      imageUrl: newAccessoryData.imageUrl,
+      imageHint: newAccessoryData.imageHint || undefined,
+      affiliateLink: newAccessoryData.affiliateLink,
+      price: newAccessoryData.price || undefined,
+      category: newAccessoryData.category || undefined,
+      isDeal: newAccessoryData.isDeal,
+      aiSummary: newAccessoryData.aiSummary || undefined,
+      embedHtml: newAccessoryData.embedHtml || undefined,
+      likedBy: [],
+      comments: [],
+      createdAt: Timestamp.now(), // Placeholder, o valor real é gerado pelo servidor
+      updatedAt: Timestamp.now(), // Placeholder
+    };
+    return createdAccessory;
+  } catch (error: any) {
+    console.error("[Data:addAccessory] Erro DETALHADO durante addDoc:", error);
+    if (error.code) {
+        console.error("Código do erro Firestore:", error.code);
+        console.error("Mensagem do erro Firestore:", error.message);
+    }
+    throw error; // Re-lança o erro para ser tratado pela action
+  }
 }
 
 export async function updateAccessory(accessoryId: string, accessoryData: Partial<Omit<Accessory, 'id' | 'likedBy' | 'comments'>>): Promise<Accessory | null> {
@@ -248,8 +284,6 @@ export async function deleteAccessory(accessoryId: string): Promise<boolean> {
   const accessoryDocRef = doc(db, "acessorios", accessoryId);
   try {
     await deleteDoc(accessoryDocRef);
-    // Note: Deleting subcollections (like comments, if they were true subcollections) would require more complex logic.
-    // Here, comments are an array field, so they are deleted with the document.
     return true;
   } catch (error) {
     console.error(`Error deleting accessory ${accessoryId}:`, error);
@@ -292,18 +326,14 @@ export async function addCommentToAccessoryData(
   if (!db) { console.error("Firestore db instance not available in addCommentToAccessoryData."); return null; }
   const accessoryDocRef = doc(db, "acessorios", accessoryId);
   try {
-    const newComment: Omit<Comment, 'id' | 'createdAt'> & { createdAt: any } = { // createdAt as 'any' for serverTimestamp
+    const newComment: Omit<Comment, 'id' | 'createdAt'> & { createdAt: any } = { 
       userId,
       userName,
       text,
       status,
-      createdAt: serverTimestamp(), // Use Firestore server timestamp
+      createdAt: serverTimestamp(), 
     };
-
-    // Firestore's arrayUnion adds the comment. We need a unique ID if we want to update/delete later.
-    // For simplicity in this update, we'll add it to an array. A subcollection is better for scalable comments.
-    // For this example, we'll make 'id' part of the comment object stored in the array.
-    const commentWithId = { ...newComment, id: doc(collection(db, '_')).id }; // Generate a unique ID for the comment
+    const commentWithId = { ...newComment, id: doc(collection(db, '_')).id }; 
 
     await updateDoc(accessoryDocRef, {
       comments: arrayUnion(commentWithId),
@@ -313,10 +343,7 @@ export async function addCommentToAccessoryData(
     if (status === 'approved') {
       await checkAndAwardBadges(userId);
     }
-    // To return the full comment with resolved timestamp, we'd need to re-fetch or adapt.
-    // For now, returning the input structure (with ID) as an approximation.
-    // The server timestamp will be resolved on read.
-    return { ...commentWithId, createdAt: Timestamp.now() }; // Approximate with client-side now for immediate return
+    return { ...commentWithId, createdAt: Timestamp.now() }; 
   } catch (error) {
     console.error(`Error adding comment to accessory ${accessoryId}:`, error);
     return null;
@@ -337,9 +364,8 @@ export async function updateCommentStatus(accessoryId: string, commentId: string
 
       if (commentIndex === -1) throw "Comment not found in array";
 
-      // Create a new array with the updated comment
       const newCommentsArray = commentsArray.map((c, index) =>
-        index === commentIndex ? { ...c, status: newStatus, updatedAt: Timestamp.now() } : c // Add/update updatedAt on comment if needed
+        index === commentIndex ? { ...c, status: newStatus, updatedAt: Timestamp.now() } : c 
       );
       
       transaction.update(accessoryDocRef, { comments: newCommentsArray, updatedAt: serverTimestamp() });
@@ -359,7 +385,7 @@ export async function updateCommentStatus(accessoryId: string, commentId: string
 
 // --- Utility Functions (may need Firestore integration if they rely on data previously in arrays) ---
 export async function getUniqueCategories(): Promise<string[]> {
-  const accessoriesList = await getAllAccessories(); // Fetch from Firestore
+  const accessoriesList = await getAllAccessories(); 
   const categoriesSet = new Set<string>();
   accessoriesList.forEach(acc => { if (acc.category) categoriesSet.add(acc.category); });
   return Array.from(categoriesSet).sort();
@@ -385,7 +411,6 @@ export async function getDailyDeals(): Promise<Accessory[]> {
         console.error("INDEX REQUIRED: The query for daily deals (isDeal == true, orderBy createdAt desc) needs a composite index. Please create it in the Firebase console.");
         console.error("Firebase suggested index creation link (from a similar error, may need adjustment):", error.message.substring(error.message.indexOf('https://')));
     }
-    // Attempt fallback if primary query fails (e.g. due to missing index for the specific query)
     if (deals.length === 0) {
         try {
             console.log("Error in primary deals query, attempting fallback for latest 2 accessories.");
@@ -407,16 +432,15 @@ export async function getCoupons(): Promise<Coupon[]> {
   if (!db) { console.error("Firestore db instance not available in getCoupons."); return []; }
   try {
     const today = Timestamp.now();
-    const q = query(couponsCollection, orderBy("expiryDate", "asc")); // Order by expiry to handle nulls later
+    const q = query(couponsCollection, orderBy("expiryDate", "asc")); 
     const couponsSnapshot = await getDocs(q);
     
     const allCoupons = couponsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Coupon));
     
-    // Filter expired client-side as Firestore querying for "expiryDate >= today OR expiryDate IS NULL" is complex
     return allCoupons.filter(coupon => {
-      if (!coupon.expiryDate) return true; // No expiry date means active
-      return coupon.expiryDate.toDate() >= today.toDate(); // Compare Date objects
-    }).sort((a, b) => { // Ensure consistent sort after filter
+      if (!coupon.expiryDate) return true; 
+      return coupon.expiryDate.toDate() >= today.toDate(); 
+    }).sort((a,b) => { 
         if (!a.expiryDate && !b.expiryDate) return 0;
         if (!a.expiryDate) return 1;
         if (!b.expiryDate) return -1;
@@ -447,7 +471,7 @@ export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'u
   if (!db) { throw new Error("Firestore db instance not available in addCoupon."); }
   const newCouponData = {
     ...couponData,
-    expiryDate: couponData.expiryDate ? Timestamp.fromDate(new Date(couponData.expiryDate as any)) : undefined, // Convert string to Timestamp
+    expiryDate: couponData.expiryDate ? Timestamp.fromDate(new Date(couponData.expiryDate as any)) : undefined, 
     store: couponData.store || undefined,
     applyUrl: couponData.applyUrl || undefined,
     createdAt: serverTimestamp(),
@@ -463,7 +487,7 @@ export async function updateCoupon(couponId: string, couponData: Partial<Omit<Co
   try {
     const updateData: Record<string, any> = { ...couponData, updatedAt: serverTimestamp() };
     if (couponData.expiryDate === "") {
-        updateData.expiryDate = null; // Or deleteField() if you want to remove it
+        updateData.expiryDate = null; 
     } else if (couponData.expiryDate) {
         updateData.expiryDate = Timestamp.fromDate(new Date(couponData.expiryDate as any));
     }
@@ -574,7 +598,7 @@ export async function updatePost(postId: string, postData: Partial<Omit<Post, 'i
     if (postData.publishedAt) {
         updateData.publishedAt = Timestamp.fromDate(new Date(postData.publishedAt as any));
     }
-    if (postData.tags && !Array.isArray(postData.tags)) { // Assuming tags might come as string from form
+    if (postData.tags && !Array.isArray(postData.tags)) { 
         updateData.tags = (postData.tags as unknown as string).split(',').map(t => t.trim()).filter(t => t);
     }
     await updateDoc(postDocRef, updateData);
@@ -604,7 +628,7 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
   const user = await getUserById(userId);
   if (!user) { console.warn(`User ${userId} not found for badge checking.`); return; }
 
-  const criteriaData = await generateBadgeCriteriaData(user); // Now async
+  const criteriaData = await generateBadgeCriteriaData(user); 
   let userBadges = user.badges || [];
   let badgesUpdated = false;
 
@@ -638,7 +662,6 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
         pending.push({
           comment: {
             ...comment,
-            // Ensure createdAt is a Firestore Timestamp before further processing
             createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt : Timestamp.fromDate(new Date(comment.createdAt as any)),
           },
           accessoryId: acc.id,
@@ -647,7 +670,6 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
       }
     });
   });
-  // Sort by Firestore Timestamp directly
   return pending.sort((a, b) => b.comment.createdAt.toMillis() - a.comment.createdAt.toMillis());
 }
 
@@ -699,16 +721,15 @@ const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]>
           userId: comment.userId,
           userName: comment.userName,
           text: comment.text,
-          createdAt: convertTimestampToStringForDisplay(comment.createdAt), // Convert Timestamp to string for display
+          createdAt: convertTimestampToStringForDisplay(comment.createdAt), 
           status: comment.status,
           accessoryName: acc.name,
           accessoryId: acc.id,
         });
       });
   });
-  // Sort by original timestamp before conversion for accuracy if possible, or by converted string date
   return allApprovedComments
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) // Sorting by string date is less reliable, consider original Timestamps before map
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) 
     .slice(0, topN);
 };
 
@@ -728,7 +749,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
 export async function getCommentsByUserId(userId: string): Promise<CommentWithAccessoryInfo[]> {
   if (!db) { console.error("Firestore db instance not available in getCommentsByUserId."); return []; }
   const userComments: CommentWithAccessoryInfo[] = [];
-  const allAccessoriesList = await getAllAccessories(); // Fetch all accessories
+  const allAccessoriesList = await getAllAccessories(); 
 
   allAccessoriesList.forEach(acc => {
     (acc.comments || [])
@@ -739,14 +760,13 @@ export async function getCommentsByUserId(userId: string): Promise<CommentWithAc
           userId: comment.userId,
           userName: comment.userName,
           text: comment.text,
-          createdAt: convertTimestampToStringForDisplay(comment.createdAt), // Convert for display
+          createdAt: convertTimestampToStringForDisplay(comment.createdAt), 
           status: comment.status,
           accessoryId: acc.id,
           accessoryName: acc.name,
         });
       });
   });
-  // Sort by original timestamp before conversion for accuracy if possible, or by converted string date
   return userComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 

@@ -32,9 +32,12 @@ export async function createAccessoryAction(
     embedHtml: rawFormData.embedHtml || undefined,
   };
 
+  console.log("[Action:createAccessory] Data recebida do formulário para validação:", JSON.stringify(dataToValidate, null, 2));
+
   const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);
 
   if (!validatedFields.success) {
+    console.error("[Action:createAccessory] Falha na validação Zod:", JSON.stringify(validatedFields.error.flatten(), null, 2));
     return {
       success: false,
       message: "Falha na validação. Verifique os campos.",
@@ -42,6 +45,8 @@ export async function createAccessoryAction(
       error: "Dados inválidos. Corrija os erros abaixo."
     };
   }
+
+  console.log("[Action:createAccessory] Dados validados para enviar ao Firestore:", JSON.stringify(validatedFields.data, null, 2));
 
   try {
     // addAccessory is now async
@@ -57,11 +62,21 @@ export async function createAccessoryAction(
         accessory: newAccessory
       };
     } else {
-      return { success: false, error: "Falha ao criar o acessório no sistema." };
+      console.error("[Action:createAccessory] addAccessory retornou um valor falso (null/undefined) sem lançar erro.");
+      return { success: false, error: "Falha ao criar o acessório no sistema (retorno inesperado da função addAccessory)." };
     }
-  } catch (error) {
-    console.error("Error in createAccessoryAction:", error);
-    return { success: false, error: "Erro no servidor ao tentar criar o acessório." };
+  } catch (error: any) {
+    console.error("[Action:createAccessory] Erro DETALHADO no bloco catch:", error);
+    let errorMessage = "Erro no servidor ao tentar criar o acessório.";
+    if (error.code) { // Erros do Firebase frequentemente têm um código
+        errorMessage += ` (Código Firebase: ${error.code})`;
+    }
+    if (error.message) { // E uma mensagem
+        errorMessage += ` Mensagem: ${error.message}`;
+    }
+    // Para log mais verboso, se as mensagens acima não forem suficientes:
+    // console.error("Objeto de erro completo (stringified):", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    return { success: false, error: errorMessage };
   }
 }
 
