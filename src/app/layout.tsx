@@ -7,16 +7,15 @@ import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import { getSiteSettings } from '@/lib/data';
-import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'; // Import the registrar
-import NavigationProgress from '@/components/NavigationProgress'; // Import the new component
+import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
+import NavigationProgress from '@/components/NavigationProgress';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-// Fetch settings once, can be used by both generateMetadata and RootLayout
 const siteSettings = getSiteSettings();
 
 export async function generateMetadata(): Promise<Metadata> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'; // Default to localhost for dev
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
   const metadataBase = new URL(baseUrl);
 
   return {
@@ -26,15 +25,14 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${siteSettings.siteTitle || 'SmartAcessorios'}`,
     },
     description: siteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-    // manifest: '/manifest.json', // REMOVED from here
     icons: {
       icon: siteSettings.siteFaviconUrl || '/favicon.ico',
-      apple: [ // Apple touch icons
-        { url: '/apple-touch-icon.png', sizes: '180x180' }, // Default apple-touch-icon
+      apple: [
+        { url: '/apple-touch-icon.png', sizes: '180x180' },
       ],
     },
     applicationName: siteSettings.siteTitle || 'SmartAcessorios',
-    appleWebApp: { // Apple PWA specific settings
+    appleWebApp: {
       capable: true,
       title: siteSettings.siteTitle || 'SmartAcessorios',
       statusBarStyle: 'default',
@@ -54,17 +52,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
-      <head>{/* Ensure no leading/trailing whitespace or newlines around children of head */}
+      <head>
         <link rel="manifest" href="/manifest.json" />
-        {/* Theme color is now handled by viewport export */}
-        {/* Apple PWA meta tags are now handled by generateMetadata */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        {/* Os comentários sobre theme-color e Apple PWA foram movidos para fora da tag <head> para maior segurança, */}
+        {/* já que generateMetadata e viewport cuidam dessas configurações. */}
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
-          <NavigationProgress /> {/* Add the NavigationProgress component here */}
+          <NavigationProgress />
           <Header siteLogoUrl={siteSettings.siteLogoUrl} />
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}
