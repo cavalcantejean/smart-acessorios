@@ -1,8 +1,8 @@
 
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting, CommentWithAccessoryInfo } from './types';
 import { allBadges, generateBadgeCriteriaData } from './badges';
-import { Facebook, Instagram, Twitter, Film, MessageSquare, Send, MessageCircle, Ghost, AtSign, Mail, Youtube, PlaySquare } from 'lucide-react';
-import PinterestIcon from '@/components/icons/PinterestIcon';
+// Removed Lucide Icon imports that were specific to the old SocialLinkSetting.IconComponent structure
+// They will be imported directly in Footer.tsx as needed
 import { db } from './firebase';
 import {
   collection,
@@ -38,21 +38,22 @@ const convertTimestampToStringForDisplay = (timestamp: Timestamp | undefined): s
 let siteSettings: SiteSettings = {
   siteTitle: 'SmartAcessorios',
   siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-  siteLogoUrl: '', siteFaviconUrl: '',
-  socialLinks: [
-    { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", IconComponent: Facebook, placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
-    { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", IconComponent: Instagram, placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
-    { platform: "Twitter", label: "X (Twitter)", url: "https://x.com/Smart_acessorio", IconComponent: Twitter, placeholderUrl: "https://x.com/seu_usuario", customImageUrl: "" },
-    { platform: "TikTok", label: "TikTok", url: "https://tiktok.com/@smartacessorio", IconComponent: Film, placeholderUrl: "https://tiktok.com/@seu_usuario", customImageUrl: "" },
-    { platform: "WhatsApp", label: "WhatsApp", url: "https://whatsapp.com/channel/0029VbAKxmx5PO18KEZQkJ2V", IconComponent: MessageSquare, placeholderUrl: "https://wa.me/seu_numero_ou_link_canal", customImageUrl: "" },
-    { platform: "Pinterest", label: "Pinterest", url: "https://pinterest.com/smartacessorios", IconComponent: PinterestIcon, placeholderUrl: "https://pinterest.com/seu_usuario", customImageUrl: "" },
-    { platform: "Telegram", label: "Telegram", url: "https://t.me/smartacessorios", IconComponent: Send, placeholderUrl: "https://t.me/seu_canal", customImageUrl: "" },
-    { platform: "Discord", label: "Discord", url: "https://discord.gg/89bwDJWh3y", IconComponent: MessageCircle, placeholderUrl: "https://discord.gg/seu_servidor", customImageUrl: "" },
-    { platform: "Snapchat", label: "Snapchat", url: "https://snapchat.com/add/smartacessorios", IconComponent: Ghost, placeholderUrl: "https://snapchat.com/add/seu_usuario", customImageUrl: "" },
-    { platform: "Threads", label: "Threads", url: "https://threads.net/@smart.acessorios", IconComponent: AtSign, placeholderUrl: "https://threads.net/@seu_usuario", customImageUrl: "" },
-    { platform: "Email", label: "Email", url: "mailto:smartacessori@gmail.com", IconComponent: Mail, placeholderUrl: "mailto:seu_email@example.com", customImageUrl: "" },
-    { platform: "YouTube", label: "YouTube", url: "https://youtube.com/@smart.acessorios", IconComponent: Youtube, placeholderUrl: "https://youtube.com/@seu_canal", customImageUrl: "" },
-    { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", IconComponent: PlaySquare, placeholderUrl: "https://k.kwai.com/u/@seu_usuario", customImageUrl: "" }
+  siteLogoUrl: '', 
+  siteFaviconUrl: '',
+  socialLinks: [ // IconComponent property REMOVED from these objects
+    { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
+    { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
+    { platform: "Twitter", label: "X (Twitter)", url: "https://x.com/Smart_acessorio", placeholderUrl: "https://x.com/seu_usuario", customImageUrl: "" },
+    { platform: "TikTok", label: "TikTok", url: "https://tiktok.com/@smartacessorio", placeholderUrl: "https://tiktok.com/@seu_usuario", customImageUrl: "" },
+    { platform: "WhatsApp", label: "WhatsApp", url: "https://whatsapp.com/channel/0029VbAKxmx5PO18KEZQkJ2V", placeholderUrl: "https://wa.me/seu_numero_ou_link_canal", customImageUrl: "" },
+    { platform: "Pinterest", label: "Pinterest", url: "https://pinterest.com/smartacessorios", placeholderUrl: "https://pinterest.com/seu_usuario", customImageUrl: "" },
+    { platform: "Telegram", label: "Telegram", url: "https://t.me/smartacessorios", placeholderUrl: "https://t.me/seu_canal", customImageUrl: "" },
+    { platform: "Discord", label: "Discord", url: "https://discord.gg/89bwDJWh3y", placeholderUrl: "https://discord.gg/seu_servidor", customImageUrl: "" },
+    { platform: "Snapchat", label: "Snapchat", url: "https://snapchat.com/add/smartacessorios", placeholderUrl: "https://snapchat.com/add/seu_usuario", customImageUrl: "" },
+    { platform: "Threads", label: "Threads", url: "https://threads.net/@smart.acessorios", placeholderUrl: "https://threads.net/@seu_usuario", customImageUrl: "" },
+    { platform: "Email", label: "Email", url: "mailto:smartacessori@gmail.com", placeholderUrl: "mailto:seu_email@example.com", customImageUrl: "" },
+    { platform: "YouTube", label: "YouTube", url: "https://youtube.com/@smart.acessorios", placeholderUrl: "https://youtube.com/@seu_canal", customImageUrl: "" },
+    { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", placeholderUrl: "https://k.kwai.com/u/@seu_usuario", customImageUrl: "" }
   ]
 };
 export function getSiteSettings(): SiteSettings { return { ...siteSettings, socialLinks: siteSettings.socialLinks.map(link => ({ ...link })) }; }
@@ -705,6 +706,7 @@ const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]>
         });
       });
   });
+  // Sort by original timestamp before conversion for accuracy if possible, or by converted string date
   return allApprovedComments
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) // Sorting by string date is less reliable, consider original Timestamps before map
     .slice(0, topN);

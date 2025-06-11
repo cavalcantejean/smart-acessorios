@@ -155,7 +155,7 @@ export interface SocialLinkSetting {
   platform: string;
   label: string;
   url: string;
-  IconComponent: ComponentType<{ className?: string }>;
+  // IconComponent: ComponentType<{ className?: string }>; // REMOVED
   placeholderUrl: string;
   customImageUrl?: string;
 }
