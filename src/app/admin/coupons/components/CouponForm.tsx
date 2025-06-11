@@ -83,11 +83,12 @@ export default function CouponForm({
     if (state?.message) {
       if (state.success) {
         toast({ title: "Sucesso!", description: state.message });
-        if (state.coupon && !initialData?.id) { 
+        if (state.coupon && !initialData) { 
+          console.log("CouponForm: Create success, attempting redirect to /admin/coupons");
           router.push('/admin/coupons');
-        }
-        if (!initialData?.id) {
           form.reset({ code: "", description: "", discount: "", expiryDate: "", store: "", applyUrl: "" });
+        } else if (state.coupon && initialData) {
+          // Update, no redirect
         }
       } else {
         toast({
@@ -235,3 +236,5 @@ export default function CouponForm({
     </Form>
   );
 }
+
+    

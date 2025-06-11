@@ -113,7 +113,7 @@ export default function PostForm({
       category: initialData?.category || "",
       tags: Array.isArray(initialData?.tags) ? initialData.tags.join(", ") : (initialData?.tags || ""),
       publishedAt: defaultPublishedAt,
-      embedHtml: initialData?.embedHtml || "", // Initialize embedHtml
+      embedHtml: initialData?.embedHtml || "", 
     },
   });
 
@@ -125,20 +125,19 @@ export default function PostForm({
     if (state?.message) {
       if (state.success) {
         toast({ title: "Sucesso!", description: state.message });
-        if (state.post && !initialData?.id) { // Redirect only on successful creation
+        if (state.post && !initialData) { 
+          console.log("PostForm: Create success, attempting redirect to /admin/blog-posts");
           router.push('/admin/blog-posts');
-        } else if (state.post && initialData?.id) {
-           // Optionally stay or refresh: router.refresh();
-        }
-        if (!initialData?.id) { // Reset form only on creation
           form.reset({ 
             title: "", slug: "", excerpt: "", content: "", imageUrl: "", imageHint: "",
             authorName: "Equipe SmartAcessorios", authorAvatarUrl: "", authorAvatarHint: "",
             category: "", tags: "", publishedAt: new Date().toISOString().split('T')[0],
-            embedHtml: "" // Reset embedHtml
+            embedHtml: ""
           });
           setImagePreview(null);
           if(fileInputRef.current) fileInputRef.current.value = "";
+        } else if (state.post && initialData) {
+           // Update, no redirect
         }
       } else {
         toast({ title: "Erro", description: state.error || state.message || "Falha ao salvar post.", variant: "destructive" });
@@ -349,3 +348,4 @@ export default function PostForm({
   );
 }
 
+    

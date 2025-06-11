@@ -155,17 +155,18 @@ export default function AccessoryForm({
           title: "Sucesso!",
           description: state.message,
         });
+        // Check if it's a create operation (no initialData or no initialData.id)
         if (state.accessory && !initialData) { 
+          console.log("AccessoryForm: Create success, attempting redirect to /admin/accessories");
           router.push('/admin/accessories'); 
+           form.reset(); // Reset form fields
+           setImagePreview(null); // Clear image preview
+           setAiPrompt(""); // Clear AI prompt
+           if(fileInputRef.current) fileInputRef.current.value = ""; // Clear file input
         } else if (state.accessory && initialData) { 
-            // router.push(`/admin/accessories/\${state.accessory.id}/edit`); 
-        }
-        
-        if (!initialData) { 
-           form.reset();
-           setImagePreview(null);
-           setAiPrompt("");
-           if(fileInputRef.current) fileInputRef.current.value = ""; 
+            // This is an update, no redirect.
+            // Optionally, you might want to refresh data or re-fetch:
+            // router.refresh(); 
         }
       } else {
         toast({
@@ -515,3 +516,5 @@ export default function AccessoryForm({
     </Form>
   );
 }
+
+    
