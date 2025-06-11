@@ -1,5 +1,4 @@
-
-import type { Metadata, Viewport } from 'next'; // Import Viewport
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Header from '@/components/Header';
@@ -7,7 +6,6 @@ import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import { getSiteSettings } from '@/lib/data';
-// import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'; // Removido
 import NavigationProgress from '@/components/NavigationProgress';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -27,7 +25,6 @@ export async function generateMetadata(): Promise<Metadata> {
     description: siteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
     icons: {
       icon: siteSettings.siteFaviconUrl || '/favicon.ico',
-      // apple: [], // Removido para evitar 404 se o arquivo não existir
     },
     applicationName: siteSettings.siteTitle || 'SmartAcessorios',
     appleWebApp: {
@@ -35,14 +32,12 @@ export async function generateMetadata(): Promise<Metadata> {
       title: siteSettings.siteTitle || 'SmartAcessorios',
       statusBarStyle: 'default',
     },
-    // manifest: '/manifest.json', // Removido para desabilitar PWA temporariamente
   };
 }
 
 export const viewport: Viewport = {
   themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5',
 };
-
 
 export default function RootLayout({
   children,
@@ -51,12 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
-      <head>
-        {/* <link rel="manifest" href="/manifest.json" /> */} {/* Removido para desabilitar PWA temporariamente */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
+      <head><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" /><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" /></head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
           <NavigationProgress />
@@ -66,7 +56,6 @@ export default function RootLayout({
           </main>
           <Footer />
           <Toaster />
-          {/* <ServiceWorkerRegistrar /> */} {/* Removido para desabilitar PWA temporariamente */}
         </AuthProvider>
       </body>
     </html>
