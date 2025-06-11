@@ -6,7 +6,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
-import { getSiteSettings } from '@/lib/data'; 
+import { getSiteSettings } from '@/lib/data';
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'; // Import the registrar
 import NavigationProgress from '@/components/NavigationProgress'; // Import the new component
 
@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: siteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
     // manifest: '/manifest.json', // REMOVED from here
     icons: {
-      icon: siteSettings.siteFaviconUrl || '/favicon.ico', 
+      icon: siteSettings.siteFaviconUrl || '/favicon.ico',
       apple: [ // Apple touch icons
         { url: '/apple-touch-icon.png', sizes: '180x180' }, // Default apple-touch-icon
       ],
@@ -37,13 +37,13 @@ export async function generateMetadata(): Promise<Metadata> {
     appleWebApp: { // Apple PWA specific settings
       capable: true,
       title: siteSettings.siteTitle || 'SmartAcessorios',
-      statusBarStyle: 'default', 
+      statusBarStyle: 'default',
     },
   };
 }
 
 export const viewport: Viewport = {
-  themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5', 
+  themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5',
 };
 
 
@@ -54,8 +54,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
-      <head>
-        <link rel="manifest" href="/manifest.json" /> {/* ADDED EXPLICITLY HERE */}
+      <head>{/* Ensure no leading/trailing whitespace or newlines around children of head */}
+        <link rel="manifest" href="/manifest.json" />
         {/* Theme color is now handled by viewport export */}
         {/* Apple PWA meta tags are now handled by generateMetadata */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
