@@ -366,20 +366,37 @@ export async function getUniqueCategories(): Promise<string[]> {
 
 export async function getDailyDeals(): Promise<Accessory[]> {
   if (!db) { console.error("Firestore db instance not available in getDailyDeals."); return []; }
+  let deals: Accessory[] = [];
   try {
     const dealsQuery = query(accessoriesCollection, where("isDeal", "==", true), orderBy("createdAt", "desc"), limit(6));
     const dealsSnapshot = await getDocs(dealsQuery);
-    let deals = dealsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
-    if (deals.length === 0) { // Fallback if no deals
-        const fallbackQuery = query(accessoriesCollection, orderBy("createdAt", "desc"), limit(2));
-        const fallbackSnapshot = await getDocs(fallbackQuery);
-        deals = fallbackSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
+    deals = dealsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
+    
+    if (deals.length === 0) {
+      console.log("No specific deals found, attempting fallback query for latest accessories.");
+      const fallbackQuery = query(accessoriesCollection, orderBy("createdAt", "desc"), limit(2));
+      const fallbackSnapshot = await getDocs(fallbackQuery);
+      deals = fallbackSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
     }
-    return deals;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching daily deals from Firestore:", error);
-    return [];
+    if (error.code === 'failed-precondition' && error.message.includes('requires an index')) {
+        console.error("INDEX REQUIRED: The query for daily deals (isDeal == true, orderBy createdAt desc) needs a composite index. Please create it in the Firebase console.");
+        console.error("Firebase suggested index creation link (from a similar error, may need adjustment):", error.message.substring(error.message.indexOf('https://')));
+    }
+    // Attempt fallback if primary query fails (e.g. due to missing index for the specific query)
+    if (deals.length === 0) {
+        try {
+            console.log("Error in primary deals query, attempting fallback for latest 2 accessories.");
+            const fallbackQuery = query(accessoriesCollection, orderBy("createdAt", "desc"), limit(2));
+            const fallbackSnapshot = await getDocs(fallbackQuery);
+            deals = fallbackSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
+        } catch (fallbackError) {
+            console.error("Error fetching fallback daily deals:", fallbackError);
+        }
+    }
   }
+  return deals;
 }
 
 // --- Coupon Management (Firestore) ---
@@ -397,7 +414,7 @@ export async function getCoupons(): Promise<Coupon[]> {
     // Filter expired client-side as Firestore querying for "expiryDate >= today OR expiryDate IS NULL" is complex
     return allCoupons.filter(coupon => {
       if (!coupon.expiryDate) return true; // No expiry date means active
-      return coupon.expiryDate >= today;
+      return coupon.expiryDate.toDate() >= today.toDate(); // Compare Date objects
     }).sort((a, b) => { // Ensure consistent sort after filter
         if (!a.expiryDate && !b.expiryDate) return 0;
         if (!a.expiryDate) return 1;
