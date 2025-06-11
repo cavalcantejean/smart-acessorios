@@ -113,67 +113,75 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
             </TableRow>
           </TableHeader>
           <TableBody>
-            {accessories.map((accessory) => (
-              <TableRow key={accessory.id}>
-                <TableCell className="hidden sm:table-cell">
-                  <div className="relative h-12 w-12 rounded-md overflow-hidden">
-                    <Image
-                      src={accessory.imageUrl}
-                      alt={accessory.name}
-                      fill
-                      style={{ objectFit: 'cover' }}
-                      sizes="48px"
-                      data-ai-hint={accessory.imageHint || "product accessory"}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium max-w-[200px] truncate">
-                    <Link href={`/accessory/${accessory.id}`} target="_blank" className="hover:underline" title={accessory.name}>
-                        {accessory.name} <ExternalLink className="inline h-3 w-3 ml-0.5 text-muted-foreground"/>
-                    </Link>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">{accessory.category || 'N/A'}</TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  {accessory.price ? `R$${accessory.price.replace('.', ',')}` : 'N/A'}
-                </TableCell>
-                <TableCell className="text-center hidden sm:table-cell">
-                  {accessory.isDeal ? (
-                    <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                      <CheckCircle className="mr-1 h-3.5 w-3.5" /> Sim
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">
-                      <XCircle className="mr-1 h-3.5 w-3.5" /> Não
-                    </Badge>
-                  )}
-                </TableCell>
-                 <TableCell className="hidden lg:table-cell text-xs">
-                  {formatDate(accessory.createdAt as Timestamp | undefined)}
-                </TableCell>
-                <TableCell className="text-right space-x-1 sm:space-x-2">
-                  <Button variant="outline" size="icon" asChild title="Editar Acessório">
-                    <Link href={`/admin/accessories/${accessory.id}/edit`}>
-                      <Edit className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => setAccessoryToDelete(accessory)}
-                      disabled={isDeletePending && accessoryToDelete?.id === accessory.id}
-                      title="Excluir Acessório"
-                    >
-                      {isDeletePending && accessoryToDelete?.id === accessory.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
+            {accessories.length > 0 ? (
+              accessories.map((accessory) => (
+                <TableRow key={accessory.id}>
+                  <TableCell className="hidden sm:table-cell">
+                    <div className="relative h-12 w-12 rounded-md overflow-hidden">
+                      <Image
+                        src={accessory.imageUrl}
+                        alt={accessory.name}
+                        fill
+                        style={{ objectFit: 'cover' }}
+                        sizes="48px"
+                        data-ai-hint={accessory.imageHint || "product accessory"}
+                      />
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium max-w-[200px] truncate">
+                      <Link href={`/accessory/${accessory.id}`} target="_blank" className="hover:underline" title={accessory.name}>
+                          {accessory.name} <ExternalLink className="inline h-3 w-3 ml-0.5 text-muted-foreground"/>
+                      </Link>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">{accessory.category || 'N/A'}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {accessory.price ? `R$${accessory.price.replace('.', ',')}` : 'N/A'}
+                  </TableCell>
+                  <TableCell className="text-center hidden sm:table-cell">
+                    {accessory.isDeal ? (
+                      <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                        <CheckCircle className="mr-1 h-3.5 w-3.5" /> Sim
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">
+                        <XCircle className="mr-1 h-3.5 w-3.5" /> Não
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-xs">
+                    {formatDate(accessory.createdAt as Timestamp | undefined)}
+                  </TableCell>
+                  <TableCell className="text-right space-x-1 sm:space-x-2">
+                    <Button variant="outline" size="icon" asChild title="Editar Acessório">
+                      <Link href={`/admin/accessories/${accessory.id}/edit`}>
+                        <Edit className="h-4 w-4" />
+                      </Link>
                     </Button>
-                  </AlertDialogTrigger>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => setAccessoryToDelete(accessory)}
+                        disabled={isDeletePending && accessoryToDelete?.id === accessory.id}
+                        title="Excluir Acessório"
+                      >
+                        {isDeletePending && accessoryToDelete?.id === accessory.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  Nenhum acessório encontrado. Verifique as permissões de leitura no Firestore ou adicione novos acessórios.
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
