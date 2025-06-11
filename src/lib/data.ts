@@ -119,6 +119,7 @@ let coupons: Coupon[] = [
   { id: 'coupon1', code: 'SUMMER20', description: 'Get 20% off on all summer accessories.', discount: '20% OFF', expiryDate: '2024-08-31', store: 'AccessoryStore', applyUrl: 'https://example.com/store/summer-sale' },
   { id: 'coupon2', code: 'AUDIOFUN', description: '15% discount on headphones and speakers.', discount: '15% OFF', expiryDate: '2024-09-15', store: 'SoundGoodies', applyUrl: 'https://example.com/audio' },
   { id: 'coupon3', code: 'FREESHIP', description: 'Free shipping on orders over R$50.', discount: 'Free Shipping', store: 'GadgetHub' },
+  { id: 'coupon-expired-1', code: 'PASTDEAL', description: 'This was a great deal, but it is over.', discount: '50% OFF', expiryDate: '2023-01-01', store: 'OldStore' },
 ];
 
 const testimonials: Testimonial[] = [
@@ -144,7 +145,7 @@ let mockPosts: Post[] = [
 let siteSettings: SiteSettings = {
   siteTitle: 'SmartAcessorios',
   siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-  siteLogoUrl: '', siteFaviconUrl: '', 
+  siteLogoUrl: '', siteFaviconUrl: '',
   socialLinks: [
     { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", IconComponent: Facebook, placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
     { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", IconComponent: Instagram, placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
@@ -221,7 +222,7 @@ export function toggleLikeOnAccessory(accessoryId: string, userId: string): { li
   if (userIndex > -1) accessory.likedBy.splice(userIndex, 1);
   else accessory.likedBy.push(userId);
   accessories[accessoryIndex] = { ...accessory };
-  checkAndAwardBadges(userId); 
+  checkAndAwardBadges(userId);
   return { likedBy: [...accessory.likedBy], likesCount: accessory.likedBy.length };
 }
 
@@ -245,8 +246,52 @@ export function getDailyDeals(): Accessory[] {
   const deals = accessories.filter(acc => acc.isDeal);
   return deals.length > 0 ? deals : accessories.slice(0, 2).map(acc => ({ ...acc }));
 }
-export function getCoupons(): Coupon[] { return [...coupons].sort((a, b) => { if (!a.expiryDate && !b.expiryDate) return 0; if (!a.expiryDate) return 1; if (!b.expiryDate) return -1; return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime(); }); }
-export function getCouponById(id: string): Coupon | undefined { return coupons.find(c => c.id === id); }
+
+export function getCoupons(): Coupon[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to start of today for comparison
+
+  const activeCoupons = coupons.filter(coupon => {
+    if (!coupon.expiryDate) {
+      return true; // No expiry date means it's always active
+    }
+    // Dates in mock data are YYYY-MM-DD.
+    // Create Date object ensuring it's interpreted as UTC to avoid timezone issues.
+    // Then compare with today's date (also set to start of day).
+    const expiry = new Date(coupon.expiryDate + "T00:00:00Z");
+    return expiry >= today;
+  });
+
+  return [...activeCoupons].sort((a, b) => {
+    if (!a.expiryDate && !b.expiryDate) return 0;
+    if (!a.expiryDate) return 1; // Coupons without expiry date go last
+    if (!b.expiryDate) return -1; // Coupons without expiry date go last
+    // Ensure dates are parsed correctly for sorting
+    const dateA = new Date(a.expiryDate + "T00:00:00Z").getTime();
+    const dateB = new Date(b.expiryDate + "T00:00:00Z").getTime();
+    return dateA - dateB;
+  });
+}
+
+export function getCouponById(id: string): Coupon | undefined {
+  const coupon = coupons.find(c => c.id === id);
+  if (!coupon) return undefined;
+
+  if (coupon.expiryDate) {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const expiry = new Date(coupon.expiryDate + "T00:00:00Z");
+    if (expiry < today) {
+      // If accessed by ID but expired, we might still want to show it on the edit page,
+      // but it won't appear in getCoupons(). Or, return undefined if it should be completely hidden.
+      // For now, let's return it so it can be potentially edited/seen by admin if they have the direct link.
+      // The list views won't show it.
+      return coupon;
+    }
+  }
+  return coupon;
+}
+
 export function addCoupon(couponData: Omit<Coupon, 'id'>): Coupon {
   const newCoupon: Coupon = { id: `coupon-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, ...couponData, expiryDate: couponData.expiryDate || undefined, store: couponData.store || undefined, applyUrl: couponData.applyUrl || undefined, };
   coupons.unshift(newCoupon); return newCoupon;
@@ -308,11 +353,11 @@ export async function toggleFollowUser(currentUserId: string, targetUserId: stri
 export async function checkAndAwardBadges(userId: string): Promise<void> {
   const userIndex = mockUsers.findIndex(u => u.id === userId);
   if (userIndex === -1) { console.warn(`Mock user ${userId} not found for badge checking.`); return; }
-  
+
   let user = mockUsers[userIndex]; // This is from mock data
   // In a real app, you'd fetch the user's latest data from Firestore here if needed
   // For badge criteria based on Firestore fields, ensure 'user' reflects that.
-  
+
   user.badges = Array.isArray(user.badges) ? user.badges : [];
   const criteriaData = generateBadgeCriteriaData(user); // Pass UserFirestoreData
   let badgesUpdated = false;
@@ -325,7 +370,7 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
   if (badgesUpdated) mockUsers[userIndex] = { ...user, badges: [...(user.badges || [])] };
 }
 
-// This now fetches all users from mock data. 
+// This now fetches all users from mock data.
 // A real app would fetch from Firestore, potentially with pagination.
 export function getAllUsers(): UserFirestoreData[] { return mockUsers.map(user => ({ ...user, badges: user.badges || [] })); }
 
@@ -400,3 +445,5 @@ export function getAccessoriesLikedByUser(userId: string): Accessory[] {
   // It returns all accessories liked by the user.
   return accessories.filter(acc => acc.likedBy.includes(userId));
 }
+
+    
