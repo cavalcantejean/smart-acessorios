@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import { getSiteSettings } from '@/lib/data'; 
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar'; // Import the registrar
+import NavigationProgress from '@/components/NavigationProgress'; // Import the new component
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -63,6 +64,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
+          <NavigationProgress /> {/* Add the NavigationProgress component here */}
           <Header siteLogoUrl={siteSettings.siteLogoUrl} />
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}

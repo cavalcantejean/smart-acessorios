@@ -87,3 +87,22 @@ This was overriding the Tailwind font-body utility class for Inter font.
     @apply bg-background text-foreground;
   }
 }
+
+/* NProgress Customizations */
+#nprogress .bar {
+  background: hsl(var(--primary)) !important; /* Use your primary color */
+  height: 3px !important; /* Adjust thickness */
+  z-index: 1031 !important; /* Ensure it's above most elements */
+}
+
+#nprogress .peg {
+  box-shadow: 0 0 10px hsl(var(--primary)), 0 0 5px hsl(var(--primary)) !important; /* Shadow with primary color */
+}
+
+/* Optional: If you enable the spinner */
+/*
+#nprogress .spinner-icon {
+  border-top-color: hsl(var(--primary)) !important;
+  border-left-color: hsl(var(--primary)) !important;
+}
+*/
