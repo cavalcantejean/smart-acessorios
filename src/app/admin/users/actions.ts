@@ -2,8 +2,8 @@
 "use server";
 
 import { z } from 'zod';
-import { toggleUserAdminStatus as toggleAdminData, getUserById } from '@/lib/data';
-import type { User } from '@/lib/types';
+import { toggleUserAdminStatus as toggleAdminData, getUserById, getAllUsers as getAllUsersData } from '@/lib/data'; // Now async
+import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
 import { revalidatePath } from 'next/cache';
 
 const ToggleAdminStatusSchema = z.object({
@@ -12,7 +12,7 @@ const ToggleAdminStatusSchema = z.object({
 
 interface ToggleAdminStatusActionResult {
   success: boolean;
-  user?: User | null; // Return the updated user or null if not found
+  user?: User | null;
   message?: string;
   error?: string;
 }
@@ -30,33 +30,30 @@ export async function toggleAdminStatusAction(
   if (!validatedFields.success) {
     return {
       success: false,
-      error: "Invalid input: " + validatedFields.error.flatten().fieldErrors,
+      error: "Invalid input: " + JSON.stringify(validatedFields.error.flatten().fieldErrors),
     };
   }
 
   const { userId } = validatedFields.data;
 
   // Prevent admin from revoking their own admin status if they are the only admin
-  // This is a simplified check. A real app might have more complex logic.
-  const currentUserPerformingAction = getUserById('admin-1'); // Assuming 'admin-1' is a fixed superadmin or retrieve dynamically
-  if (currentUserPerformingAction?.id === userId) {
-    const allUsers = getUserById(userId); // Re-fetch to ensure current data
-    if (allUsers?.isAdmin) { // Check if target user is currently admin
-        const adminUsers = getAllUsers().filter(u => u.isAdmin);
-        if (adminUsers.length === 1 && adminUsers[0].id === userId) {
-             return { success: false, error: "Não é possível remover o status de administrador do único administrador." };
-        }
-    }
+  // This logic needs to be async now due to data fetching
+  const targetUser = await getUserById(userId);
+  if (targetUser?.isAdmin) {
+      const allUsers = await getAllUsersData();
+      const adminUsers = allUsers.filter(u => u.isAdmin);
+      if (adminUsers.length === 1 && adminUsers[0].id === userId) {
+           return { success: false, error: "Não é possível remover o status de administrador do único administrador." };
+      }
   }
 
-
   try {
-    const updatedUser = toggleAdminData(userId);
+    const updatedUser = await toggleAdminData(userId); // Await async call
     if (!updatedUser) {
       return { success: false, error: `Falha ao alterar o status de admin. Usuário ${userId} não encontrado.` };
     }
-    
-    revalidatePath('/admin/users'); // Revalidate the users page to show updated data
+
+    revalidatePath('/admin/users');
 
     return {
       success: true,
@@ -67,13 +64,4 @@ export async function toggleAdminStatusAction(
     console.error("Error in toggleAdminStatusAction:", error);
     return { success: false, error: "Ocorreu um erro no servidor ao tentar alterar o status de administrador." };
   }
-}
-
-// Helper function, assuming it's okay to be in this "use server" file
-// or it would be imported from data.ts if it's more general
-function getAllUsers(): User[] {
-  // In a real app, this would fetch from your data source
-  // For now, assuming it's available or you'd import it from data.ts
-  const data = require('@/lib/data');
-  return data.getAllUsers();
 }

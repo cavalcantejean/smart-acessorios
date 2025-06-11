@@ -2,17 +2,17 @@
 "use server";
 
 import { z } from 'zod';
-import { CouponFormSchema, type CouponFormValues } from '@/lib/schemas/coupon-schema';
-import { addCoupon, updateCoupon, deleteCoupon as deleteCouponData, getCouponById } from '@/lib/data';
+import { CouponFormSchema } from '@/lib/schemas/coupon-schema';
+import { addCoupon, updateCoupon, deleteCoupon as deleteCouponData } from '@/lib/data'; // Now async
 import type { Coupon } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+// import { redirect } from 'next/navigation'; // Not redirecting from action
 
 export interface CouponActionResult {
   success: boolean;
   message?: string;
-  error?: string; 
-  errors?: z.ZodIssue[]; 
+  error?: string;
+  errors?: z.ZodIssue[];
   coupon?: Coupon;
 }
 
@@ -21,10 +21,9 @@ export async function createCouponAction(
   formData: FormData
 ): Promise<CouponActionResult> {
   const rawFormData = Object.fromEntries(formData.entries());
-  
   const dataToValidate = {
     ...rawFormData,
-    expiryDate: rawFormData.expiryDate || undefined, 
+    expiryDate: rawFormData.expiryDate || undefined,
     store: rawFormData.store || undefined,
     applyUrl: rawFormData.applyUrl || undefined,
   };
@@ -43,20 +42,17 @@ export async function createCouponAction(
   try {
     const couponInputData = {
       ...validatedFields.data,
-      expiryDate: validatedFields.data.expiryDate || undefined,
-      store: validatedFields.data.store || undefined,
-      applyUrl: validatedFields.data.applyUrl || undefined,
+      // expiryDate will be handled in addCoupon for Firestore Timestamp conversion
     };
-
-    const newCoupon = addCoupon(couponInputData);
+    const newCoupon = await addCoupon(couponInputData as any); // Cast as any to handle date string temp.
     if (newCoupon) {
       revalidatePath('/admin/coupons');
-      revalidatePath('/coupons'); 
-      revalidatePath('/'); 
-      return { 
-        success: true, 
-        message: `Cupom "${newCoupon.code}" criado com sucesso!`, 
-        coupon: newCoupon 
+      revalidatePath('/coupons');
+      revalidatePath('/');
+      return {
+        success: true,
+        message: `Cupom "${newCoupon.code}" criado com sucesso!`,
+        coupon: newCoupon
       };
     } else {
       return { success: false, error: "Falha ao criar o cupom no sistema." };
@@ -79,7 +75,7 @@ export async function updateCouponAction(
     store: rawFormData.store || undefined,
     applyUrl: rawFormData.applyUrl || undefined,
   };
-  
+
   const validatedFields = CouponFormSchema.safeParse(dataToValidate);
 
   if (!validatedFields.success) {
@@ -93,22 +89,19 @@ export async function updateCouponAction(
 
   try {
     const couponInputData = {
-      ...validatedFields.data,
-      expiryDate: validatedFields.data.expiryDate || undefined,
-      store: validatedFields.data.store || undefined,
-      applyUrl: validatedFields.data.applyUrl || undefined,
+        ...validatedFields.data,
+        // expiryDate will be handled in updateCoupon for Firestore Timestamp conversion
     };
-
-    const updatedCoupon = updateCoupon(couponId, couponInputData);
+    const updatedCoupon = await updateCoupon(couponId, couponInputData as any); // Cast as any for date
     if (updatedCoupon) {
       revalidatePath('/admin/coupons');
       revalidatePath(`/admin/coupons/${couponId}/edit`);
       revalidatePath('/coupons');
       revalidatePath('/');
-      return { 
-        success: true, 
-        message: `Cupom "${updatedCoupon.code}" atualizado com sucesso!`, 
-        coupon: updatedCoupon 
+      return {
+        success: true,
+        message: `Cupom "${updatedCoupon.code}" atualizado com sucesso!`,
+        coupon: updatedCoupon
       };
     } else {
       return { success: false, error: `Falha ao atualizar o cupom. ID ${couponId} não encontrado.` };
@@ -130,7 +123,7 @@ export async function deleteCouponAction(
   }
 
   try {
-    const deleted = deleteCouponData(couponId);
+    const deleted = await deleteCouponData(couponId);
     if (deleted) {
       revalidatePath('/admin/coupons');
       revalidatePath('/coupons');

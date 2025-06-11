@@ -1,5 +1,5 @@
 
-import { getPendingComments } from '@/lib/data';
+import { getPendingComments } from '@/lib/data'; // Now async
 import type { PendingCommentDisplay } from '@/lib/types';
 import PendingCommentsList from './components/PendingCommentsList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,19 +7,30 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, MessageSquareWarning } from 'lucide-react';
 import type { Metadata } from 'next';
-
-// Note: Auth checks for admin pages are typically handled in a layout or higher-order component.
-// For this page, we'll assume the admin layout handles redirection if not admin.
+import { Timestamp } from 'firebase/firestore';
 
 export const metadata: Metadata = {
   title: 'Moderar Conteúdo | Admin SmartAcessorios',
   description: 'Revise e aprove ou rejeite comentários pendentes.',
 };
 
+// Helper to convert Timestamp to string for client components
+const preparePendingCommentForClient = (pendingComment: PendingCommentDisplay): PendingCommentDisplay => {
+  return {
+    ...pendingComment,
+    comment: {
+      ...pendingComment.comment,
+      createdAt: pendingComment.comment.createdAt instanceof Timestamp
+                 ? pendingComment.comment.createdAt.toDate().toISOString()
+                 : pendingComment.comment.createdAt as any, // Assume it might already be string
+    }
+  };
+};
+
+
 export default async function ModerationPage() {
-  // In a real app, ensure only admins can access this page.
-  // This could be done via middleware or a layout component.
-  const pendingComments: PendingCommentDisplay[] = getPendingComments();
+  const rawPendingComments: PendingCommentDisplay[] = await getPendingComments(); // Await async call
+  const pendingComments = rawPendingComments.map(preparePendingCommentForClient);
 
   return (
     <div className="space-y-6">

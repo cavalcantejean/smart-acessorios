@@ -1,32 +1,63 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories, getLatestPosts } from '@/lib/data';
+import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories, getLatestPosts } from '@/lib/data'; // Now async
 import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
 import TestimonialCard from '@/components/TestimonialCard';
 import BlogPostCard from '@/components/BlogPostCard';
 import type { Accessory, Coupon, Testimonial, Post } from '@/lib/types';
-import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star, BookOpenText } from 'lucide-react';
+import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star, BookOpenText, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
-import Image from 'next/image';
+import Image from 'next/image'; // Keep for hero if added later
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
+import { Timestamp } from 'firebase/firestore';
+
+// Helper to prepare accessory for client (convert Timestamps)
+const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
+  return {
+    ...accessory,
+    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : accessory.createdAt as any,
+    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : accessory.updatedAt as any,
+    comments: (accessory.comments || []).map(comment => ({
+      ...comment,
+      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : comment.createdAt as any,
+    })),
+  };
+};
+
+const prepareCouponForClient = (coupon: Coupon): Coupon => {
+  return {
+    ...coupon,
+    expiryDate: coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate().toISOString() : coupon.expiryDate as any,
+    createdAt: coupon.createdAt instanceof Timestamp ? coupon.createdAt.toDate().toISOString() : coupon.createdAt as any,
+    updatedAt: coupon.updatedAt instanceof Timestamp ? coupon.updatedAt.toDate().toISOString() : coupon.updatedAt as any,
+  };
+};
+
+const preparePostForClient = (post: Post): Post => {
+  return {
+    ...post,
+    publishedAt: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : post.publishedAt as any,
+    createdAt: post.createdAt instanceof Timestamp ? post.createdAt.toDate().toISOString() : post.createdAt as any,
+    updatedAt: post.updatedAt instanceof Timestamp ? post.updatedAt.toDate().toISOString() : post.updatedAt as any,
+  };
+};
 
 
 export default function HomePage() {
-  // State for base data fetched once
   const [baseAccessoriesData, setBaseAccessoriesData] = useState<Accessory[]>([]);
   const [baseDailyDealsData, setBaseDailyDealsData] = useState<Accessory[]>([]);
   const [basePromotionalCouponsData, setBasePromotionalCouponsData] = useState<Coupon[]>([]);
-  const [baseTestimonialsData, setBaseTestimonialsData] = useState<Testimonial[]>([]);
+  const [baseTestimonialsData, setBaseTestimonialsData] = useState<Testimonial[]>([]); // Testimonials are still mock
   const [baseLatestPostsData, setBaseLatestPostsData] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Existing state variables
   const [searchTermAccessories, setSearchTermAccessories] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState<string[]>([]);
@@ -38,17 +69,43 @@ export default function HomePage() {
     Autoplay({ delay: 5000, stopOnInteraction: true, stopOnMouseEnter: true, stopOnFocusIn: true })
   );
 
-  // Fetch base data once on mount
   useEffect(() => {
-    setBaseAccessoriesData(getAllAccessories());
-    setBaseDailyDealsData(getDailyDeals());
-    setBasePromotionalCouponsData(getCoupons());
-    setBaseTestimonialsData(getTestimonials());
-    setBaseLatestPostsData(getLatestPosts(3));
-    setCategories(getUniqueCategories());
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [
+          accessoriesRaw,
+          dealsRaw,
+          couponsRaw,
+          testimonials, // from mock
+          postsRaw,
+          uniqueCategories
+        ] = await Promise.all([
+          getAllAccessories(),
+          getDailyDeals(),
+          getCoupons(),
+          getTestimonials(), // Remains synchronous
+          getLatestPosts(3),
+          getUniqueCategories()
+        ]);
+
+        setBaseAccessoriesData(accessoriesRaw.map(prepareAccessoryForClient));
+        setBaseDailyDealsData(dealsRaw.map(prepareAccessoryForClient));
+        setBasePromotionalCouponsData(couponsRaw.map(prepareCouponForClient));
+        setBaseTestimonialsData(testimonials);
+        setBaseLatestPostsData(postsRaw.map(preparePostForClient));
+        setCategories(uniqueCategories);
+
+      } catch (error) {
+        console.error("Error fetching homepage data:", error);
+        // Handle error state if needed
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
-  // Update displayed accessories based on filters and base data
   useEffect(() => {
     let filtered = baseAccessoriesData;
     if (selectedCategory !== 'all') {
@@ -63,7 +120,6 @@ export default function HomePage() {
     setDisplayedAccessories(filtered.slice(0, 8));
   }, [searchTermAccessories, selectedCategory, baseAccessoriesData]);
 
-  // Update displayed coupons based on search term and base data
   useEffect(() => {
     let filtered = basePromotionalCouponsData;
     if (couponSearchTerm) {
@@ -73,16 +129,22 @@ export default function HomePage() {
         (coupon.store && coupon.store.toLowerCase().includes(couponSearchTerm.toLowerCase()))
       );
     }
-    // Apply limit after filtering
     const couponsOnHomepageLimit = 3;
     setDisplayedCoupons(filtered.slice(0, couponsOnHomepageLimit));
   }, [couponSearchTerm, basePromotionalCouponsData]);
 
-  // Derived data for rendering (now uses base data states)
   const dealsToShowInCarousel = baseDailyDealsData.slice(0, 6);
   const dealsToShowInGrid = baseDailyDealsData.slice(0, 4);
-  const testimonialsToShow = baseTestimonialsData.slice(0, 3);
+  const testimonialsToShow = baseTestimonialsData.slice(0, 3); // Still from mock
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
+        <Loader2 className="h-16 w-16 animate-spin text-primary mb-6" />
+        <p className="text-xl text-muted-foreground">Carregando SmartAcessorios...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12">
@@ -95,10 +157,7 @@ export default function HomePage() {
             </div>
           </div>
           <Carousel
-            opts={{
-              align: "start",
-              loop: dealsToShowInCarousel.length > 1,
-            }}
+            opts={{ align: "start", loop: dealsToShowInCarousel.length > 1, }}
             plugins={[autoplayPlugin.current]}
             onMouseEnter={autoplayPlugin.current.stop}
             onMouseLeave={autoplayPlugin.current.play}
@@ -108,21 +167,15 @@ export default function HomePage() {
               {dealsToShowInCarousel.map((accessory, index) => (
                 <CarouselItem key={`carousel-${accessory.id}`} className="basis-full pl-4">
                   <div className="p-1 h-full">
-                     <AccessoryCard accessory={accessory} priority={index === 0} /> {/* Adiciona priority ao primeiro item */}
+                     <AccessoryCard accessory={accessory} priority={index === 0} />
                   </div>
                 </CarouselItem>
               ))}
             </CarouselContent>
             {dealsToShowInCarousel.length > 1 && (
               <>
-                <CarouselPrevious
-                  variant="ghost"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/60 text-foreground hover:bg-background/90 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden sm:flex items-center justify-center shadow-md"
-                />
-                <CarouselNext
-                  variant="ghost"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/60 text-foreground hover:bg-background/90 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden sm:flex items-center justify-center shadow-md"
-                />
+                <CarouselPrevious variant="ghost" className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/60 text-foreground hover:bg-background/90 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden sm:flex items-center justify-center shadow-md" />
+                <CarouselNext variant="ghost" className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-background/60 text-foreground hover:bg-background/90 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden sm:flex items-center justify-center shadow-md" />
               </>
             )}
           </Carousel>
@@ -188,7 +241,7 @@ export default function HomePage() {
                 <Ticket className="h-7 w-7 text-accent" />
                 <h2 className="text-3xl font-bold font-headline">Cupons Promocionais</h2>
               </div>
-            {basePromotionalCouponsData.length > displayedCoupons.length && basePromotionalCouponsData.length > 3 && ( // Check against original length for "Ver Todos"
+            {basePromotionalCouponsData.length > displayedCoupons.length && basePromotionalCouponsData.length > 3 && (
                <Button variant="outline" asChild size="sm">
                 <Link href="/coupons">
                   Ver Todos <ArrowRight className="ml-2 h-4 w-4" />
@@ -289,5 +342,4 @@ export default function HomePage() {
       </section>
     </div>
   );
-
-  
+}

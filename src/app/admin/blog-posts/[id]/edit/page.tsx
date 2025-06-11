@@ -1,5 +1,5 @@
 
-import { getPostById } from '@/lib/data';
+import { getPostById } from '@/lib/data'; // Now async
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -7,9 +7,11 @@ import { ArrowLeft, AlertTriangle, FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 import PostForm from '@/components/admin/PostForm';
 import { updatePostAction } from '../../actions';
+import type { Post } from '@/lib/types';
+import { Timestamp } from 'firebase/firestore';
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const post = getPostById(params.id);
+  const post = await getPostById(params.id); // Await async call
   if (!post) {
     return { title: 'Post Não Encontrado | Admin' };
   }
@@ -20,8 +22,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditPostPage({ params }: { params: { id: string } }) {
-  // Admin auth check should be here or in a layout
-  const post = getPostById(params.id);
+  const post = await getPostById(params.id); // Await async call
 
   if (!post) {
     return (
@@ -41,12 +42,26 @@ export default async function EditPostPage({ params }: { params: { id: string } 
   }
 
   const boundUpdatePostAction = updatePostAction.bind(null, post.id);
-  
+
   // Prepare initialData for the form. Tags should be a string.
+  // Convert publishedAt Timestamp to 'yyyy-MM-dd' string for date input
+  let publishedAtString = "";
+  if (post.publishedAt) {
+    if (post.publishedAt instanceof Timestamp) {
+      publishedAtString = post.publishedAt.toDate().toISOString().split('T')[0];
+    } else if (typeof post.publishedAt === 'string') { // If already string (e.g. from direct JSON)
+      publishedAtString = new Date(post.publishedAt).toISOString().split('T')[0];
+    } else if (typeof post.publishedAt === 'object' && 'seconds' in post.publishedAt && 'nanoseconds' in post.publishedAt) {
+      // Handle cases where it might be a plain object resembling a Timestamp
+      publishedAtString = new Timestamp((post.publishedAt as any).seconds, (post.publishedAt as any).nanoseconds).toDate().toISOString().split('T')[0];
+    }
+  }
+
+
   const initialDataForForm = {
     ...post,
     tags: Array.isArray(post.tags) ? post.tags.join(", ") : "",
-    publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString().split('T')[0] : "",
+    publishedAt: publishedAtString,
   };
 
 
@@ -76,11 +91,11 @@ export default async function EditPostPage({ params }: { params: { id: string } 
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <PostForm 
-              formAction={boundUpdatePostAction} 
+            <PostForm
+              formAction={boundUpdatePostAction}
               initialData={initialDataForForm}
               submitButtonText="Salvar Alterações"
-            /> 
+            />
         </CardContent>
       </Card>
     </div>

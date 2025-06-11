@@ -1,5 +1,5 @@
 
-import { getAllAccessories } from '@/lib/data';
+import { getAllAccessories } from '@/lib/data'; // Now async
 import type { Accessory } from '@/lib/types';
 import AccessoriesTable from './components/AccessoriesTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ManageAccessoriesPage() {
-  // In a real app, add admin auth check here or in a layout
-  const accessories: Accessory[] = getAllAccessories();
+  const accessories: Accessory[] = await getAllAccessories(); // Await the async call
 
   return (
     <div className="space-y-6">

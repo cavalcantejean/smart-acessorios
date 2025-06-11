@@ -1,46 +1,75 @@
 
-"use client"; 
+"use client";
 
-import { getPostBySlug } from '@/lib/data';
+import { getPostBySlug } from '@/lib/data'; // Now async
 import type { Post } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, UserCircle, BookOpenText } from 'lucide-react'; // Added BookOpenText
+import { ArrowLeft, CalendarDays, UserCircle, BookOpenText } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { notFound } from 'next/navigation';
+// import { notFound } from 'next/navigation'; // Removed, client-side notFound is different
 import { useEffect, useState } from 'react';
-import { Separator } from '@/components/ui/separator'; // Import Separator
+import { Separator } from '@/components/ui/separator';
+import { Timestamp } from 'firebase/firestore';
 
 interface PostPageProps {
   params: { slug: string };
 }
 
+// Client-side post type where dates are strings
+interface ClientPost extends Omit<Post, 'publishedAt' | 'createdAt' | 'updatedAt'> {
+  publishedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+
 export default function PostPage({ params }: PostPageProps) {
-  const [post, setPost] = useState<Post | null | undefined>(undefined); // undefined for loading, null for not found
+  const [post, setPost] = useState<ClientPost | null | undefined>(undefined);
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchedPost = getPostBySlug(params.slug);
-    setPost(fetchedPost);
+    const fetchPost = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedPost = await getPostBySlug(params.slug);
+        if (fetchedPost) {
+          // Convert Timestamps to ISO strings for client-side state
+          const clientReadyPost: ClientPost = {
+            ...fetchedPost,
+            publishedAt: (fetchedPost.publishedAt as Timestamp).toDate().toISOString(),
+            createdAt: fetchedPost.createdAt ? (fetchedPost.createdAt as Timestamp).toDate().toISOString() : undefined,
+            updatedAt: fetchedPost.updatedAt ? (fetchedPost.updatedAt as Timestamp).toDate().toISOString() : undefined,
+          };
+          setPost(clientReadyPost);
+          document.title = `${clientReadyPost.title} | SmartAcessorios Blog`;
+          setFormattedDate(new Date(clientReadyPost.publishedAt).toLocaleDateString('pt-BR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: 'UTC'
+          }));
+        } else {
+          setPost(null); // Not found
+          document.title = "Artigo Não Encontrado | SmartAcessorios Blog";
+        }
+      } catch (error) {
+        console.error("Error fetching post by slug:", error);
+        setPost(null); // Error state
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    if (fetchedPost) {
-      document.title = `${fetchedPost.title} | SmartAcessorios Blog`;
-      setFormattedDate(new Date(fetchedPost.publishedAt).toLocaleDateString('pt-BR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'UTC'
-      }));
-    } else {
-      document.title = "Artigo Não Encontrado | SmartAcessorios Blog";
-    }
+    fetchPost();
   }, [params.slug]);
 
 
-  if (post === undefined) { // Loading state
+  if (isLoading || post === undefined) {
     return (
         <div className="flex justify-center items-center min-h-[60vh]">
             <div role="status" className="flex flex-col items-center">
@@ -55,7 +84,7 @@ export default function PostPage({ params }: PostPageProps) {
     );
   }
 
-  if (!post) {
+  if (!post) { // Not found or error state
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <BookOpenText className="h-20 w-20 text-muted-foreground mb-6" />
@@ -115,19 +144,19 @@ export default function PostPage({ params }: PostPageProps) {
               alt={post.title}
               fill={true}
               style={{ objectFit: 'cover' }}
-              priority={true} 
+              priority={true}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 1000px"
               data-ai-hint={post.imageHint || "blog hero"}
             />
           </div>
         )}
-        
+
         {post.embedHtml && (
           <div className="my-8">
             <Separator />
-            <div 
+            <div
               className="aspect-video mt-8 w-full max-w-full overflow-hidden rounded-lg shadow-lg [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:rounded-lg"
-              dangerouslySetInnerHTML={{ __html: post.embedHtml }} 
+              dangerouslySetInnerHTML={{ __html: post.embedHtml }}
             />
             <Separator className="mt-8"/>
           </div>

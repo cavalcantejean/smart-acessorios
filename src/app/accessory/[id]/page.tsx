@@ -1,5 +1,5 @@
 
-import { getAccessoryById } from '@/lib/data';
+import { getAccessoryById } from '@/lib/data'; // Now async
 import type { Accessory } from '@/lib/types';
 import AccessoryDetailsClientWrapper from './components/AccessoryDetailsClientWrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const accessory = getAccessoryById(params.id);
+  const accessory = await getAccessoryById(params.id); // Await async call
   if (!accessory) {
     return {
       title: 'Acessório Não Encontrado',
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 }
 
 export default async function AccessoryDetailPage({ params }: { params: { id:string } }) {
-  const accessory: Accessory | undefined = getAccessoryById(params.id);
+  const accessory: Accessory | undefined = await getAccessoryById(params.id); // Await async call
 
   if (!accessory) {
     return (
@@ -45,5 +45,16 @@ export default async function AccessoryDetailPage({ params }: { params: { id:str
     );
   }
 
-  return <AccessoryDetailsClientWrapper accessory={accessory} />;
+  // Comments need to be prepared for client (convert Timestamps to strings)
+  const preparedAccessory = {
+    ...accessory,
+    comments: (accessory.comments || []).map(comment => ({
+      ...comment,
+      createdAt: comment.createdAt instanceof Object && 'toDate' in comment.createdAt 
+                 ? (comment.createdAt as import('firebase/firestore').Timestamp).toDate().toISOString() 
+                 : (typeof comment.createdAt === 'string' ? comment.createdAt : new Date().toISOString()),
+    })),
+  };
+
+  return <AccessoryDetailsClientWrapper accessory={preparedAccessory as Accessory & { comments: Array<Comment & { createdAt: string }>}} />;
 }

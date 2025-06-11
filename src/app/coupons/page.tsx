@@ -1,17 +1,30 @@
 
-import { getCoupons } from '@/lib/data';
+import { getCoupons } from '@/lib/data'; // Now async
 import type { Coupon } from '@/lib/types';
 import CouponCard from '@/components/CouponCard';
 import { Ticket } from 'lucide-react';
 import type { Metadata } from 'next';
+import { Timestamp } from 'firebase/firestore';
+
 
 export const metadata: Metadata = {
   title: 'Cupons Promocionais | SmartAcessorios',
   description: 'Encontre os melhores cupons de desconto para acessórios de smartphone.',
 };
 
-export default function CouponsPage() {
-  const promotionalCoupons: Coupon[] = getCoupons();
+// Helper to prepare coupon for client (convert Timestamps)
+const prepareCouponForClient = (coupon: Coupon): Coupon => {
+  return {
+    ...coupon,
+    expiryDate: coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate().toISOString() : coupon.expiryDate as any,
+    createdAt: coupon.createdAt instanceof Timestamp ? coupon.createdAt.toDate().toISOString() : coupon.createdAt as any,
+    updatedAt: coupon.updatedAt instanceof Timestamp ? coupon.updatedAt.toDate().toISOString() : coupon.updatedAt as any,
+  };
+};
+
+export default async function CouponsPage() {
+  const rawCoupons: Coupon[] = await getCoupons(); // Await async call
+  const promotionalCoupons = rawCoupons.map(prepareCouponForClient);
 
   return (
     <div className="space-y-8">

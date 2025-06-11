@@ -1,14 +1,15 @@
 
-import { getUserById } from '@/lib/data';
-import type { User } from '@/lib/types';
+import { getUserById } from '@/lib/data'; // Now async
+import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import UserProfileClientView from './components/UserProfileClientView'; // Novo componente
+import UserProfileClientView from './components/UserProfileClientView';
+import { Timestamp } from 'firebase/firestore';
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const user = getUserById(params.id);
+  const user = await getUserById(params.id); // Await async call
   if (!user) {
     return {
       title: 'Perfil Não Encontrado',
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 }
 
 export default async function UserProfilePage({ params }: { params: { id: string } }) {
-  const profileUser: User | undefined = getUserById(params.id);
+  const profileUser: User | undefined = await getUserById(params.id); // Await async call
 
   if (!profileUser) {
     return (
@@ -45,5 +46,17 @@ export default async function UserProfilePage({ params }: { params: { id: string
     );
   }
 
-  return <UserProfileClientView profileUser={profileUser} />;
+  // Prepare user data for client (convert Timestamps to strings)
+  const clientReadyProfileUser = {
+    ...profileUser,
+    createdAt: profileUser.createdAt instanceof Timestamp ? profileUser.createdAt.toDate().toISOString() : profileUser.createdAt,
+    updatedAt: profileUser.updatedAt instanceof Timestamp ? profileUser.updatedAt.toDate().toISOString() : profileUser.updatedAt,
+    // Ensure followers/following/badges are arrays
+    followers: Array.isArray(profileUser.followers) ? profileUser.followers : [],
+    following: Array.isArray(profileUser.following) ? profileUser.following : [],
+    badges: Array.isArray(profileUser.badges) ? profileUser.badges : [],
+  };
+
+
+  return <UserProfileClientView profileUser={clientReadyProfileUser as User} />;
 }

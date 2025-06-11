@@ -2,7 +2,7 @@
 "use server";
 
 import { z } from 'zod';
-import { updateCommentStatus } from '@/lib/data';
+import { updateCommentStatus } from '@/lib/data'; // Now async
 import { revalidatePath } from 'next/cache';
 import type { Comment } from '@/lib/types';
 
@@ -15,7 +15,7 @@ export interface ModerationActionResult {
   success: boolean;
   message?: string;
   error?: string;
-  moderatedCommentId?: string; // To help update UI
+  moderatedCommentId?: string;
   newStatus?: 'approved' | 'rejected';
 }
 
@@ -40,14 +40,14 @@ async function performModeration(
   const { commentId, accessoryId } = validatedFields.data;
 
   try {
-    const updatedComment = updateCommentStatus(accessoryId, commentId, decision);
+    const updatedComment = await updateCommentStatus(accessoryId, commentId, decision); // Await async call
 
     if (!updatedComment) {
       return { success: false, error: `Falha ao ${decision === 'approved' ? 'aprovar' : 'rejeitar'} comentário. Comentário não encontrado.`, moderatedCommentId: commentId };
     }
 
     revalidatePath('/admin/moderation');
-    revalidatePath(`/accessory/${accessoryId}`); // Also revalidate the accessory page
+    revalidatePath(`/accessory/${accessoryId}`);
 
     return {
       success: true,
@@ -57,10 +57,10 @@ async function performModeration(
     };
   } catch (error) {
     console.error(`Error in ${decision === 'approved' ? 'approve' : 'reject'}CommentAction:`, error);
-    return { 
-        success: false, 
+    return {
+        success: false,
         error: `Ocorreu um erro no servidor ao tentar ${decision === 'approved' ? 'aprovar' : 'rejeitar'} o comentário.`,
-        moderatedCommentId: commentId 
+        moderatedCommentId: commentId
     };
   }
 }

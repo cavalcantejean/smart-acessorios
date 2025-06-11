@@ -1,26 +1,38 @@
 
-import { getAllUsers } from '@/lib/data';
-import type { User } from '@/lib/types';
+import { getAllUsers } from '@/lib/data'; // Now async
+import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
 import UsersTable from './components/UsersTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, UsersIcon } from 'lucide-react';
 import type { Metadata } from 'next';
+import { Timestamp } from 'firebase/firestore';
 
-// Note: Auth checks for admin pages are typically handled in a layout or higher-order component,
-// or via middleware. For this page, we'll assume the admin layout handles redirection if not admin.
-// Alternatively, add explicit checks using useAuth if this page were a client component,
-// or server-side session checks.
 
 export const metadata: Metadata = {
   title: 'Gerenciar Usuários | Admin SmartAcessorios',
   description: 'Visualize e gerencie todos os usuários da plataforma.',
 };
 
+// Helper to prepare user data for client (convert Timestamps)
+const prepareUserForClient = (user: User): User => {
+  return {
+    ...user,
+    createdAt: user.createdAt instanceof Timestamp ? user.createdAt.toDate().toISOString() : user.createdAt,
+    updatedAt: user.updatedAt instanceof Timestamp ? user.updatedAt.toDate().toISOString() : user.updatedAt,
+    // Ensure followers/following/badges are arrays for client components if they rely on it
+    followers: Array.isArray(user.followers) ? user.followers : [],
+    following: Array.isArray(user.following) ? user.following : [],
+    badges: Array.isArray(user.badges) ? user.badges : [],
+  } as User; // Cast as User to satisfy downstream components expecting string dates
+};
+
 
 export default async function ManageUsersPage() {
-  const users: User[] = getAllUsers();
+  const rawUsers: User[] = await getAllUsers(); // Await async call
+  const users = rawUsers.map(prepareUserForClient);
+
 
   return (
     <div className="space-y-6">

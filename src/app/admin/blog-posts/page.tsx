@@ -1,5 +1,5 @@
 
-import { getAllPosts, getPostById } from '@/lib/data'; // Added getPostById
+import { getAllPosts } from '@/lib/data'; // Now async
 import type { Post } from '@/lib/types';
 import PostsTable from './components/PostsTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ManageBlogPostsPage() {
-  // In a real app, add admin auth check here or in a layout
-  const posts: Post[] = getAllPosts();
+  const posts: Post[] = await getAllPosts(); // Await async call
 
   return (
     <div className="space-y-6">

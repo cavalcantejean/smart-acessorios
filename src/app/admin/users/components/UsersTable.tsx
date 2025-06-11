@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useActionState, startTransition } from 'react';
-import type { User } from '@/lib/types';
+import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
 import { toggleAdminStatusAction } from '../actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +17,7 @@ import { CheckCircle, XCircle, Eye, UserCog, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/useAuth'; // Import useAuth to get current admin ID
 
 interface UsersTableProps {
   initialUsers: User[];
@@ -35,6 +36,7 @@ export default function UsersTable({ initialUsers }: UsersTableProps) {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [adminActionState, handleToggleAdmin, isAdminTogglePending] = useActionState(toggleAdminStatusAction, initialActionState);
   const { toast } = useToast();
+  const { user: currentAdminUser, isLoading: isAuthLoading } = useAuth(); // Get current authenticated admin
 
   useEffect(() => {
     setUsers(initialUsers);
@@ -47,8 +49,7 @@ export default function UsersTable({ initialUsers }: UsersTableProps) {
           title: "Sucesso!",
           description: adminActionState.message,
         });
-        // Update local state optimistically or based on returned user
-        setUsers(prevUsers => 
+        setUsers(prevUsers =>
           prevUsers.map(u => u.id === adminActionState.user!.id ? adminActionState.user! : u)
         );
       } else if (!adminActionState.success && adminActionState.error) {
@@ -68,11 +69,8 @@ export default function UsersTable({ initialUsers }: UsersTableProps) {
         handleToggleAdmin(formData);
     });
   };
-  
-  // In a real app, you'd get the current admin's ID from auth context
-  // For this mock, let's assume 'admin-1' is the ID of the currently logged-in admin.
-  // This is a simplification for the self-demotion prevention.
-  const currentAdminId = 'admin-1'; 
+
+  const currentAdminId = currentAdminUser?.id;
 
   return (
     <div className="overflow-x-auto">
@@ -88,7 +86,13 @@ export default function UsersTable({ initialUsers }: UsersTableProps) {
         </TableHeader>
         <TableBody>
           {users.map((user) => {
-            const isCurrentUserTheOnlyAdmin = user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.id === currentAdminId;
+            // Check if this user is the current admin and the only admin
+            const isThisUserTheOnlyAdmin = user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.id === currentAdminId;
+            const disableToggle = isAdminTogglePending || (isThisUserTheOnlyAdmin && user.id === currentAdminId) || isAuthLoading;
+            const toggleTitle = (isThisUserTheOnlyAdmin && user.id === currentAdminId)
+                                ? "Não é possível remover o status de administrador do único administrador."
+                                : (user.isAdmin ? "Remover Admin" : "Tornar Admin");
+
             return (
               <TableRow key={user.id}>
                 <TableCell className="font-medium hidden sm:table-cell truncate max-w-[100px]">{user.id}</TableCell>
@@ -116,8 +120,8 @@ export default function UsersTable({ initialUsers }: UsersTableProps) {
                     variant={user.isAdmin ? "destructive" : "outline"}
                     size="sm"
                     onClick={() => onToggleAdmin(user.id)}
-                    disabled={isAdminTogglePending || (isCurrentUserTheOnlyAdmin && user.id === currentAdminId) } // Disable if current user is the only admin and it's them
-                    title={isCurrentUserTheOnlyAdmin && user.id === currentAdminId ? "Não é possível remover o status de administrador do único administrador." : (user.isAdmin ? "Remover Admin" : "Tornar Admin")}
+                    disabled={disableToggle}
+                    title={toggleTitle}
                   >
                     {isAdminTogglePending && adminActionState?.user?.id === user.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

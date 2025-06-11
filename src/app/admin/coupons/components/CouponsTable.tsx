@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Timestamp } from 'firebase/firestore';
 
 interface CouponsTableProps {
   initialCoupons: Coupon[];
@@ -54,7 +55,9 @@ export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
           title: "Sucesso!",
           description: deleteState.message,
         });
-        // List will re-render due to revalidatePath or state update if filtered locally
+        if (couponToDelete) {
+            setCoupons(prev => prev.filter(c => c.id !== couponToDelete.id));
+        }
       } else if (!deleteState.success && deleteState.error) {
         toast({
           title: "Erro",
@@ -62,9 +65,9 @@ export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
           variant: "destructive",
         });
       }
-      setCouponToDelete(null); 
+      setCouponToDelete(null);
     }
-  }, [deleteState, toast]);
+  }, [deleteState, toast, couponToDelete]);
 
   const handleDeleteConfirm = () => {
     if (couponToDelete) {
@@ -76,14 +79,23 @@ export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
     }
   };
 
-  const formatDateSafe = (dateString?: string) => {
-    if (!dateString) return 'N/A';
+  const formatDateSafe = (dateInput?: Timestamp | string | Date): string => {
+    if (!dateInput) return 'N/A';
     try {
-      return format(parseISO(dateString), "PPP", { locale: ptBR });
+      let date: Date;
+      if (dateInput instanceof Timestamp) {
+        date = dateInput.toDate();
+      } else if (dateInput instanceof Date) {
+        date = dateInput;
+      } else { // Assuming string
+        date = parseISO(dateInput);
+      }
+      return format(date, "PPP", { locale: ptBR });
     } catch (error) {
-      return dateString; // Return original if parsing fails
+      return typeof dateInput === 'string' ? dateInput : 'Data inválida';
     }
   };
+
 
   return (
     <AlertDialog open={!!couponToDelete} onOpenChange={(isOpen) => { if (!isOpen) setCouponToDelete(null); }}>
@@ -181,4 +193,3 @@ export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
     </AlertDialog>
   );
 }
-

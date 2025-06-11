@@ -8,17 +8,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { User, Heart, Settings, LogOut, Loader2, Users, UserCheck, ExternalLink, Award, Lock } from 'lucide-react';
-import { getUserById } from '@/lib/data'; 
-import type { User as FullUserType, Badge as BadgeType } from '@/lib/types';
-import { allBadges, getBadgeById } from '@/lib/badges'; // Import allBadges
+import { getUserById } from '@/lib/data'; // Now async
+import type { UserFirestoreData as FullUserType, Badge as BadgeType } from '@/lib/types';
+import { allBadges, getBadgeById } from '@/lib/badges';
 import { Badge as ShadBadge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Timestamp } from 'firebase/firestore';
+
+// Client-side User type (dates as strings)
+interface ClientFullUser extends Omit<FullUserType, 'createdAt' | 'updatedAt'> {
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 
 export default function DashboardPage() {
   const { user: authUser, isAuthenticated, isLoading: isLoadingAuth, logout } = useAuth();
   const router = useRouter();
-  const [fullUser, setFullUser] = useState<FullUserType | null>(null);
+  const [fullUser, setFullUser] = useState<ClientFullUser | null>(null);
   const [isLoadingFullUser, setIsLoadingFullUser] = useState(true);
   const [earnedBadgeIds, setEarnedBadgeIds] = useState<string[]>([]);
 
@@ -29,19 +36,31 @@ export default function DashboardPage() {
   }, [isLoadingAuth, isAuthenticated, router]);
 
   useEffect(() => {
-    if (authUser && isAuthenticated) {
-      const fetchedUser = getUserById(authUser.id);
-      if (fetchedUser) {
-        setFullUser(fetchedUser);
-        setEarnedBadgeIds(fetchedUser.badges || []);
+    const fetchFullUser = async () => {
+      if (authUser && isAuthenticated) {
+        setIsLoadingFullUser(true);
+        try {
+          const fetchedUser = await getUserById(authUser.id);
+          if (fetchedUser) {
+            const clientReadyUser: ClientFullUser = {
+              ...fetchedUser,
+              createdAt: fetchedUser.createdAt instanceof Timestamp ? fetchedUser.createdAt.toDate().toISOString() : fetchedUser.createdAt,
+              updatedAt: fetchedUser.updatedAt instanceof Timestamp ? fetchedUser.updatedAt.toDate().toISOString() : fetchedUser.updatedAt,
+            };
+            setFullUser(clientReadyUser);
+            setEarnedBadgeIds(clientReadyUser.badges || []);
+            document.title = `${clientReadyUser.name} - Painel | SmartAcessorios`;
+          }
+        } catch (error) {
+          console.error("Error fetching full user data:", error);
+        } finally {
+          setIsLoadingFullUser(false);
+        }
+      } else if (!isLoadingAuth && !isAuthenticated) {
+        setIsLoadingFullUser(false);
       }
-      setIsLoadingFullUser(false);
-      if (typeof window !== 'undefined') {
-        document.title = `${authUser.name} - Painel | SmartAcessorios`;
-      }
-    } else if (!isLoadingAuth && !isAuthenticated) {
-      setIsLoadingFullUser(false); 
-    }
+    };
+    fetchFullUser();
   }, [authUser, isAuthenticated, isLoadingAuth]);
 
 
@@ -106,7 +125,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -123,10 +142,10 @@ export default function DashboardPage() {
                 return (
                   <Tooltip key={badge.id} delayDuration={100}>
                     <TooltipTrigger asChild>
-                      <ShadBadge 
-                        variant="outline" 
+                      <ShadBadge
+                        variant="outline"
                         className={`cursor-default border-2 p-2 text-sm flex items-center gap-1.5 transition-all duration-200 ease-in-out hover:shadow-md
-                                    ${isEarned ? `${badge.color || 'border-primary/70 text-foreground'} hover:opacity-90` 
+                                    ${isEarned ? `${badge.color || 'border-primary/70 text-foreground'} hover:opacity-90`
                                                 : 'border-muted/50 text-muted-foreground opacity-60 hover:opacity-80'}`}
                       >
                         {isEarned ? <badge.icon className="h-4 w-4" /> : <Lock className="h-4 w-4 text-muted-foreground/70" />}
@@ -189,5 +208,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

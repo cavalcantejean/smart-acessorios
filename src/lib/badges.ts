@@ -1,29 +1,45 @@
 
-import type { Badge, User, Accessory, Comment, BadgeCriteriaData } from './types';
+import type { Badge, UserFirestoreData, Accessory, Comment, BadgeCriteriaData } from './types';
 import { MessageSquare, ThumbsUp, UserPlus, Star, Users } from 'lucide-react';
-import { getAllAccessories, mockUsers as allUsersData } from './data'; // Import mockUsers as allUsersData to avoid conflict
+import { getAllAccessories, getUserById } from './data'; // Import Firestore based getUserById
+import { collection, getDocs, query, where, getCountFromServer } from 'firebase/firestore';
+import { db } from './firebase';
 
-// Helper function to count comments by a user
-export const countUserComments = (userId: string, accessories: Accessory[]): number => {
-  return accessories.reduce((count, acc) => {
-    return count + (acc.comments?.filter(comment => comment.userId === userId && comment.status === 'approved').length || 0);
-  }, 0);
+
+// Helper function to count comments by a user from Firestore
+export const countUserComments = async (userId: string): Promise<number> => {
+  if (!db) return 0;
+  let totalComments = 0;
+  // This is inefficient as it fetches all accessories.
+  // A better approach would be a dedicated 'comments' collection queryable by userId.
+  // For now, sticking to the current structure:
+  const accessories = await getAllAccessories(); // Fetches from Firestore
+  accessories.forEach(acc => {
+    totalComments += (acc.comments?.filter(c => c.userId === userId && c.status === 'approved').length || 0);
+  });
+  return totalComments;
 };
 
-// Helper function to count likes by a user
-export const countUserLikes = (userId: string, accessories: Accessory[]): number => {
-  return accessories.reduce((count, acc) => {
-    return count + (acc.likedBy?.includes(userId) ? 1 : 0);
-  }, 0);
+// Helper function to count likes by a user from Firestore
+export const countUserLikes = async (userId: string): Promise<number> => {
+  if (!db) return 0;
+  const accessoriesQuery = query(collection(db, "acessorios"), where("likedBy", "array-contains", userId));
+  try {
+    const snapshot = await getCountFromServer(accessoriesQuery);
+    return snapshot.data().count;
+  } catch (error) {
+    console.error("Error counting user likes:", error);
+    return 0;
+  }
 };
 
-// Helper function to count how many users a user is following
-export const countUserFollowing = (user: User): number => {
+// Helper function to count how many users a user is following (uses UserFirestoreData)
+export const countUserFollowing = (user: UserFirestoreData): number => {
   return user.following?.length || 0;
 };
 
-// Helper function to count how many followers a user has
-export const countUserFollowers = (user: User): number => {
+// Helper function to count how many followers a user has (uses UserFirestoreData)
+export const countUserFollowers = (user: UserFirestoreData): number => {
   return user.followers?.length || 0;
 };
 
@@ -91,14 +107,12 @@ export const getBadgeById = (id: string): Badge | undefined => {
   return allBadges.find(b => b.id === id);
 };
 
-export const generateBadgeCriteriaData = (user: User): BadgeCriteriaData => {
-  const accessories = getAllAccessories(); // Fetch all accessories for counts
-  // allUsersData is already imported from data.ts
-
+// Now async as it fetches data from Firestore
+export const generateBadgeCriteriaData = async (user: UserFirestoreData): Promise<BadgeCriteriaData> => {
   return {
-    userCommentsCount: countUserComments(user.id, accessories),
-    userLikesCount: countUserLikes(user.id, accessories),
-    userFollowingCount: countUserFollowing(user),
-    userFollowersCount: countUserFollowers(user),
+    userCommentsCount: await countUserComments(user.id),
+    userLikesCount: await countUserLikes(user.id),
+    userFollowingCount: countUserFollowing(user), // This uses data already on the user object
+    userFollowersCount: countUserFollowers(user), // This uses data already on the user object
   };
 };

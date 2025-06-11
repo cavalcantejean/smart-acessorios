@@ -29,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
+import { Timestamp } from 'firebase/firestore';
 
 interface PostsTableProps {
   initialPosts: Post[];
@@ -53,8 +54,9 @@ export default function PostsTable({ initialPosts }: PostsTableProps) {
           title: "Sucesso!",
           description: deleteState.message,
         });
-        // Re-fetch or filter locally if revalidatePath works as expected
-        // setPosts(prevPosts => prevPosts.filter(p => p.id !== postToDelete?.id));
+        if (postToDelete) {
+          setPosts(prevPosts => prevPosts.filter(p => p.id !== postToDelete.id));
+        }
       } else if (!deleteState.success && deleteState.error) {
         toast({
           title: "Erro",
@@ -62,9 +64,9 @@ export default function PostsTable({ initialPosts }: PostsTableProps) {
           variant: "destructive",
         });
       }
-      setPostToDelete(null); 
+      setPostToDelete(null);
     }
-  }, [deleteState, toast]);
+  }, [deleteState, toast, postToDelete]);
 
   const handleDeleteConfirm = () => {
     if (postToDelete) {
@@ -76,11 +78,21 @@ export default function PostsTable({ initialPosts }: PostsTableProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+  const formatDate = (dateInput: Timestamp | Date | string) => {
+    let date: Date;
+    if (dateInput instanceof Timestamp) {
+      date = dateInput.toDate();
+    } else if (dateInput instanceof Date) {
+      date = dateInput;
+    } else {
+      date = new Date(dateInput); // Attempt to parse if string
+    }
+    if (isNaN(date.getTime())) return 'Data inválida';
+    return date.toLocaleDateString('pt-BR', {
       year: 'numeric', month: 'short', day: 'numeric',
     });
   };
+
 
   return (
     <AlertDialog open={!!postToDelete} onOpenChange={(isOpen) => { if (!isOpen) setPostToDelete(null); }}>

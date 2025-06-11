@@ -2,19 +2,18 @@
 "use server";
 
 import { z } from 'zod';
-import { AccessoryFormSchema, type AccessoryFormValues } from '@/lib/schemas/accessory-schema';
-import { addAccessory, updateAccessory, deleteAccessory as deleteAccessoryData, getAccessoryById } from '@/lib/data';
+import { AccessoryFormSchema } from '@/lib/schemas/accessory-schema';
+import { addAccessory, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data';
 import type { Accessory } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+// import { redirect } from 'next/navigation'; // Not redirecting from action
 import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow';
-
 
 export interface AccessoryActionResult {
   success: boolean;
   message?: string;
-  error?: string; // General error message
-  errors?: z.ZodIssue[]; // Specific field validation errors
+  error?: string;
+  errors?: z.ZodIssue[];
   accessory?: Accessory;
 }
 
@@ -22,60 +21,6 @@ export async function createAccessoryAction(
   prevState: AccessoryActionResult | null,
   formData: FormData
 ): Promise<AccessoryActionResult> {
-  const rawFormData = Object.fromEntries(formData.entries());
-
-  // Convert checkbox/switch value and handle optional fields
-  const dataToValidate = {
-    ...rawFormData,
-    isDeal: rawFormData.isDeal === 'on',
-    price: rawFormData.price || undefined,
-    category: rawFormData.category || undefined,
-    imageHint: rawFormData.imageHint || undefined,
-    aiSummary: rawFormData.aiSummary || undefined,
-    embedHtml: rawFormData.embedHtml || undefined, 
-  };
-
-  const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);
-
-  if (!validatedFields.success) {
-    console.log("Validation errors:", validatedFields.error.flatten().fieldErrors);
-    return {
-      success: false,
-      message: "Falha na validação. Verifique os campos.",
-      errors: validatedFields.error.errors,
-      error: "Dados inválidos. Corrija os erros abaixo."
-    };
-  }
-
-  try {
-    const newAccessory = addAccessory(validatedFields.data);
-    if (newAccessory) {
-      revalidatePath('/admin/accessories');
-      revalidatePath('/products');
-      revalidatePath('/');
-      revalidatePath('/deals');
-      // Do not redirect here, let the form handle it based on state
-      return { 
-        success: true, 
-        message: `Acessório "${newAccessory.name}" criado com sucesso!`, 
-        accessory: newAccessory 
-      };
-    } else {
-      return { success: false, error: "Falha ao criar o acessório no sistema." };
-    }
-  } catch (error) {
-    console.error("Error in createAccessoryAction:", error);
-    return { success: false, error: "Erro no servidor ao tentar criar o acessório." };
-  }
-}
-
-export async function updateAccessoryAction(
-  accessoryId: string,
-  prevState: AccessoryActionResult | null,
-  formData: FormData
-): Promise<AccessoryActionResult> {
-  console.log(`updateAccessoryAction for ID ${accessoryId} called with formData:`, Object.fromEntries(formData.entries()));
-  
   const rawFormData = Object.fromEntries(formData.entries());
   const dataToValidate = {
     ...rawFormData,
@@ -99,7 +44,57 @@ export async function updateAccessoryAction(
   }
 
   try {
-    const updatedAccessory = updateAccessory(accessoryId, validatedFields.data);
+    // addAccessory is now async
+    const newAccessory = await addAccessory(validatedFields.data);
+    if (newAccessory) {
+      revalidatePath('/admin/accessories');
+      revalidatePath('/products');
+      revalidatePath('/');
+      revalidatePath('/deals');
+      return {
+        success: true,
+        message: `Acessório "${newAccessory.name}" criado com sucesso!`,
+        accessory: newAccessory
+      };
+    } else {
+      return { success: false, error: "Falha ao criar o acessório no sistema." };
+    }
+  } catch (error) {
+    console.error("Error in createAccessoryAction:", error);
+    return { success: false, error: "Erro no servidor ao tentar criar o acessório." };
+  }
+}
+
+export async function updateAccessoryAction(
+  accessoryId: string,
+  prevState: AccessoryActionResult | null,
+  formData: FormData
+): Promise<AccessoryActionResult> {
+  const rawFormData = Object.fromEntries(formData.entries());
+  const dataToValidate = {
+    ...rawFormData,
+    isDeal: rawFormData.isDeal === 'on',
+    price: rawFormData.price || undefined,
+    category: rawFormData.category || undefined,
+    imageHint: rawFormData.imageHint || undefined,
+    aiSummary: rawFormData.aiSummary || undefined,
+    embedHtml: rawFormData.embedHtml || undefined,
+  };
+
+  const validatedFields = AccessoryFormSchema.safeParse(dataToValidate);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      message: "Falha na validação. Verifique os campos.",
+      errors: validatedFields.error.errors,
+      error: "Dados inválidos. Corrija os erros abaixo."
+    };
+  }
+
+  try {
+    // updateAccessory is now async
+    const updatedAccessory = await updateAccessory(accessoryId, validatedFields.data);
     if (updatedAccessory) {
       revalidatePath('/admin/accessories');
       revalidatePath(`/admin/accessories/${accessoryId}/edit`);
@@ -107,10 +102,10 @@ export async function updateAccessoryAction(
       revalidatePath('/products');
       revalidatePath('/');
       revalidatePath('/deals');
-      return { 
-        success: true, 
-        message: `Acessório "${updatedAccessory.name}" atualizado com sucesso!`, 
-        accessory: updatedAccessory 
+      return {
+        success: true,
+        message: `Acessório "${updatedAccessory.name}" atualizado com sucesso!`,
+        accessory: updatedAccessory
       };
     } else {
       return { success: false, error: `Falha ao atualizar o acessório. ID ${accessoryId} não encontrado.` };
@@ -132,11 +127,12 @@ export async function deleteAccessoryAction(
   }
 
   try {
-    const deleted = deleteAccessoryData(accessoryId);
+    // deleteAccessoryData is now async
+    const deleted = await deleteAccessoryData(accessoryId);
     if (deleted) {
       revalidatePath('/admin/accessories');
-      revalidatePath('/products'); 
-      revalidatePath('/'); 
+      revalidatePath('/products');
+      revalidatePath('/');
       revalidatePath('/deals');
       return { success: true, message: "Acessório excluído com sucesso." };
     } else {
@@ -148,7 +144,6 @@ export async function deleteAccessoryAction(
   }
 }
 
-// --- AI Helper Action ---
 const GenerateDescriptionAISchema = z.object({
   productInfo: z.string().min(5, "Product information must be at least 5 characters."),
 });
@@ -179,4 +174,3 @@ export async function generateDescriptionWithAIAction(
     return { success: false, error: "Falha ao gerar descrição com IA. Tente novamente." };
   }
 }
-

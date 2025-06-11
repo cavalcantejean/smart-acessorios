@@ -29,12 +29,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Timestamp } from 'firebase/firestore';
 
 interface AccessoriesTableProps {
   initialAccessories: Accessory[];
 }
 
 const initialActionState: AccessoryActionResult = { success: false };
+
+// Helper to convert Firestore Timestamp to displayable date string if needed
+const formatDate = (timestamp: Timestamp | Date | string | undefined): string => {
+  if (!timestamp) return 'N/A';
+  if (timestamp instanceof Timestamp) {
+    return timestamp.toDate().toLocaleDateString('pt-BR');
+  }
+  if (timestamp instanceof Date) {
+    return timestamp.toLocaleDateString('pt-BR');
+  }
+  // Attempt to parse if it's a string (though Timestamps are preferred)
+  const date = new Date(timestamp);
+  if (!isNaN(date.getTime())) {
+    return date.toLocaleDateString('pt-BR');
+  }
+  return 'Data inválida';
+};
+
 
 export default function AccessoriesTable({ initialAccessories }: AccessoriesTableProps) {
   const [accessories, setAccessories] = useState<Accessory[]>(initialAccessories);
@@ -53,7 +72,10 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
           title: "Sucesso!",
           description: deleteState.message,
         });
-        // The list will re-render due to revalidatePath or state update if we filter locally
+        // Optimistically remove or wait for revalidation
+         if (accessoryToDelete) {
+           setAccessories(prev => prev.filter(acc => acc.id !== accessoryToDelete.id));
+         }
       } else if (!deleteState.success && deleteState.error) {
         toast({
           title: "Erro",
@@ -61,10 +83,9 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
           variant: "destructive",
         });
       }
-      // Close the dialog regardless of success/failure of the action itself
-      setAccessoryToDelete(null); 
+      setAccessoryToDelete(null);
     }
-  }, [deleteState, toast]);
+  }, [deleteState, toast, accessoryToDelete]);
 
   const handleDeleteConfirm = () => {
     if (accessoryToDelete) {
@@ -87,6 +108,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
               <TableHead className="hidden md:table-cell">Categoria</TableHead>
               <TableHead className="hidden lg:table-cell">Preço</TableHead>
               <TableHead className="text-center hidden sm:table-cell">É Oferta?</TableHead>
+               <TableHead className="hidden lg:table-cell">Criado em</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -124,6 +146,9 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
                       <XCircle className="mr-1 h-3.5 w-3.5" /> Não
                     </Badge>
                   )}
+                </TableCell>
+                 <TableCell className="hidden lg:table-cell text-xs">
+                  {formatDate(accessory.createdAt as Timestamp | undefined)}
                 </TableCell>
                 <TableCell className="text-right space-x-1 sm:space-x-2">
                   <Button variant="outline" size="icon" asChild title="Editar Acessório">

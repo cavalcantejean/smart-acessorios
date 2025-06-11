@@ -1,11 +1,11 @@
 
-import { getCoupons } from '@/lib/data';
+import { getCoupons } from '@/lib/data'; // Now async
 import type { Coupon } from '@/lib/types';
 import CouponsTable from './components/CouponsTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, TicketPercent, PlusCircle } from 'lucide-react'; // Changed icon
+import { ArrowLeft, TicketPercent, PlusCircle } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ManageCouponsPage() {
-  const coupons: Coupon[] = getCoupons();
+  const coupons: Coupon[] = await getCoupons(); // Await async call
 
   return (
     <div className="space-y-6">

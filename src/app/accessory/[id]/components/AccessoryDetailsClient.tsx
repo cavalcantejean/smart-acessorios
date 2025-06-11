@@ -8,15 +8,26 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import Image from 'next/image';
 import Link from 'next/link';
 import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft, ThumbsUp } from 'lucide-react';
-import { summarizeAccessoryDescriptionAction, toggleLikeAccessoryAction } from '../actions';
+import { summarizeAccessoryDescriptionAction, toggleLikeAccessoryAction, addCommentAccessoryAction } from '../actions';
 import FavoriteButton from '@/components/FavoriteButton';
 import LikeButton from '@/components/LikeButton';
 import CommentsSection from '@/components/CommentsSection';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
+import { Timestamp } from 'firebase/firestore';
+
+
+// Type for Accessory props coming into this client component
+// Dates from Firestore Timestamps should be strings (ISO) or numbers (milliseconds)
+interface ClientAccessory extends Omit<Accessory, 'comments' | 'createdAt' | 'updatedAt' | 'expiryDate'> {
+  comments: Array<Omit<Comment, 'createdAt'> & { createdAt: string }>;
+  createdAt?: string; // ISO string or undefined
+  updatedAt?: string; // ISO string or undefined
+  // expiryDate for coupons, if used here, would also be string
+}
 
 interface AccessoryDetailsClientProps {
-  accessory: Accessory;
+  accessory: ClientAccessory; // Use the client-specific type
   isFavoriteInitial: boolean;
   onToggleFavorite: (id: string) => void;
 }
@@ -31,19 +42,19 @@ const initialLikeActionState: LikeActionResult = { success: false, isLiked: fals
 
 
 export default function AccessoryDetailsClient({ accessory: initialAccessory, isFavoriteInitial, onToggleFavorite }: AccessoryDetailsClientProps) {
-  const [accessory, setAccessory] = useState<Accessory>(initialAccessory);
-  const [currentSummary, setCurrentSummary] = useState<string | undefined>(accessory.aiSummary || accessory.shortDescription);
+  const [accessory, setAccessory] = useState<ClientAccessory>(initialAccessory);
+  const [currentSummary, setCurrentSummary] = useState<string | undefined>(initialAccessory.aiSummary || initialAccessory.shortDescription);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [isFavorite, setIsFavorite] = useState(isFavoriteInitial);
 
   const { toast } = useToast();
-  const { user, isAuthenticated, isAdmin, isLoading: isLoadingAuth } = useAuth(); // Added isAdmin
+  const { user, isAuthenticated, isAdmin, isLoading: isLoadingAuth } = useAuth();
 
   const [likeState, handleLikeAction, isLikePending] = useActionState(toggleLikeAccessoryAction, initialLikeActionState);
   const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(false);
   const [currentLikesCount, setCurrentLikesCount] = useState(0);
 
-  const [currentComments, setCurrentComments] = useState<Comment[]>([]);
+  const [currentComments, setCurrentComments] = useState<(Omit<Comment, 'createdAt'> & { createdAt: string })[]>([]);
 
   useEffect(() => {
     setAccessory(initialAccessory);
@@ -51,14 +62,17 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     setIsFavorite(isFavoriteInitial);
     setCurrentLikesCount(initialAccessory.likedBy?.length || 0);
     setIsLikedByCurrentUser(isAuthenticated && user ? initialAccessory.likedBy?.includes(user.id) : false);
+    // Filter and set comments
     setCurrentComments(initialAccessory.comments?.filter(c => c.status === 'approved') || []);
   }, [initialAccessory, isFavoriteInitial, isAuthenticated, user]);
+
 
   useEffect(() => {
     if (likeState?.message) {
       if (likeState.success) {
         setIsLikedByCurrentUser(likeState.isLiked);
         setCurrentLikesCount(likeState.likesCount);
+        toast({ title: "Sucesso!", description: likeState.message });
       } else {
         toast({ title: "Erro", description: likeState.message || "Falha ao processar curtida.", variant: "destructive" });
       }
@@ -94,7 +108,8 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     handleLikeAction(formData);
   };
 
-  const handleCommentAdded = (newComment: Comment) => {
+  // Type for comment when it's added, createdAt will be string
+  const handleCommentAdded = (newComment: Omit<Comment, 'createdAt'> & { createdAt: string }) => {
     if (newComment.status === 'approved') {
       setCurrentComments(prevComments => [...prevComments, newComment]);
     }
@@ -141,7 +156,7 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
             style={{ objectFit: 'cover' }}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             data-ai-hint={accessory.imageHint || "accessory details"}
-            priority={true} 
+            priority={true}
           />
         </div>
         {!isLoadingAuth && isAuthenticated && (
@@ -202,10 +217,17 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
           </details>
         )}
 
+        {accessory.embedHtml && (
+          <div className="my-6 rounded-lg overflow-hidden shadow-md aspect-video">
+            <div className="[&_iframe]:w-full [&_iframe]:h-full [&_iframe]:rounded-lg" dangerouslySetInnerHTML={{ __html: accessory.embedHtml }} />
+          </div>
+        )}
+
         <CommentsSection
           accessoryId={accessory.id}
           comments={currentComments}
           onCommentAdded={handleCommentAdded}
+          serverAddCommentAction={addCommentAccessoryAction}
         />
       </CardContent>
       <CardFooter className="p-6 bg-secondary/30">

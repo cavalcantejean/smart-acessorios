@@ -1,17 +1,32 @@
 
-import { getDailyDeals } from '@/lib/data';
+import { getDailyDeals } from '@/lib/data'; // Now async
 import type { Accessory } from '@/lib/types';
 import AccessoryCard from '@/components/AccessoryCard';
 import { Tag } from 'lucide-react';
 import type { Metadata } from 'next';
+import { Timestamp } from 'firebase/firestore';
 
 export const metadata: Metadata = {
   title: 'Ofertas do Dia | SmartAcessorios',
   description: 'Confira as melhores ofertas do dia em acessórios para smartphones.',
 };
 
-export default function DealsPage() {
-  const dailyDeals: Accessory[] = getDailyDeals();
+// Helper to prepare accessory for client (convert Timestamps)
+const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
+  return {
+    ...accessory,
+    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : accessory.createdAt as any,
+    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : accessory.updatedAt as any,
+    comments: (accessory.comments || []).map(comment => ({
+      ...comment,
+      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : comment.createdAt as any,
+    })),
+  };
+};
+
+export default async function DealsPage() {
+  const rawDeals: Accessory[] = await getDailyDeals(); // Await async call
+  const dailyDeals = rawDeals.map(prepareAccessoryForClient);
 
   return (
     <div className="space-y-8">

@@ -1,5 +1,5 @@
 
-import { getCouponById } from '@/lib/data';
+import { getCouponById } from '@/lib/data'; // Now async
 import type { Coupon } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,10 @@ import { ArrowLeft, AlertTriangle, TicketPercent } from 'lucide-react';
 import type { Metadata } from 'next';
 import CouponForm from '../../components/CouponForm';
 import { updateCouponAction } from '../../actions';
+import { Timestamp } from 'firebase/firestore';
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const coupon = getCouponById(params.id);
+  const coupon = await getCouponById(params.id); // Await async call
   if (!coupon) {
     return { title: 'Cupom Não Encontrado | Admin' };
   }
@@ -21,7 +22,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditCouponPage({ params }: { params: { id: string } }) {
-  const coupon = getCouponById(params.id);
+  const coupon = await getCouponById(params.id); // Await async call
 
   if (!coupon) {
     return (
@@ -41,11 +42,13 @@ export default async function EditCouponPage({ params }: { params: { id: string 
   }
 
   const boundUpdateCouponAction = updateCouponAction.bind(null, coupon.id);
-  
+
   // Prepare initialData for the form. expiryDate needs to be in 'yyyy-MM-dd' format if present.
   const initialDataForForm = {
     ...coupon,
-    expiryDate: coupon.expiryDate ? coupon.expiryDate.split('T')[0] : "", // Format for date input
+    expiryDate: coupon.expiryDate instanceof Timestamp
+                 ? coupon.expiryDate.toDate().toISOString().split('T')[0]
+                 : (typeof coupon.expiryDate === 'string' ? coupon.expiryDate.split('T')[0] : ""),
     store: coupon.store || "",
   };
 
@@ -75,11 +78,11 @@ export default async function EditCouponPage({ params }: { params: { id: string 
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <CouponForm 
-              formAction={boundUpdateCouponAction} 
+            <CouponForm
+              formAction={boundUpdateCouponAction}
               initialData={initialDataForForm}
               submitButtonText="Salvar Alterações"
-            /> 
+            />
         </CardContent>
       </Card>
     </div>

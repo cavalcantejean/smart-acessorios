@@ -1,17 +1,34 @@
 
-import { getAllAccessories } from '@/lib/data';
+import { getAllAccessories } from '@/lib/data'; // Now async
 import type { Accessory } from '@/lib/types';
 import AccessoryCard from '@/components/AccessoryCard';
 import { ShoppingBag } from 'lucide-react';
 import type { Metadata } from 'next';
+import { Timestamp } from 'firebase/firestore';
 
 export const metadata: Metadata = {
   title: 'Todos os Produtos | SmartAcessorios',
   description: 'Navegue por todos os nossos acessórios para smartphones.',
 };
 
-export default function ProductsPage() {
-  const allAccessories: Accessory[] = getAllAccessories();
+// Helper to prepare accessory for client (convert Timestamps)
+const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
+  return {
+    ...accessory,
+    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : accessory.createdAt as any,
+    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : accessory.updatedAt as any,
+    comments: (accessory.comments || []).map(comment => ({
+      ...comment,
+      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : comment.createdAt as any,
+    })),
+  };
+};
+
+
+export default async function ProductsPage() {
+  const rawAccessories: Accessory[] = await getAllAccessories(); // Await async call
+  const allAccessories = rawAccessories.map(prepareAccessoryForClient);
+
 
   return (
     <div className="space-y-8">

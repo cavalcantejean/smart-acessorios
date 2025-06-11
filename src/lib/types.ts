@@ -1,12 +1,13 @@
 
 import type { ComponentType } from 'react';
+import type { Timestamp } from 'firebase/firestore';
 
 export interface Comment {
   id: string;
   userId: string;
   userName: string;
   text: string;
-  createdAt: string; // ISO date string
+  createdAt: Timestamp; // Changed to Firestore Timestamp
   status: 'approved' | 'pending_review' | 'rejected';
 }
 
@@ -22,9 +23,11 @@ export interface Accessory {
   category?: string;
   aiSummary?: string;
   isDeal?: boolean;
-  likedBy: string[]; // Array of user IDs who liked this accessory
-  comments: Comment[];
+  likedBy: string[];
+  comments: Comment[]; // Comments will be a subcollection or handled separately
   embedHtml?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface Coupon {
@@ -32,9 +35,11 @@ export interface Coupon {
   code: string;
   description: string;
   discount: string;
-  expiryDate?: string;
-  store?: string; // Optional: name of the store or brand
-  applyUrl?: string; // Optional: URL where the coupon can be applied
+  expiryDate?: Timestamp; // Changed to Firestore Timestamp
+  store?: string;
+  applyUrl?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface Testimonial {
@@ -46,11 +51,10 @@ export interface Testimonial {
   role?: string;
 }
 
-// User data as stored in Firestore
 export interface UserFirestoreData {
-  id: string; // Should match Firebase Auth UID
+  id: string;
   name: string;
-  email: string; // Stored for querying or display, but Auth is source of truth
+  email: string;
   isAdmin: boolean;
   followers: string[];
   following: string[];
@@ -58,21 +62,17 @@ export interface UserFirestoreData {
   avatarHint?: string;
   bio?: string;
   badges?: string[];
-  createdAt?: any; // Firestore Timestamp for creation
-  // NO PASSWORD HERE
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
-// User object used within the application, typically after auth
 export interface AuthUser {
-  id: string; // Firebase Auth UID
-  name: string | null; // Can be null if not set in profile or Firestore
-  email: string | null; // Firebase Auth email
+  id: string;
+  name: string | null;
+  email: string | null;
   isAdmin: boolean;
-  // You can add other frequently accessed, non-sensitive fields from Firestore here
 }
 
-
-// Badge System Types
 export interface BadgeCriteriaData {
   userCommentsCount: number;
   userLikesCount: number;
@@ -84,17 +84,36 @@ export interface Badge {
   id: string;
   name: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>; // Lucide icon component
+  icon: React.ComponentType<{ className?: string }>;
   color?: string;
-  criteria: (user: UserFirestoreData, data: BadgeCriteriaData) => boolean; // User type updated
+  criteria: (user: UserFirestoreData, data: BadgeCriteriaData) => boolean;
 }
 
-// Type for displaying pending comments in admin moderation
 export interface PendingCommentDisplay {
-  comment: Comment;
+  comment: Comment; // Comment object itself
   accessoryId: string;
   accessoryName: string;
 }
+
+export interface Post {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string; // HTML content
+  imageUrl: string;
+  imageHint?: string;
+  authorName: string;
+  authorAvatarUrl?: string;
+  authorAvatarHint?: string;
+  category?: string;
+  tags: string[];
+  publishedAt: Timestamp; // Changed to Firestore Timestamp
+  embedHtml?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
 
 // Analytics Types
 export interface CategoryCount {
@@ -109,10 +128,17 @@ export interface TopAccessoryInfo {
   imageUrl?: string;
 }
 
-export interface RecentCommentInfo extends Comment {
+export interface RecentCommentInfo {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  createdAt: string; // Keep as string for display, will be converted from Timestamp
+  status: 'approved' | 'pending_review' | 'rejected';
   accessoryName: string;
   accessoryId: string;
 }
+
 
 export interface AnalyticsData {
   totalUsers: number;
@@ -124,7 +150,7 @@ export interface AnalyticsData {
   recentComments: RecentCommentInfo[];
 }
 
-// Site Settings Types
+// Site Settings Types (remains local)
 export interface SocialLinkSetting {
   platform: string;
   label: string;
@@ -142,8 +168,10 @@ export interface SiteSettings {
   siteFaviconUrl?: string;
 }
 
-// New Type for Recent Activity
+// For User Profile Activity
 export interface CommentWithAccessoryInfo extends Comment {
   accessoryId: string;
   accessoryName: string;
+  // Ensure createdAt is string here if directly used in client component expecting string
+  createdAt: string; // Or handle conversion in component
 }

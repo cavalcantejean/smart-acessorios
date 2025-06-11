@@ -1,25 +1,38 @@
 
-import { getAnalyticsData, type AnalyticsData } from '@/lib/data';
+import { getAnalyticsData, type AnalyticsData } from '@/lib/data'; // Now async
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, BarChart3, Users, ShoppingBag, MessageSquare } from 'lucide-react';
+import { ArrowLeft, BarChart3 } from 'lucide-react'; // Removed unused icons
 import type { Metadata } from 'next';
 import AnalyticsSummaryCards from './components/AnalyticsSummaryCards';
 import AccessoriesByCategoryChart from './components/AccessoriesByCategoryChart';
 import TopItemsList from './components/TopItemsList';
 import RecentCommentsList from './components/RecentCommentsList';
 import { Separator } from '@/components/ui/separator';
-
+import { Timestamp } from 'firebase/firestore';
 
 export const metadata: Metadata = {
   title: 'Analytics | Admin SmartAcessorios',
   description: 'Visualize estatísticas de uso e engajamento da plataforma.',
 };
 
-// This page is now a Server Component to fetch data
+// Helper to ensure dates in recentComments are strings for client components
+const prepareAnalyticsDataForClient = (data: AnalyticsData): AnalyticsData => {
+  return {
+    ...data,
+    recentComments: (data.recentComments || []).map(comment => ({
+      ...comment,
+      // createdAt is already string in RecentCommentInfo type, but good to be sure
+      createdAt: typeof comment.createdAt === 'string' ? comment.createdAt : new Date(comment.createdAt).toISOString(),
+    })),
+  };
+};
+
+
 export default async function AnalyticsPage() {
-  const analyticsData: AnalyticsData = await getAnalyticsData();
+  const rawAnalyticsData: AnalyticsData = await getAnalyticsData(); // Await async call
+  const analyticsData = prepareAnalyticsDataForClient(rawAnalyticsData);
 
   return (
     <div className="space-y-8">
@@ -46,7 +59,7 @@ export default async function AnalyticsPage() {
       />
 
       <Separator className="my-6" />
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-lg">
           <CardHeader>
@@ -61,7 +74,7 @@ export default async function AnalyticsPage() {
             )}
           </CardContent>
         </Card>
-        
+
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Comentários Recentes</CardTitle>

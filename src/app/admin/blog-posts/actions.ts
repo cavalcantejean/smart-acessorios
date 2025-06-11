@@ -2,21 +2,20 @@
 "use server";
 
 import { z } from 'zod';
-import { PostFormSchema, type PostFormValues } from '@/lib/schemas/post-schema';
-import { addPost, updatePost, deletePost as deletePostData, getPostById } from '@/lib/data';
+import { PostFormSchema } from '@/lib/schemas/post-schema';
+import { addPost, updatePost, deletePost as deletePostData, getPostById } from '@/lib/data'; // Now async
 import type { Post } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+// import { redirect } from 'next/navigation'; // Not redirecting from action
 
 export interface PostActionResult {
   success: boolean;
   message?: string;
-  error?: string; // General error message
-  errors?: z.ZodIssue[]; // Specific field validation errors
+  error?: string;
+  errors?: z.ZodIssue[];
   post?: Post;
 }
 
-// Helper to convert comma-separated tags string to string array
 const parseTags = (tagsString?: string): string[] => {
   if (!tagsString || tagsString.trim() === "") return [];
   return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
@@ -27,16 +26,15 @@ export async function createPostAction(
   formData: FormData
 ): Promise<PostActionResult> {
   const rawFormData = Object.fromEntries(formData.entries());
-  
-  // Handle optional fields and parse tags
   const dataToValidate = {
     ...rawFormData,
-    tags: rawFormData.tags as string | undefined, // Keep as string for schema validation
+    tags: rawFormData.tags as string | undefined,
     authorAvatarUrl: rawFormData.authorAvatarUrl || undefined,
     authorAvatarHint: rawFormData.authorAvatarHint || undefined,
     category: rawFormData.category || undefined,
     imageHint: rawFormData.imageHint || undefined,
-    publishedAt: rawFormData.publishedAt || new Date().toISOString().split('T')[0], // Default to today if empty
+    publishedAt: rawFormData.publishedAt || new Date().toISOString().split('T')[0],
+    embedHtml: rawFormData.embedHtml || undefined,
   };
 
   const validatedFields = PostFormSchema.safeParse(dataToValidate);
@@ -54,19 +52,18 @@ export async function createPostAction(
     const postDataForDb = {
       ...validatedFields.data,
       tags: parseTags(validatedFields.data.tags),
-      publishedAt: new Date(validatedFields.data.publishedAt || Date.now()).toISOString(),
+      // publishedAt will be converted to Timestamp in addPost
     };
-
-    const newPost = addPost(postDataForDb);
+    const newPost = await addPost(postDataForDb as any); // Cast as any for date handling
     if (newPost) {
       revalidatePath('/admin/blog-posts');
       revalidatePath('/blog');
       revalidatePath(`/blog/${newPost.slug}`);
-      revalidatePath('/'); // Revalidate homepage if latest posts are shown
-      return { 
-        success: true, 
-        message: `Post "${newPost.title}" criado com sucesso!`, 
-        post: newPost 
+      revalidatePath('/');
+      return {
+        success: true,
+        message: `Post "${newPost.title}" criado com sucesso!`,
+        post: newPost
       };
     } else {
       return { success: false, error: "Falha ao criar o post no sistema." };
@@ -91,8 +88,9 @@ export async function updatePostAction(
     category: rawFormData.category || undefined,
     imageHint: rawFormData.imageHint || undefined,
     publishedAt: rawFormData.publishedAt || undefined,
+    embedHtml: rawFormData.embedHtml || undefined,
   };
-  
+
   const validatedFields = PostFormSchema.safeParse(dataToValidate);
 
   if (!validatedFields.success) {
@@ -108,22 +106,19 @@ export async function updatePostAction(
     const postDataForDb = {
       ...validatedFields.data,
       tags: parseTags(validatedFields.data.tags),
-      publishedAt: validatedFields.data.publishedAt 
-                     ? new Date(validatedFields.data.publishedAt).toISOString() 
-                     : new Date().toISOString(), // Fallback for publishedAt
+      // publishedAt will be converted in updatePost
     };
-
-    const updatedPost = updatePost(postId, postDataForDb);
+    const updatedPost = await updatePost(postId, postDataForDb as any); // Cast for date
     if (updatedPost) {
       revalidatePath('/admin/blog-posts');
       revalidatePath(`/admin/blog-posts/${postId}/edit`);
       revalidatePath('/blog');
       revalidatePath(`/blog/${updatedPost.slug}`);
       revalidatePath('/');
-      return { 
-        success: true, 
-        message: `Post "${updatedPost.title}" atualizado com sucesso!`, 
-        post: updatedPost 
+      return {
+        success: true,
+        message: `Post "${updatedPost.title}" atualizado com sucesso!`,
+        post: updatedPost
       };
     } else {
       return { success: false, error: `Falha ao atualizar o post. ID ${postId} não encontrado.` };
@@ -145,12 +140,12 @@ export async function deletePostAction(
   }
 
   try {
-    const postToDelete = getPostById(postId); // Get slug before deleting for revalidation
-    const deleted = deletePostData(postId);
+    const postToDelete = await getPostById(postId);
+    const deleted = await deletePostData(postId);
     if (deleted && postToDelete) {
       revalidatePath('/admin/blog-posts');
       revalidatePath('/blog');
-      revalidatePath(`/blog/${postToDelete.slug}`); // Revalidate specific slug
+      revalidatePath(`/blog/${postToDelete.slug}`);
       revalidatePath('/');
       return { success: true, message: "Post excluído com sucesso." };
     } else if (deleted && !postToDelete){

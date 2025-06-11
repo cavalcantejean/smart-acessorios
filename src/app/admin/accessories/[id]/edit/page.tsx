@@ -1,16 +1,17 @@
 
-import { getAccessoryById } from '@/lib/data';
+import { getAccessoryById } from '@/lib/data'; // Now async
 import type { Accessory } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Construction, AlertTriangle } from 'lucide-react';
 import type { Metadata } from 'next';
-// import AccessoryForm from '../../components/AccessoryForm'; // To be used later
-// import { updateAccessoryAction } from '../../actions'; // To be used later
+import AccessoryForm from '@/components/admin/AccessoryForm';
+import { updateAccessoryAction } from '../../actions';
+import { Timestamp } from 'firebase/firestore';
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const accessory = getAccessoryById(params.id);
+  const accessory = await getAccessoryById(params.id); // Await async call
   if (!accessory) {
     return { title: 'Acessório Não Encontrado | Admin' };
   }
@@ -21,8 +22,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditAccessoryPage({ params }: { params: { id: string } }) {
-  // Admin auth check should be here or in a layout
-  const accessory = getAccessoryById(params.id);
+  const accessory = await getAccessoryById(params.id); // Await async call
 
   if (!accessory) {
     return (
@@ -41,7 +41,17 @@ export default async function EditAccessoryPage({ params }: { params: { id: stri
     );
   }
 
-  // const boundUpdateAccessoryAction = updateAccessoryAction.bind(null, accessory.id);
+  const boundUpdateAccessoryAction = updateAccessoryAction.bind(null, accessory.id);
+
+  // Prepare initialData for the form, converting Timestamps if necessary
+  const initialDataForForm = {
+    ...accessory,
+    // Ensure date fields that might be Timestamps are converted for form if needed
+    // For AccessoryForm, it expects strings or booleans as per AccessoryFormValues
+    // Price is already string in schema, isDeal is boolean
+    // Timestamps (createdAt, updatedAt) are not directly on the form schema
+  };
+
 
   return (
     <div className="space-y-6">
@@ -62,22 +72,15 @@ export default async function EditAccessoryPage({ params }: { params: { id: stri
         <CardHeader>
           <CardTitle>Formulário de Edição de Acessório</CardTitle>
           <CardDescription>
-            Esta funcionalidade (formulário de edição) está em desenvolvimento.
+            Modifique os campos abaixo para atualizar o acessório.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-center py-12">
-          <Construction className="mx-auto h-16 w-16 text-primary mb-4" />
-          <p className="text-muted-foreground">
-            O formulário para editar acessórios será implementado em breve.
-          </p>
-          {/* 
-            Placeholder for the form:
-            <AccessoryForm 
-              formAction={boundUpdateAccessoryAction} 
-              initialData={accessory}
+        <CardContent>
+           <AccessoryForm
+              formAction={boundUpdateAccessoryAction}
+              initialData={initialDataForForm} // Pass the prepared data
               submitButtonText="Salvar Alterações"
-            /> 
-          */}
+            />
         </CardContent>
       </Card>
     </div>
