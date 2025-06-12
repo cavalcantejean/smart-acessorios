@@ -29,6 +29,7 @@ export type GenerateDescriptionOutput = z.infer<typeof GenerateDescriptionOutput
 export async function generateProductDescription(
   input: GenerateDescriptionInput
 ): Promise<GenerateDescriptionOutput> {
+  console.log("[GENKIT_FLOW_SERVER] generateProductDescription (wrapper) chamada com input:", input);
   return generateProductDescriptionFlow(input);
 }
 
@@ -63,10 +64,24 @@ const generateProductDescriptionFlow = ai.defineFlow(
     outputSchema: GenerateDescriptionOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
-    if (!output?.generatedDescription) {
-        throw new Error("AI failed to generate a description.");
+    console.log("[GENKIT_FLOW_SERVER] generateProductDescriptionFlow INICIADO com input:", input);
+    try {
+      console.log("[GENKIT_FLOW_SERVER] Chamando o prompt Genkit...");
+      const {output} = await prompt(input);
+      console.log("[GENKIT_FLOW_SERVER] Resposta do prompt Genkit:", output);
+
+      if (!output?.generatedDescription) {
+          console.error("[GENKIT_FLOW_SERVER] Falha da IA: descrição gerada é nula ou vazia.");
+          throw new Error("AI failed to generate a description. Output was null or description empty.");
+      }
+      console.log("[GENKIT_FLOW_SERVER] Descrição gerada com sucesso pelo Genkit.");
+      return output;
+    } catch (error) {
+      console.error("[GENKIT_FLOW_SERVER] Erro dentro do fluxo Genkit:", error);
+      throw error; // Re-throw para ser capturado pela Server Action
     }
-    return output;
   }
 );
+
+
+    

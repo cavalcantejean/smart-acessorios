@@ -3,8 +3,7 @@
 
 import { z } from 'zod';
 import { AccessoryFormSchema } from '@/lib/schemas/accessory-schema';
-// Importar funções de data-admin.ts que usam o Admin SDK
-import { addAccessoryWithAdmin, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data-admin'; 
+import { addAccessoryWithAdmin, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data-admin';
 import type { Accessory } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow';
@@ -78,7 +77,7 @@ export async function createAccessoryAction(
   console.log("[Action:createAccessory] Validated data for Firestore (via Admin SDK):", JSON.stringify(validatedFields.data, null, 2));
 
   try {
-    const newAccessory = await addAccessoryWithAdmin(validatedFields.data); // Usa a função de data-admin.ts
+    const newAccessory = await addAccessoryWithAdmin(validatedFields.data);
     if (newAccessory) {
       revalidatePath('/admin/accessories');
       revalidatePath('/products');
@@ -96,10 +95,10 @@ export async function createAccessoryAction(
   } catch (error: any) {
     console.error("[Action:createAccessory] Detailed error in catch block:", error);
     let errorMessage = "Erro no servidor ao tentar criar o acessório.";
-    if (error.code) { 
+    if (error.code) {
         errorMessage += ` (Código Firebase: ${error.code})`;
     }
-    if (error.message) { 
+    if (error.message) {
         errorMessage += ` Mensagem: ${error.message}`;
     }
     return { success: false, error: errorMessage };
@@ -155,7 +154,7 @@ export async function updateAccessoryAction(
   }
 
   try {
-    const updatedAccessory = await updateAccessory(accessoryId, validatedFields.data); // Usa a função de data-admin.ts
+    const updatedAccessory = await updateAccessory(accessoryId, validatedFields.data);
     if (updatedAccessory) {
       revalidatePath('/admin/accessories');
       revalidatePath(`/admin/accessories/${accessoryId}/edit`);
@@ -207,7 +206,7 @@ export async function deleteAccessoryAction(
   }
 
   try {
-    const deleted = await deleteAccessoryData(accessoryId); // Usa a função de data-admin.ts
+    const deleted = await deleteAccessoryData(accessoryId);
     if (deleted) {
       revalidatePath('/admin/accessories');
       revalidatePath('/products');
@@ -236,21 +235,38 @@ interface GenerateDescriptionAIResult {
 export async function generateDescriptionWithAIAction(
   productInfo: string
 ): Promise<GenerateDescriptionAIResult> {
+  console.log("[AI_ACTION_SERVER] generateDescriptionWithAIAction chamada com productInfo:", productInfo);
   const validationResult = GenerateDescriptionAISchema.safeParse({ productInfo });
   if (!validationResult.success) {
-    return { success: false, error: validationResult.error.errors.map(e => e.message).join(', ') };
+    const errorMessages = validationResult.error.errors.map(e => e.message).join(', ');
+    console.error("[AI_ACTION_SERVER] Validação falhou:", errorMessages);
+    return { success: false, error: errorMessages };
   }
 
   try {
+    console.log("[AI_ACTION_SERVER] Chamando generateProductDescription (Genkit flow)...");
     const result: GenerateDescriptionOutput = await generateProductDescription({ productInfo: validationResult.data.productInfo });
+    console.log("[AI_ACTION_SERVER] Resultado do Genkit flow:", result);
+
     if (result.generatedDescription) {
+      console.log("[AI_ACTION_SERVER] Descrição gerada com sucesso.");
       return { success: true, description: result.generatedDescription };
     } else {
+      console.error("[AI_ACTION_SERVER] AI não conseguiu gerar uma descrição, mas não lançou erro.");
       return { success: false, error: "AI não conseguiu gerar uma descrição." };
     }
-  } catch (error) {
-    console.error("Error in generateDescriptionWithAIAction:", error);
-    return { success: false, error: "Falha ao gerar descrição com IA. Tente novamente." };
+  } catch (error: any) {
+    console.error("[AI_ACTION_SERVER] Erro em generateDescriptionWithAIAction:", error);
+    let errorMessage = "Falha ao gerar descrição com IA. Tente novamente.";
+    if (error.message) {
+        errorMessage = `Falha na IA: ${error.message}`;
+    }
+    if (error.cause) {
+        errorMessage += ` Causa: ${JSON.stringify(error.cause)}`;
+    }
+    return { success: false, error: errorMessage };
   }
 }
+    
+
     
