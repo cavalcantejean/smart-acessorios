@@ -19,36 +19,38 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'app-files-v1.softr-files.com', // Added this hostname
+        hostname: 'app-files-v1.softr-files.com',
         port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com', // Placeholder for potential Firebase Storage use
+        hostname: 'firebasestorage.googleapis.com',
         port: '',
         pathname: '/**',
       }
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     // Apply these fallbacks only to the client-side bundle
     if (!isServer) {
       if (!config.resolve) {
         config.resolve = {};
       }
+      // Ensure client-side fallbacks for Node.js core modules
       config.resolve.fallback = {
-        ...(config.resolve.fallback || {}), // Spread existing fallbacks if any
+        ...(config.resolve.fallback || {}),
         "child_process": false,
         "fs": false,
         "os": false,
         "path": false,
         "net": false,
         "tls": false,
-        "stream": false, // Added common problematic module
-        "crypto": false, // Added common problematic module
+        "stream": false,
+        "crypto": false,
       };
     }
+
     // Important: return the modified config
     return config;
   },
