@@ -4,18 +4,82 @@
 import { z } from 'zod';
 import { AccessoryFormSchema } from '@/lib/schemas/accessory-schema';
 import { addAccessoryWithAdmin, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data-admin';
-import type { Accessory } from '@/lib/types';
+import type { Accessory, Comment } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow';
 import { adminDb } from '@/lib/firebase-admin';
+import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 
+// Helper type for client-safe accessory, mirroring Accessory type but with string dates
+interface ClientSafeComment extends Omit<Comment, 'createdAt'> {
+  createdAt?: string;
+}
+interface ClientSafeAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'comments' | 'likedBy' | 'price'> {
+  id: string; // Ensure id is present
+  name: string;
+  shortDescription: string;
+  fullDescription: string;
+  imageUrl: string;
+  imageHint?: string;
+  affiliateLink: string;
+  price?: string; // price is already string or undefined in Accessory
+  category?: string;
+  isDeal?: boolean;
+  aiSummary?: string;
+  embedHtml?: string;
+  likedBy: string[]; // likedBy is string[]
+  createdAt?: string;
+  updatedAt?: string;
+  comments: ClientSafeComment[];
+}
+
+// Update AccessoryActionResult to use this type
 export interface AccessoryActionResult {
   success: boolean;
   message?: string;
   error?: string;
   errors?: z.ZodIssue[];
-  accessory?: Accessory;
+  accessory?: ClientSafeAccessory; // Use the client-safe type
 }
+
+// Helper function to serialize an accessory
+function serializeAccessoryForClient(accessory: Accessory | null | undefined): ClientSafeAccessory | undefined {
+  if (!accessory) return undefined;
+
+  const adminCreatedAt = accessory.createdAt as unknown as AdminTimestamp | undefined;
+  const adminUpdatedAt = accessory.updatedAt as unknown as AdminTimestamp | undefined;
+
+  return {
+    id: accessory.id,
+    name: accessory.name,
+    shortDescription: accessory.shortDescription,
+    fullDescription: accessory.fullDescription,
+    imageUrl: accessory.imageUrl,
+    imageHint: accessory.imageHint,
+    affiliateLink: accessory.affiliateLink,
+    price: accessory.price,
+    category: accessory.category,
+    isDeal: accessory.isDeal,
+    aiSummary: accessory.aiSummary,
+    embedHtml: accessory.embedHtml,
+    likedBy: accessory.likedBy || [],
+    createdAt: adminCreatedAt?.toDate?.().toISOString(),
+    updatedAt: adminUpdatedAt?.toDate?.().toISOString(),
+    comments: (accessory.comments || []).map(comment => {
+      const adminCommentCreatedAt = comment.createdAt as unknown as AdminTimestamp | undefined;
+      return {
+        ...comment,
+        id: comment.id, // ensure id is present
+        userId: comment.userId,
+        userName: comment.userName,
+        text: comment.text,
+        status: comment.status,
+        createdAt: adminCommentCreatedAt?.toDate?.().toISOString(),
+      };
+    }),
+  };
+}
+
 
 export async function createAccessoryAction(
   prevState: AccessoryActionResult | null,
@@ -77,20 +141,29 @@ export async function createAccessoryAction(
   console.log("[Action:createAccessory] Validated data for Firestore (via Admin SDK):", JSON.stringify(validatedFields.data, null, 2));
 
   try {
-    const newAccessory = await addAccessoryWithAdmin(validatedFields.data);
-    if (newAccessory) {
+    // addAccessoryWithAdmin returns data with FieldValue for timestamps initially
+    const tempAccessoryData = await addAccessoryWithAdmin(validatedFields.data);
+
+    // Fetch the actual document to get resolved Timestamps
+    const docRef = adminDb.collection('acessorios').doc(tempAccessoryData.id);
+    const newDocSnap = await docRef.get();
+    const createdAccessoryDb = newDocSnap.data();
+
+    if (createdAccessoryDb) {
+      const createdAccessory = { id: newDocSnap.id, ...createdAccessoryDb } as Accessory; // Cast to base type
+
       revalidatePath('/admin/accessories');
       revalidatePath('/products');
       revalidatePath('/');
       revalidatePath('/deals');
       return {
         success: true,
-        message: `Acessório "${newAccessory.name}" criado com sucesso!`,
-        accessory: newAccessory as Accessory
+        message: `Acessório "${createdAccessory.name}" criado com sucesso!`,
+        accessory: serializeAccessoryForClient(createdAccessory),
       };
     } else {
-      console.error("[Action:createAccessory] addAccessoryWithAdmin returned a falsy value without throwing an error.");
-      return { success: false, error: "Falha ao criar o acessório no sistema (retorno inesperado de addAccessoryWithAdmin)." };
+      console.error("[Action:createAccessory] Failed to fetch newly created accessory document.");
+      return { success: false, error: "Falha ao buscar o acessório recém-criado." };
     }
   } catch (error: any) {
     console.error("[Action:createAccessory] Detailed error in catch block:", error);
@@ -154,8 +227,8 @@ export async function updateAccessoryAction(
   }
 
   try {
-    const updatedAccessory = await updateAccessory(accessoryId, validatedFields.data);
-    if (updatedAccessory) {
+    const updatedAccessoryFromDb = await updateAccessory(accessoryId, validatedFields.data);
+    if (updatedAccessoryFromDb) {
       revalidatePath('/admin/accessories');
       revalidatePath(`/admin/accessories/${accessoryId}/edit`);
       revalidatePath(`/accessory/${accessoryId}`);
@@ -164,8 +237,8 @@ export async function updateAccessoryAction(
       revalidatePath('/deals');
       return {
         success: true,
-        message: `Acessório "${updatedAccessory.name}" atualizado com sucesso!`,
-        accessory: updatedAccessory
+        message: `Acessório "${updatedAccessoryFromDb.name}" atualizado com sucesso!`,
+        accessory: serializeAccessoryForClient(updatedAccessoryFromDb)
       };
     } else {
       return { success: false, error: `Falha ao atualizar o acessório. ID ${accessoryId} não encontrado.` };
@@ -267,6 +340,4 @@ export async function generateDescriptionWithAIAction(
     return { success: false, error: errorMessage };
   }
 }
-    
-
     
