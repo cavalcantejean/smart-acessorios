@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
       config.resolve.fallback = {
-        ...(config.resolve.fallback || {}), // Ensures we're spreading an object
+        ...(config.resolve.fallback || {}), // Ensure we're spreading an object
         "child_process": false,
         "fs": false,
         "os": false,
