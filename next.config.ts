@@ -31,10 +31,8 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  webpack: (config, { isServer, dev }) => { // `dev` tells if it's in development mode
-    console.log(`[Next.js Webpack Config] Running for: ${isServer ? 'server' : 'client'}, Dev: ${dev}`);
+  webpack: (config, { isServer, dev }) => {
     if (!isServer) {
-      console.log('[Next.js Webpack Config] Applying client-side fallbacks...');
       config.resolve.fallback = {
         ...(config.resolve.fallback || {}), // Ensures we're spreading an object
         "child_process": false,
@@ -44,7 +42,6 @@ const nextConfig: NextConfig = {
         "net": false,
         "tls": false,
       };
-      console.log('[Next.js Webpack Config] Client fallbacks applied:', JSON.stringify(config.resolve.fallback));
     }
     // Important: return the modified config
     return config;
