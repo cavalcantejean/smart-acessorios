@@ -31,16 +31,22 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  webpack: (config, { isServer, dev }) => {
+  webpack: (config, { isServer }) => {
+    // Apply these fallbacks only to the client-side bundle
     if (!isServer) {
+      if (!config.resolve) {
+        config.resolve = {};
+      }
       config.resolve.fallback = {
-        ...(config.resolve.fallback || {}), // Ensure we're spreading an object
+        ...(config.resolve.fallback || {}), // Spread existing fallbacks if any
         "child_process": false,
         "fs": false,
         "os": false,
         "path": false,
         "net": false,
         "tls": false,
+        "stream": false, // Added common problematic module
+        "crypto": false, // Added common problematic module
       };
     }
     // Important: return the modified config
