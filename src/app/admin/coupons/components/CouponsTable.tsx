@@ -38,6 +38,44 @@ interface CouponsTableProps {
 
 const initialActionState: CouponActionResult = { success: false };
 
+// Helper to convert Firestore Timestamp (or its plain object representation) to displayable date string
+const formatDateSafe = (dateInput?: any): string => { // Use 'any' for flexibility
+  if (!dateInput) return 'N/A';
+
+  let date: Date;
+  try {
+    if (dateInput instanceof Date) {
+      date = dateInput;
+    } else if (dateInput instanceof Timestamp) { // Client SDK Timestamp
+      date = dateInput.toDate();
+    } else if (typeof dateInput === 'string') {
+       // Try parsing as ISO string first, then fallback to direct Date constructor
+      if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|([+-]\d{2}:\d{2})))?$/.test(dateInput)) {
+        date = parseISO(dateInput);
+      } else {
+        date = new Date(dateInput);
+      }
+    } else if (typeof dateInput === 'object' && dateInput !== null &&
+               typeof dateInput.seconds === 'number' && typeof dateInput.nanoseconds === 'number') {
+      // Handle plain object from RSC serialization
+      date = new Timestamp(dateInput.seconds, dateInput.nanoseconds).toDate();
+    } else {
+      console.warn("formatDateSafe received unrecognized dateInput in CouponsTable:", dateInput);
+      return 'Data inválida';
+    }
+
+    if (isNaN(date.getTime())) {
+      console.warn("formatDateSafe resulted in an invalid date for input in CouponsTable:", dateInput);
+      // Fallback for strings that might be pre-formatted if parseISO fails and new Date() also fails
+      return typeof dateInput === 'string' ? dateInput : 'Data inválida';
+    }
+    return format(date, "PPP", { locale: ptBR });
+  } catch (error) {
+    console.error("Error in formatDateSafe (CouponsTable):", error, "Input:", dateInput);
+    return typeof dateInput === 'string' ? dateInput : 'Data inválida';
+  }
+};
+
 export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
   const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
   const [deleteState, handleDeleteAction, isDeletePending] = useActionState(deleteCouponAction, initialActionState);
@@ -78,24 +116,6 @@ export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
       });
     }
   };
-
-  const formatDateSafe = (dateInput?: Timestamp | string | Date): string => {
-    if (!dateInput) return 'N/A';
-    try {
-      let date: Date;
-      if (dateInput instanceof Timestamp) {
-        date = dateInput.toDate();
-      } else if (dateInput instanceof Date) {
-        date = dateInput;
-      } else { // Assuming string
-        date = parseISO(dateInput);
-      }
-      return format(date, "PPP", { locale: ptBR });
-    } catch (error) {
-      return typeof dateInput === 'string' ? dateInput : 'Data inválida';
-    }
-  };
-
 
   return (
     <AlertDialog open={!!couponToDelete} onOpenChange={(isOpen) => { if (!isOpen) setCouponToDelete(null); }}>

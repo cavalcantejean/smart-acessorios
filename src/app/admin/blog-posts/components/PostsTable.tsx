@@ -37,6 +37,36 @@ interface PostsTableProps {
 
 const initialActionState: PostActionResult = { success: false };
 
+// Helper to convert Firestore Timestamp (or its plain object representation) to displayable date string
+const formatDate = (dateInput: any): string => { // Use 'any' for flexibility
+  if (!dateInput) return 'N/A';
+
+  let date: Date;
+
+  if (dateInput instanceof Date) {
+    date = dateInput;
+  } else if (dateInput instanceof Timestamp) { // Client SDK Timestamp
+    date = dateInput.toDate();
+  } else if (typeof dateInput === 'string') {
+    date = new Date(dateInput); // Handles ISO strings
+  } else if (typeof dateInput === 'object' && dateInput !== null &&
+             typeof dateInput.seconds === 'number' && typeof dateInput.nanoseconds === 'number') {
+    // Handle plain object from RSC serialization
+    date = new Timestamp(dateInput.seconds, dateInput.nanoseconds).toDate();
+  } else {
+    console.warn("formatDate received unrecognized dateInput in PostsTable:", dateInput);
+    return 'Data inválida';
+  }
+
+  if (isNaN(date.getTime())) {
+    console.warn("formatDate resulted in an invalid date for input in PostsTable:", dateInput);
+    return 'Data inválida';
+  }
+  return date.toLocaleDateString('pt-BR', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
+};
+
 export default function PostsTable({ initialPosts }: PostsTableProps) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [deleteState, handleDeleteAction, isDeletePending] = useActionState(deletePostAction, initialActionState);
@@ -77,22 +107,6 @@ export default function PostsTable({ initialPosts }: PostsTableProps) {
       });
     }
   };
-
-  const formatDate = (dateInput: Timestamp | Date | string) => {
-    let date: Date;
-    if (dateInput instanceof Timestamp) {
-      date = dateInput.toDate();
-    } else if (dateInput instanceof Date) {
-      date = dateInput;
-    } else {
-      date = new Date(dateInput); // Attempt to parse if string
-    }
-    if (isNaN(date.getTime())) return 'Data inválida';
-    return date.toLocaleDateString('pt-BR', {
-      year: 'numeric', month: 'short', day: 'numeric',
-    });
-  };
-
 
   return (
     <AlertDialog open={!!postToDelete} onOpenChange={(isOpen) => { if (!isOpen) setPostToDelete(null); }}>

@@ -38,21 +38,32 @@ interface AccessoriesTableProps {
 
 const initialActionState: AccessoryActionResult = { success: false };
 
-// Helper to convert Firestore Timestamp to displayable date string if needed
-const formatDate = (timestamp: Timestamp | Date | string | undefined): string => {
-  if (!timestamp) return 'N/A';
-  if (timestamp instanceof Timestamp) {
-    return timestamp.toDate().toLocaleDateString('pt-BR');
+// Helper to convert Firestore Timestamp (or its plain object representation) to displayable date string
+const formatDate = (timestampInput: any): string => {
+  if (!timestampInput) return 'N/A';
+
+  let date: Date;
+
+  if (timestampInput instanceof Date) {
+    date = timestampInput;
+  } else if (timestampInput instanceof Timestamp) { // Client SDK Timestamp
+    date = timestampInput.toDate();
+  } else if (typeof timestampInput === 'string') {
+    date = new Date(timestampInput); // Handles ISO strings
+  } else if (typeof timestampInput === 'object' && timestampInput !== null &&
+             typeof timestampInput.seconds === 'number' && typeof timestampInput.nanoseconds === 'number') {
+    // Handle plain object from RSC serialization
+    date = new Timestamp(timestampInput.seconds, timestampInput.nanoseconds).toDate();
+  } else {
+    console.warn("formatDate received unrecognized timestampInput in AccessoriesTable:", timestampInput);
+    return 'Data inválida';
   }
-  if (timestamp instanceof Date) {
-    return timestamp.toLocaleDateString('pt-BR');
+
+  if (isNaN(date.getTime())) {
+    console.warn("formatDate resulted in an invalid date for input in AccessoriesTable:", timestampInput);
+    return 'Data inválida';
   }
-  // Attempt to parse if it's a string (though Timestamps are preferred)
-  const date = new Date(timestamp);
-  if (!isNaN(date.getTime())) {
-    return date.toLocaleDateString('pt-BR');
-  }
-  return 'Data inválida';
+  return date.toLocaleDateString('pt-BR');
 };
 
 
@@ -153,7 +164,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
                     )}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-xs">
-                    {formatDate(accessory.createdAt as Timestamp | undefined)}
+                    {formatDate(accessory.createdAt)}
                   </TableCell>
                   <TableCell className="text-right space-x-1 sm:space-x-2">
                     <Button variant="outline" size="icon" asChild title="Editar Acessório">
