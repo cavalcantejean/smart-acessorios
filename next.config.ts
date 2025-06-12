@@ -32,7 +32,6 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
-    // Ensure resolve and resolve.fallback objects exist
     if (!config.resolve) {
       config.resolve = {};
     }
@@ -44,7 +43,7 @@ const nextConfig: NextConfig = {
       // For client-side bundle, provide fallbacks for Node.js core modules
       // and problematic server-side only libraries.
       config.resolve.fallback = {
-        ...(config.resolve.fallback || {}), // Keep existing fallbacks if any
+        ...(config.resolve.fallback || {}),
         "child_process": false,
         "fs": false,
         "os": false,
@@ -54,7 +53,7 @@ const nextConfig: NextConfig = {
         "stream": false,
         "crypto": false,
         "firebase-admin": false, 
-        "@google-cloud/firestore": false,
+        "@google-cloud/firestore": false, // Explicitly false for this problematic one too
       };
     }
 
@@ -64,3 +63,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+    

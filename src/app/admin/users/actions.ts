@@ -2,8 +2,9 @@
 "use server";
 
 import { z } from 'zod';
-import { toggleUserAdminStatus as toggleAdminData, getUserById, getAllUsers as getAllUsersData } from '@/lib/data'; // Now async
-import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
+import { toggleUserAdminStatus as toggleAdminData } from '@/lib/data-admin'; // Importar de data-admin.ts
+import { getUserById, getAllUsers as getAllUsersData } from '@/lib/data'; // Funções de leitura podem vir de data.ts (client SDK)
+import type { UserFirestoreData as User } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 const ToggleAdminStatusSchema = z.object({
@@ -36,11 +37,9 @@ export async function toggleAdminStatusAction(
 
   const { userId } = validatedFields.data;
 
-  // Prevent admin from revoking their own admin status if they are the only admin
-  // This logic needs to be async now due to data fetching
-  const targetUser = await getUserById(userId);
+  const targetUser = await getUserById(userId); // Leitura pode usar client SDK se as regras permitirem
   if (targetUser?.isAdmin) {
-      const allUsers = await getAllUsersData();
+      const allUsers = await getAllUsersData(); // Leitura pode usar client SDK
       const adminUsers = allUsers.filter(u => u.isAdmin);
       if (adminUsers.length === 1 && adminUsers[0].id === userId) {
            return { success: false, error: "Não é possível remover o status de administrador do único administrador." };
@@ -48,7 +47,7 @@ export async function toggleAdminStatusAction(
   }
 
   try {
-    const updatedUser = await toggleAdminData(userId); // Await async call
+    const updatedUser = await toggleAdminData(userId); // Escrita usa data-admin.ts
     if (!updatedUser) {
       return { success: false, error: `Falha ao alterar o status de admin. Usuário ${userId} não encontrado.` };
     }
@@ -65,3 +64,4 @@ export async function toggleAdminStatusAction(
     return { success: false, error: "Ocorreu um erro no servidor ao tentar alterar o status de administrador." };
   }
 }
+    

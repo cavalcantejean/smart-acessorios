@@ -3,10 +3,10 @@
 
 import { z } from 'zod';
 import { PostFormSchema } from '@/lib/schemas/post-schema';
-import { addPost, updatePost, deletePost as deletePostData, getPostById } from '@/lib/data'; // Now async
+import { addPost, updatePost, deletePost as deletePostData } from '@/lib/data-admin'; // Importar de data-admin.ts
+import { getPostById } from '@/lib/data'; // getPostById (leitura) pode vir de data.ts
 import type { Post } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-// import { redirect } from 'next/navigation'; // Not redirecting from action
 
 export interface PostActionResult {
   success: boolean;
@@ -52,9 +52,8 @@ export async function createPostAction(
     const postDataForDb = {
       ...validatedFields.data,
       tags: parseTags(validatedFields.data.tags),
-      // publishedAt will be converted to Timestamp in addPost
     };
-    const newPost = await addPost(postDataForDb as any); // Cast as any for date handling
+    const newPost = await addPost(postDataForDb as any); // Usa addPost de data-admin.ts
     if (newPost) {
       revalidatePath('/admin/blog-posts');
       revalidatePath('/blog');
@@ -106,9 +105,8 @@ export async function updatePostAction(
     const postDataForDb = {
       ...validatedFields.data,
       tags: parseTags(validatedFields.data.tags),
-      // publishedAt will be converted in updatePost
     };
-    const updatedPost = await updatePost(postId, postDataForDb as any); // Cast for date
+    const updatedPost = await updatePost(postId, postDataForDb as any); // Usa updatePost de data-admin.ts
     if (updatedPost) {
       revalidatePath('/admin/blog-posts');
       revalidatePath(`/admin/blog-posts/${postId}/edit`);
@@ -140,8 +138,8 @@ export async function deletePostAction(
   }
 
   try {
-    const postToDelete = await getPostById(postId);
-    const deleted = await deletePostData(postId);
+    const postToDelete = await getPostById(postId); // Leitura de data.ts
+    const deleted = await deletePostData(postId); // Escrita de data-admin.ts
     if (deleted && postToDelete) {
       revalidatePath('/admin/blog-posts');
       revalidatePath('/blog');
@@ -161,3 +159,4 @@ export async function deletePostAction(
     return { success: false, error: "Erro no servidor ao excluir post." };
   }
 }
+    

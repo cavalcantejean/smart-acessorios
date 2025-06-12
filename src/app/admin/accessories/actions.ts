@@ -3,12 +3,12 @@
 
 import { z } from 'zod';
 import { AccessoryFormSchema } from '@/lib/schemas/accessory-schema';
-// Importar o addAccessory que usa o Admin SDK
-import { addAccessoryWithAdmin, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data'; 
+// Importar funções de data-admin.ts que usam o Admin SDK
+import { addAccessoryWithAdmin, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data-admin'; 
 import type { Accessory } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow';
-import { adminDb } from '@/lib/firebase-admin'; // Importar adminDb para verificar permissão
+import { adminDb } from '@/lib/firebase-admin';
 
 export interface AccessoryActionResult {
   success: boolean;
@@ -23,7 +23,7 @@ export async function createAccessoryAction(
   formData: FormData
 ): Promise<AccessoryActionResult> {
   const rawFormData = Object.fromEntries(formData.entries());
-  const callingUserId = rawFormData.userId as string; // userId é adicionado pelo formulário
+  const callingUserId = rawFormData.userId as string;
 
   console.log("[Action:createAccessory] Raw form data received:", JSON.stringify(rawFormData, null, 2));
 
@@ -32,7 +32,6 @@ export async function createAccessoryAction(
     return { success: false, error: "ID do usuário chamador não fornecido. Ação não autorizada." };
   }
 
-  // Verificar se o usuário é admin usando o Admin SDK
   if (!adminDb) {
     console.error("[Action:createAccessory] Firebase Admin SDK (adminDb) is not initialized. Cannot verify admin status.");
     return { success: false, error: "Erro crítico na configuração do servidor (Admin SDK). Não é possível verificar o status de administrador." };
@@ -79,8 +78,7 @@ export async function createAccessoryAction(
   console.log("[Action:createAccessory] Validated data for Firestore (via Admin SDK):", JSON.stringify(validatedFields.data, null, 2));
 
   try {
-    // Usar a função que utiliza o Admin SDK para adicionar o acessório
-    const newAccessory = await addAccessoryWithAdmin(validatedFields.data);
+    const newAccessory = await addAccessoryWithAdmin(validatedFields.data); // Usa a função de data-admin.ts
     if (newAccessory) {
       revalidatePath('/admin/accessories');
       revalidatePath('/products');
@@ -89,7 +87,7 @@ export async function createAccessoryAction(
       return {
         success: true,
         message: `Acessório "${newAccessory.name}" criado com sucesso!`,
-        accessory: newAccessory as Accessory // Cast para o tipo correto se necessário
+        accessory: newAccessory as Accessory
       };
     } else {
       console.error("[Action:createAccessory] addAccessoryWithAdmin returned a falsy value without throwing an error.");
@@ -157,8 +155,7 @@ export async function updateAccessoryAction(
   }
 
   try {
-    // updateAccessory deve ser adaptado para usar Admin SDK ou ser chamado após verificação de admin
-    const updatedAccessory = await updateAccessory(accessoryId, validatedFields.data); // Esta função precisa ser verificada/adaptada
+    const updatedAccessory = await updateAccessory(accessoryId, validatedFields.data); // Usa a função de data-admin.ts
     if (updatedAccessory) {
       revalidatePath('/admin/accessories');
       revalidatePath(`/admin/accessories/${accessoryId}/edit`);
@@ -185,7 +182,7 @@ export async function deleteAccessoryAction(
   formData: FormData
 ): Promise<AccessoryActionResult> {
   const accessoryId = formData.get('accessoryId') as string;
-  const callingUserId = formData.get('userId') as string; // Assumindo que o ID do usuário também será enviado
+  const callingUserId = formData.get('userId') as string;
 
   if (!callingUserId) {
     return { success: false, error: "ID do usuário chamador não fornecido. Ação não autorizada." };
@@ -210,8 +207,7 @@ export async function deleteAccessoryAction(
   }
 
   try {
-    // deleteAccessoryData deve ser adaptado para usar Admin SDK ou ser chamado após verificação de admin
-    const deleted = await deleteAccessoryData(accessoryId); // Esta função precisa ser verificada/adaptada
+    const deleted = await deleteAccessoryData(accessoryId); // Usa a função de data-admin.ts
     if (deleted) {
       revalidatePath('/admin/accessories');
       revalidatePath('/products');
@@ -257,3 +253,4 @@ export async function generateDescriptionWithAIAction(
     return { success: false, error: "Falha ao gerar descrição com IA. Tente novamente." };
   }
 }
+    

@@ -3,10 +3,9 @@
 
 import { z } from 'zod';
 import { CouponFormSchema } from '@/lib/schemas/coupon-schema';
-import { addCoupon, updateCoupon, deleteCoupon as deleteCouponData } from '@/lib/data'; // Now async
+import { addCoupon, updateCoupon, deleteCoupon as deleteCouponData } from '@/lib/data-admin'; // Importar de data-admin.ts
 import type { Coupon } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-// import { redirect } from 'next/navigation'; // Not redirecting from action
 
 export interface CouponActionResult {
   success: boolean;
@@ -42,9 +41,8 @@ export async function createCouponAction(
   try {
     const couponInputData = {
       ...validatedFields.data,
-      // expiryDate will be handled in addCoupon for Firestore Timestamp conversion
     };
-    const newCoupon = await addCoupon(couponInputData as any); // Cast as any to handle date string temp.
+    const newCoupon = await addCoupon(couponInputData as any); // Usa addCoupon de data-admin.ts
     if (newCoupon) {
       revalidatePath('/admin/coupons');
       revalidatePath('/coupons');
@@ -90,9 +88,8 @@ export async function updateCouponAction(
   try {
     const couponInputData = {
         ...validatedFields.data,
-        // expiryDate will be handled in updateCoupon for Firestore Timestamp conversion
     };
-    const updatedCoupon = await updateCoupon(couponId, couponInputData as any); // Cast as any for date
+    const updatedCoupon = await updateCoupon(couponId, couponInputData as any); // Usa updateCoupon de data-admin.ts
     if (updatedCoupon) {
       revalidatePath('/admin/coupons');
       revalidatePath(`/admin/coupons/${couponId}/edit`);
@@ -123,7 +120,7 @@ export async function deleteCouponAction(
   }
 
   try {
-    const deleted = await deleteCouponData(couponId);
+    const deleted = await deleteCouponData(couponId); // Usa deleteCouponData de data-admin.ts
     if (deleted) {
       revalidatePath('/admin/coupons');
       revalidatePath('/coupons');
@@ -137,3 +134,4 @@ export async function deleteCouponAction(
     return { success: false, error: "Erro no servidor ao excluir cupom." };
   }
 }
+    
