@@ -1,4 +1,6 @@
 
+'use server'; // Add this to explicitly mark the module as server-only
+
 import admin, { type App as AdminApp } from 'firebase-admin';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { Auth as AdminAuth } from 'firebase-admin/auth';
@@ -35,7 +37,7 @@ if (!admin.apps.length) {
       "Firebase Admin SDK not initialized. Missing GOOGLE_APPLICATION_CREDENTIALS or individual credential env vars (FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID)."
     );
     // @ts-ignore // Para evitar erro de tipo se não inicializado
-    adminApp = null; 
+    adminApp = null;
   }
 
   if (adminApp) {

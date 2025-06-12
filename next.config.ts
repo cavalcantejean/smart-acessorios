@@ -31,15 +31,19 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  webpack: (config, { isServer, webpack }) => {
-    // Apply these fallbacks only to the client-side bundle
+  webpack: (config, { isServer }) => { // Removed unused 'webpack' variable from parameters
+    // Ensure resolve and resolve.fallback objects exist
+    if (!config.resolve) {
+      config.resolve = {};
+    }
+    if (!config.resolve.fallback) {
+      config.resolve.fallback = {};
+    }
+
     if (!isServer) {
-      if (!config.resolve) {
-        config.resolve = {};
-      }
-      // Ensure client-side fallbacks for Node.js core modules
+      // For client-side bundle, provide fallbacks
       config.resolve.fallback = {
-        ...(config.resolve.fallback || {}),
+        ...(config.resolve.fallback || {}), // Keep existing fallbacks if any
         "child_process": false,
         "fs": false,
         "os": false,
@@ -48,6 +52,8 @@ const nextConfig: NextConfig = {
         "tls": false,
         "stream": false,
         "crypto": false,
+        "firebase-admin": false, // Tell Webpack to ignore firebase-admin for client
+        "@google-cloud/firestore": false, // Explicitly ignore @google-cloud/firestore for client
       };
     }
 
