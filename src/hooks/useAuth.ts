@@ -6,13 +6,13 @@ import {
   onAuthStateChanged,
   signOut,
   type User as FirebaseUser,
-  GoogleAuthProvider, // Importar GoogleAuthProvider
-  signInWithPopup,    // Importar signInWithPopup
-  type UserCredential // Importar UserCredential
+  // GoogleAuthProvider e signInWithPopup não são mais necessários aqui
+  type UserCredential 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; // Importar setDoc e serverTimestamp
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import type { AuthUser, UserFirestoreData } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'; // Ainda necessário para a lógica de criação de conta social em processAuthStateChange
 
 export interface AuthContextType {
   user: AuthUser | null;
@@ -21,7 +21,7 @@ export interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   logout: () => Promise<void>;
-  signInWithGoogle: () => Promise<UserCredential | null>; // Adicionar nova função
+  // signInWithGoogle foi removido da interface pública do hook
   refreshAuthUser: () => Promise<void>;
 }
 
@@ -57,29 +57,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log(`useAuth: Firestore data found & AuthUser set for UID: ${fbUser.uid}, Name: ${currentAuthUser.name}, Admin: ${currentAuthUser.isAdmin}`);
           setAuthUser(currentAuthUser);
         } else {
-          // Usuário autenticado no Firebase Auth mas NÃO existe no Firestore
           console.warn(`useAuth: User ${fbUser.uid} authenticated (Firebase Auth) but NO Firestore document.`);
           
-          // Verificar se o login foi por um provedor (ex: Google)
-          // FirebaseUser.providerData contém informações sobre os provedores vinculados
           const isSocialLogin = fbUser.providerData.some(
-            (provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID // Ou outros provedores
+            (provider) => provider.providerId === GoogleAuthProvider.PROVIDER_ID
           );
 
           if (isSocialLogin) {
-            console.log(`useAuth: User ${fbUser.uid} is a new social login. Creating Firestore document.`);
+            console.log(`useAuth: User ${fbUser.uid} is a new social login (e.g., Google). Creating Firestore document.`);
             const newUserFirestoreData: UserFirestoreData = {
               id: fbUser.uid,
-              name: fbUser.displayName || "Usuário Google",
-              email: fbUser.email || "email.google@desconhecido.com", // Email é geralmente fornecido pelo Google
+              name: fbUser.displayName || "Usuário Social", // Nome genérico se displayName for nulo
+              email: fbUser.email || "email.social@desconhecido.com",
               isAdmin: false,
               followers: [],
               following: [],
               badges: [],
               createdAt: serverTimestamp(),
-              avatarUrl: fbUser.photoURL || `https://placehold.co/150x150.png?text=${(fbUser.displayName || 'G').charAt(0).toUpperCase()}`,
-              avatarHint: "user avatar google",
-              bio: `Novo membro via Google!`,
+              avatarUrl: fbUser.photoURL || `https://placehold.co/150x150.png?text=${(fbUser.displayName || 'S').charAt(0).toUpperCase()}`,
+              avatarHint: "user avatar social",
+              bio: `Novo membro via login social!`,
             };
             await setDoc(userDocRef, newUserFirestoreData);
             console.log(`useAuth: Firestore document CREATED for new social user: ${fbUser.uid}`);
@@ -91,9 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
             setAuthUser(currentAuthUser);
           } else {
-            // Se não for login social E não existe no Firestore, pode ser um problema (ex: registro por email/senha falhou ao criar doc)
             console.warn(`useAuth: User ${fbUser.uid} authenticated via non-social method but NO Firestore document. Forcing logout.`);
-            await signOut(auth); // Isso irá disparar onAuthStateChanged novamente com fbUser = null
+            await signOut(auth);
           }
         }
       } else {
@@ -140,42 +136,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/');
     } catch (error) {
       console.error("useAuth: Error during signOut: ", error);
-      setIsLoading(false);
+      setIsLoading(false); // Garante que isLoading seja false em caso de erro no logout
     }
+    // setIsLoading(false) foi movido para dentro do try/catch para garantir que seja chamado mesmo em caso de erro
   }, [router]);
 
-  const signInWithGoogle = useCallback(async (): Promise<UserCredential | null> => {
-    console.log("useAuth: signInWithGoogle called.");
-    setIsLoading(true);
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      console.log("useAuth: signInWithPopup successful. User:", result.user.uid);
-      // onAuthStateChanged será acionado e chamará processAuthStateChange,
-      // que agora lida com a criação do documento no Firestore se for um novo usuário do Google.
-      // Não precisamos definir isLoading(false) aqui, processAuthStateChange cuidará disso.
-      return result;
-    } catch (error: any) {
-      console.error("useAuth: Error during signInWithGoogle:", error);
-      // Tratar erros específicos do Google Sign-In
-      if (error.code === 'auth/popup-closed-by-user') {
-        console.warn('useAuth: Google Sign-In popup closed by user.');
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        console.warn('useAuth: Google Sign-In popup request cancelled (multiple popups).');
-      } else if (error.code === 'auth/popup-blocked') {
-        console.error('useAuth: Google Sign-In popup blocked by browser. Advise user to allow popups.');
-        // Você pode querer mostrar uma mensagem para o usuário aqui
-      }
-      // Se houver erro, onAuthStateChanged não deve ser acionado com um novo usuário.
-      // Se já havia um usuário logado, onAuthStateChanged o manterá.
-      // Definir isLoading como false se o estado do usuário não mudou.
-      if(auth.currentUser === firebaseUser) { // Checa se o usuário atual não mudou
-          setIsLoading(false);
-      }
-      return null;
-    }
-  }, []);
-
+  // signInWithGoogle é removido como método público, mas a lógica de
+  // criar um usuário no Firestore para logins sociais (como Google)
+  // permanece em processAuthStateChange para o caso de usuários existentes
+  // ou se o login social for reintroduzido de outra forma.
 
   const refreshAuthUser = useCallback(async () => {
     console.log("useAuth: refreshAuthUser called.");
@@ -193,7 +162,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { user: authUser, firebaseUser, isAuthenticated, isAdmin, isLoading, logout, signInWithGoogle, refreshAuthUser } },
+    // Removido signInWithGoogle do valor do contexto
+    { value: { user: authUser, firebaseUser, isAuthenticated, isAdmin, isLoading, logout, refreshAuthUser } },
     children
   );
 }
