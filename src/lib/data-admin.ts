@@ -3,14 +3,15 @@
 
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
 // Removed: import { db } from './firebase'; // adminDb should not use client db
+import admin, { type App as AdminApp } from 'firebase-admin'; // Import 'admin' for admin.firestore.FieldValue and admin.firestore.Timestamp
 import { adminDb, adminAuth } from './firebase-admin'; // Correct: use adminDb and adminAuth
 import {
-  Timestamp,
+  // Timestamp, // Timestamp from 'firebase-admin/firestore' is accessed via admin.firestore.Timestamp
   // serverTimestamp, // Not used directly from client 'firebase/firestore' here
   // arrayUnion, // Not used directly from client 'firebase/firestore' here
   // arrayRemove // Not used directly from client 'firebase/firestore' here
 } from 'firebase-admin/firestore'; // Import Timestamp from admin SDK if needed, or use FieldValue
-import { checkAndAwardBadges } from './data-client'; // checkAndAwardBadges is in data-client
+import { checkAndAwardBadges } from './data'; // Corrected: checkAndAwardBadges is in data.ts
 
 // --- Helper Functions for Firestore (Admin Context) ---
 const convertAdminTimestampToISO = (timestamp: admin.firestore.Timestamp | undefined): string | undefined => {
@@ -127,8 +128,14 @@ export async function updateCommentStatus(accessoryId: string, commentId: string
 
       if (commentIndex === -1) throw new Error("Comment not found in array");
 
+      // Ensure createdAt is an Admin Timestamp before spreading
+      const existingComment = commentsArray[commentIndex];
+      const createdAtAdminTimestamp = existingComment.createdAt instanceof admin.firestore.Timestamp 
+                                      ? existingComment.createdAt 
+                                      : admin.firestore.Timestamp.fromDate(new Date(existingComment.createdAt as any));
+
       const newCommentsArray = commentsArray.map((c, index) =>
-        index === commentIndex ? { ...c, status: newStatus, updatedAt: admin.firestore.FieldValue.serverTimestamp() } : c 
+        index === commentIndex ? { ...c, createdAt: createdAtAdminTimestamp, status: newStatus, updatedAt: admin.firestore.FieldValue.serverTimestamp() } : c 
       );
       
       transaction.update(accessoryDocRef, { comments: newCommentsArray, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
@@ -262,10 +269,15 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
   allAccessories.forEach(acc => {
     (acc.comments || []).forEach(comment => {
       if (comment.status === 'pending_review') {
+        // Ensure comment.createdAt is an Admin Timestamp for consistent sorting
+        const createdAtAdminTimestamp = comment.createdAt instanceof admin.firestore.Timestamp 
+                                        ? comment.createdAt 
+                                        : admin.firestore.Timestamp.fromDate(new Date(comment.createdAt as any));
+
         pending.push({
           comment: {
             ...comment,
-            createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt : admin.firestore.Timestamp.fromDate(new Date(comment.createdAt as any)),
+            createdAt: createdAtAdminTimestamp, // Store as Admin Timestamp
           },
           accessoryId: acc.id,
           accessoryName: acc.name,
@@ -273,6 +285,7 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
       }
     });
   });
+  // Sort by Admin Timestamp
   return pending.sort((a, b) => (b.comment.createdAt as admin.firestore.Timestamp).toMillis() - (a.comment.createdAt as admin.firestore.Timestamp).toMillis());
 }
 
@@ -350,6 +363,7 @@ const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]>
           userId: comment.userId,
           userName: comment.userName,
           text: comment.text,
+          // Convert Admin Timestamp to string for RecentCommentInfo type
           createdAt: convertAdminTimestampToStringForDisplay(comment.createdAt as admin.firestore.Timestamp | undefined), 
           status: comment.status,
           accessoryName: acc.name,
@@ -358,6 +372,8 @@ const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]>
       });
   });
   return allApprovedComments
+    // Sort by the string date (which should be sortable if formatted like ISO or consistent)
+    // Or, if needed, convert back to Date objects for sorting if format is not directly sortable
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) 
     .slice(0, topN);
 };
