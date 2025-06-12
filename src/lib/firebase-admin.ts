@@ -1,5 +1,5 @@
 
-'use server'; // Add this to explicitly mark the module as server-only
+// Removido: 'use server'; para permitir a exportação de objetos adminApp, adminDb, adminAuth
 
 import admin, { type App as AdminApp } from 'firebase-admin';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
