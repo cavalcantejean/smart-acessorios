@@ -158,7 +158,6 @@ export default function AccessoryForm({
           description: state.message,
         });
         if (state.accessory && !initialData) { 
-          console.log("AccessoryForm: Create success, attempting redirect to /admin/accessories");
           router.push('/admin/accessories'); 
            form.reset(); 
            setImagePreview(null); 
@@ -211,6 +210,7 @@ export default function AccessoryForm({
     setIsGeneratingDescription(true);
     try {
       const result = await generateDescriptionWithAIAction(aiPrompt);
+      console.log("AI Description Result from Server Action:", result); // LOG ADICIONADO
       if (result.success && result.description) {
         form.setValue("fullDescription", result.description, { shouldValidate: true });
         toast({ title: "Descrição Gerada!", description: "A descrição completa foi preenchida com o texto da IA." });
@@ -218,6 +218,7 @@ export default function AccessoryForm({
         toast({ title: "Falha na Geração", description: result.error || "Não foi possível gerar a descrição com IA.", variant: "destructive" });
       }
     } catch (error) {
+      console.error("Error calling generateDescriptionWithAIAction:", error); // LOG ADICIONADO
       toast({ title: "Erro de IA", description: "Ocorreu um erro ao se comunicar com a IA.", variant: "destructive" });
     } finally {
       setIsGeneratingDescription(false);
