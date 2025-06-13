@@ -28,21 +28,16 @@ interface AccessoryPageProps {
 }
 
 export async function generateMetadata({ params }: AccessoryPageProps): Promise<Metadata> {
-  console.log('[generateMetadata] Received params:', JSON.stringify(params, null, 2));
-  
-  let accessoryId: string | undefined;
-  if (params && typeof params.id === 'string') {
-    accessoryId = params.id;
-  }
-  console.log('[generateMetadata] Extracted accessoryId:', accessoryId);
+  const localAccessoryId = params.id; // Usar uma variável local claramente definida
+  console.log('[generateMetadata] Extracted localAccessoryId:', localAccessoryId);
 
-  if (!accessoryId) {
-    console.error('[generateMetadata] Error: accessoryId is falsy. Value:', accessoryId);
+  if (!localAccessoryId) {
+    console.error('[generateMetadata] Error: localAccessoryId is falsy. Value:', localAccessoryId);
     return { title: 'Acessório Inválido (Metadata)' };
   }
-  const accessory = await getAccessoryById(accessoryId);
+  const accessory = await getAccessoryById(localAccessoryId);
   if (!accessory) {
-    console.error('[generateMetadata] Error: Accessory not found for ID:', accessoryId);
+    console.error('[generateMetadata] Error: Accessory not found for ID:', localAccessoryId);
     return { title: 'Acessório Não Encontrado (Metadata)' };
   }
   return {
@@ -57,16 +52,11 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
 }
 
 export default async function AccessoryDetailPage({ params }: AccessoryPageProps) {
-  console.log('[AccessoryDetailPage] Received params:', JSON.stringify(params, null, 2));
+  const localAccessoryId = params.id; // Usar uma variável local claramente definida
+  console.log('[AccessoryDetailPage] Extracted localAccessoryId:', localAccessoryId);
 
-  let accessoryId: string | undefined;
-  if (params && typeof params.id === 'string') {
-    accessoryId = params.id;
-  }
-  console.log('[AccessoryDetailPage] Extracted accessoryId:', accessoryId);
-
-  if (!accessoryId) {
-    console.error('[AccessoryDetailPage] Error: accessoryId is falsy. Value:', accessoryId);
+  if (!localAccessoryId) {
+    console.error('[AccessoryDetailPage] Error: localAccessoryId is falsy. Value:', localAccessoryId);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">
@@ -89,10 +79,10 @@ export default async function AccessoryDetailPage({ params }: AccessoryPageProps
     );
   }
 
-  const accessoryData = await getAccessoryById(accessoryId);
+  const accessoryData = await getAccessoryById(localAccessoryId);
 
   if (!accessoryData) {
-    console.error('[AccessoryDetailPage] Error: Accessory not found for ID:', accessoryId);
+    console.error('[AccessoryDetailPage] Error: Accessory not found for ID:', localAccessoryId);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">
@@ -102,7 +92,7 @@ export default async function AccessoryDetailPage({ params }: AccessoryPageProps
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-6">
-              O acessório com o ID '{accessoryId}' não foi encontrado.
+              O acessório com o ID '{localAccessoryId}' não foi encontrado.
             </p>
             <Button asChild>
               <Link href="/">
