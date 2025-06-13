@@ -58,25 +58,9 @@ export async function registerUserAction(
   }
 
   try {
-    // Etapa 0: Verificar se o e-mail já existe no Firestore
-    const usersRef = collection(db, "usuarios");
-    const q = query(usersRef, where("email", "==", lowercasedEmail));
-    console.log("registerUserAction: Querying Firestore for existing email:", lowercasedEmail);
-    const querySnapshot = await getDocs(q);
+    // REMOVIDA: Verificação de e-mail duplicado no Firestore.
+    // Firebase Auth cuidará disso com 'auth/email-already-in-use'.
 
-    if (!querySnapshot.empty) {
-      console.log("registerUserAction: Email already exists in Firestore.");
-      return {
-        message: "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.",
-        success: false,
-        issues: { email: ["Este e-mail já está cadastrado."] },
-        fields: { name, email: lowercasedEmail },
-        user: null,
-      };
-    }
-    console.log("registerUserAction: Email does not exist in Firestore. Proceeding with Auth creation.");
-
-    // Etapa 1: Criar usuário no Firebase Authentication
     console.log("registerUserAction: Calling createUserWithEmailAndPassword...");
     const userCredential = await createUserWithEmailAndPassword(auth, lowercasedEmail, password);
     const firebaseAuthUser = userCredential.user;
@@ -84,9 +68,8 @@ export async function registerUserAction(
     console.log("registerUserAction: auth.currentUser immediately after createUserWithEmailAndPassword:", auth.currentUser ? auth.currentUser.uid : "null");
 
 
-    // Etapa 2: Criar documento do usuário no Firestore
     const newUserFirestoreData: UserFirestoreData = {
-      id: firebaseAuthUser.uid, // Crucial: ID no doc == UID do Auth
+      id: firebaseAuthUser.uid,
       name,
       email: lowercasedEmail,
       isAdmin: false,
@@ -106,7 +89,6 @@ export async function registerUserAction(
     await setDoc(doc(db, "usuarios", firebaseAuthUser.uid), newUserFirestoreData);
     console.log("registerUserAction: Firestore document CREATED for user:", firebaseAuthUser.uid);
 
-    // Etapa 3: Enviar e-mail de verificação
     try {
       console.log("registerUserAction: Calling sendEmailVerification...");
       await sendEmailVerification(firebaseAuthUser);
@@ -143,7 +125,7 @@ export async function registerUserAction(
     }
 
     if (error.code === 'auth/email-already-in-use') {
-      errorMessage = "Este e-mail já está cadastrado no Firebase Authentication. Tente fazer login ou use outro e-mail.";
+      errorMessage = "Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.";
       return { message: errorMessage, success: false, issues: { email: [errorMessage] }, fields: { name, email: lowercasedEmail }, user: null };
     } else if (error.code === 'auth/weak-password') {
       errorMessage = "A senha é muito fraca. Use pelo menos 6 caracteres.";
@@ -159,5 +141,4 @@ export async function registerUserAction(
     return { message: errorMessage, success: false, fields: { name, email: lowercasedEmail }, user: null };
   }
 }
-
     
