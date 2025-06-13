@@ -1,7 +1,7 @@
 
 "use server";
 import { summarizeProductDescription, type SummarizeProductDescriptionInput, type SummarizeProductDescriptionOutput } from '@/ai/flows/summarize-product-description';
-import { moderateComment, type ModerateCommentInput, type ModerateCommentOutput } from '@/ai/flows/moderate-comment-flow';
+// import { moderateComment, type ModerateCommentInput, type ModerateCommentOutput } from '@/ai/flows/moderate-comment-flow'; // Moderation removed for testing
 import { z } from 'zod';
 import { addCommentToAccessoryData, toggleLikeOnAccessory as toggleLikeOnAccessoryData, getAccessoryById, checkAndAwardBadges } from '@/lib/data'; // Now async
 import type { Comment } from '@/lib/types';
@@ -105,15 +105,20 @@ export async function addCommentAccessoryAction(prevState: CommentActionResult |
   const { accessoryId, commentText, userId, userName } = validatedFields.data;
 
   try {
-    const moderationResult = await moderateComment({ commentText });
-    let commentStatus: 'approved' | 'pending_review' = 'approved';
-    let userMessage = "Comentário adicionado!";
+    // MODERATION REMOVED FOR TESTING
+    // const moderationResult = await moderateComment({ commentText });
+    // let commentStatus: 'approved' | 'pending_review' = 'approved';
+    // let userMessage = "Comentário adicionado!";
 
-    if (!moderationResult.isSafe) {
-      commentStatus = 'pending_review';
-      userMessage = "Seu comentário foi enviado para moderação e será publicado após aprovação.";
-      console.log(`Comment by ${userName} on ${accessoryId} flagged as pending: ${moderationResult.reason}`);
-    }
+    // if (!moderationResult.isSafe) {
+    //   commentStatus = 'pending_review';
+    //   userMessage = "Seu comentário foi enviado para moderação e será publicado após aprovação.";
+    //   console.log(`Comment by ${userName} on ${accessoryId} flagged as pending: ${moderationResult.reason}`);
+    // }
+
+    const commentStatus: 'approved' | 'pending_review' = 'approved';
+    const userMessage = "Comentário adicionado com sucesso!";
+
 
     const newCommentFromDb = await addCommentToAccessoryData(accessoryId, userId, userName, commentText, commentStatus); // Await async call
 
@@ -132,9 +137,9 @@ export async function addCommentAccessoryAction(prevState: CommentActionResult |
 
   } catch (error) {
     console.error("Error in addCommentAccessoryAction:", error);
-    if (error instanceof Error && error.message.includes("Moderation")) {
-        return { success: false, error: "Falha no sistema de moderação. Tente novamente." };
-    }
+    // if (error instanceof Error && error.message.includes("Moderation")) { // Moderation error handling not needed for now
+    //     return { success: false, error: "Falha no sistema de moderação. Tente novamente." };
+    // }
     return { success: false, error: "Erro no servidor ao adicionar comentário." };
   }
 }
