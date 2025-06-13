@@ -226,36 +226,56 @@ export async function addCommentToAccessoryData(
   text: string,
   status: 'approved' | 'pending_review' | 'rejected' = 'approved'
 ): Promise<Comment | null> {
-  if (!db) { console.error("Firestore client db instance not available in addCommentToAccessoryData."); return null; }
+  if (!db) {
+    console.error("[data.ts] Firestore client db instance not available in addCommentToAccessoryData.");
+    return null;
+  }
   const accessoryDocRef = doc(db, "acessorios", accessoryId);
   try {
-    const newComment: Omit<Comment, 'id' | 'createdAt'> & { createdAt: any } = { 
+    const newComment: Omit<Comment, 'id' | 'createdAt'> & { createdAt: any } = {
       userId,
       userName,
       text,
       status,
-      createdAt: serverTimestamp(), 
+      createdAt: serverTimestamp(), // Firestore server-side timestamp
     };
-    const commentWithId = { ...newComment, id: doc(collection(db, '_')).id }; 
+    // Generate a unique ID for the comment client-side for immediate use if needed,
+    // Firestore arrayUnion handles the actual addition to the array.
+    const commentId = doc(collection(db, '_')).id; // Helper to generate a Firestore-like ID
+    const commentWithId = { ...newComment, id: commentId };
 
+    console.log(`[data.ts] Attempting to add comment by user ${userId} to accessory ${accessoryId}. Comment text: ${text.substring(0, 30)}...`);
     await updateDoc(accessoryDocRef, {
-      comments: arrayUnion(commentWithId),
+      comments: arrayUnion(commentWithId), // Add the comment to the array
       updatedAt: serverTimestamp()
     });
+    console.log(`[data.ts] Comment successfully submitted to Firestore for accessory ${accessoryId}. Status: ${status}`);
 
     if (status === 'approved') {
       await checkAndAwardBadges(userId);
+      console.log(`[data.ts] Badges checked for user ${userId} after approved comment.`);
     }
-    return { ...commentWithId, createdAt: Timestamp.now() } as Comment; 
-  } catch (error) {
-    console.error(`Error adding comment to accessory ${accessoryId}:`, error);
+    // Return the comment object with a client-side Timestamp.now() for immediate UI update.
+    // The actual 'createdAt' field in Firestore will be the serverTimestamp.
+    return { ...commentWithId, createdAt: Timestamp.now() } as Comment;
+  } catch (error: any) {
+    console.error(`[data.ts] Error adding comment to accessory ${accessoryId} by user ${userId}. Text: ${text.substring(0,30)}...`, error);
+    if (error.code) {
+      console.error(`[data.ts] Firestore Error Code: ${error.code}`);
+    }
+    if (error.message) {
+      console.error(`[data.ts] Firestore Error Message: ${error.message}`);
+    }
+    if (error.code === 'permission-denied') {
+      console.error("[data.ts] CRITICAL: Firestore permission denied. Check security rules for updating 'acessorios' collection, specifically the 'comments' and 'updatedAt' fields. Authenticated users need write access to these fields to add comments.");
+    }
     return null;
   }
 }
 
 // --- Utility Functions (Client SDK) ---
 export async function getUniqueCategories(): Promise<string[]> {
-  const accessoriesList = await getAllAccessories(); 
+  const accessoriesList = await getAllAccessories();
   const categoriesSet = new Set<string>();
   accessoriesList.forEach(acc => { if (acc.category) categoriesSet.add(acc.category); });
   return Array.from(categoriesSet).sort();
@@ -268,7 +288,7 @@ export async function getDailyDeals(): Promise<Accessory[]> {
     const dealsQuery = query(accessoriesClientCollection, where("isDeal", "==", true), orderBy("createdAt", "desc"), limit(6));
     const dealsSnapshot = await getDocs(dealsQuery);
     deals = dealsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
-    
+
     if (deals.length === 0) {
       console.log("No specific deals found, attempting fallback query for latest accessories.");
       const fallbackQuery = query(accessoriesClientCollection, orderBy("createdAt", "desc"), limit(2));
@@ -302,16 +322,16 @@ export async function getCoupons(): Promise<Coupon[]> {
   if (!db) { console.error("Firestore client db instance not available in getCoupons."); return []; }
   try {
     const today = Timestamp.now();
-    const q = query(couponsClientCollection, orderBy("expiryDate", "asc")); 
+    const q = query(couponsClientCollection, orderBy("expiryDate", "asc"));
     const couponsSnapshot = await getDocs(q);
-    
+
     const allCoupons = couponsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Coupon));
-    
+
     return allCoupons.filter(coupon => {
-      if (!coupon.expiryDate) return true; 
+      if (!coupon.expiryDate) return true;
       const expiryDate = coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate() : new Date(coupon.expiryDate as any);
-      return expiryDate >= today.toDate(); 
-    }).sort((a,b) => { 
+      return expiryDate >= today.toDate();
+    }).sort((a,b) => {
         if (!a.expiryDate && !b.expiryDate) return 0;
         if (!a.expiryDate) return 1;
         if (!b.expiryDate) return -1;
@@ -407,7 +427,7 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
   const user = await getUserById(userId);
   if (!user) { console.warn(`User ${userId} not found for badge checking.`); return; }
 
-  const criteriaData = await generateBadgeCriteriaData(user); 
+  const criteriaData = await generateBadgeCriteriaData(user);
   let userBadges = user.badges || [];
   let badgesUpdated = false;
 
@@ -433,7 +453,7 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
 export async function getCommentsByUserId(userId: string): Promise<CommentWithAccessoryInfo[]> {
   if (!db) { console.error("Firestore client db instance not available in getCommentsByUserId."); return []; }
   const userComments: CommentWithAccessoryInfo[] = [];
-  const allAccessoriesList = await getAllAccessories(); 
+  const allAccessoriesList = await getAllAccessories();
 
   allAccessoriesList.forEach(acc => {
     (acc.comments || [])
@@ -444,7 +464,7 @@ export async function getCommentsByUserId(userId: string): Promise<CommentWithAc
           userId: comment.userId,
           userName: comment.userName,
           text: comment.text,
-          createdAt: convertTimestampToStringForDisplay(comment.createdAt), 
+          createdAt: convertTimestampToStringForDisplay(comment.createdAt as Timestamp | undefined),
           status: comment.status,
           accessoryId: acc.id,
           accessoryName: acc.name,
@@ -469,4 +489,6 @@ export async function getAccessoriesLikedByUser(userId: string): Promise<Accesso
 // As funções que usavam adminDb foram removidas deste arquivo.
 // Elas devem existir exclusivamente em src/lib/data-admin.ts
 // e as Server Actions devem importar delas.
+
+    
     
