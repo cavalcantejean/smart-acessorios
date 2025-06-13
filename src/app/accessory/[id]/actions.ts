@@ -28,11 +28,6 @@ export async function summarizeAccessoryDescriptionAction(input: SummarizeProduc
 }
 
 // --- Like Action ---
-const LikeActionInputSchema = z.object({
-  accessoryId: z.string(),
-  userId: z.string(),
-});
-
 interface LikeActionResult {
   success: boolean;
   isLiked: boolean;
@@ -40,7 +35,11 @@ interface LikeActionResult {
   message?: string;
 }
 
-export async function toggleLikeAccessoryAction(formData: FormData): Promise<LikeActionResult> {
+// Corrected signature for useActionState:
+export async function toggleLikeAccessoryAction(
+  prevState: LikeActionResult | null, // First argument is the previous state
+  formData: FormData                 // Second argument is the payload (FormData)
+): Promise<LikeActionResult> {
   const accessoryId = formData.get('accessoryId') as string;
   const userId = formData.get('userId') as string;
 
