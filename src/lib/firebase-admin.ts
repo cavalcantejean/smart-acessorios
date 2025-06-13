@@ -1,5 +1,5 @@
 
-import admin, { type app as AdminAppType } from 'firebase-admin'; // Corrected import for type
+import admin from 'firebase-admin';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { Auth as AdminAuth } from 'firebase-admin/auth';
 
@@ -8,7 +8,7 @@ const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 const privateKeyInput = process.env.FIREBASE_PRIVATE_KEY;
 
-let adminApp: AdminAppType | undefined = undefined;
+let adminApp: admin.app.App | undefined = undefined;
 let adminDb: AdminFirestore | undefined = undefined;
 let adminAuth: AdminAuth | undefined = undefined;
 
@@ -47,6 +47,8 @@ if (!admin.apps.length) {
     console.log("Firebase Admin SDK: Initialized successfully and 'adminDb', 'adminAuth' are set.");
   } else {
     console.warn("Firebase Admin SDK: 'adminApp' could not be initialized. 'adminDb' and 'adminAuth' will remain undefined.");
+    adminDb = undefined; 
+    adminAuth = undefined; 
   }
 } else {
   adminApp = admin.app(); 
