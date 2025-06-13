@@ -352,18 +352,27 @@ interface AnalyticsData {
 
 
 const getTotalUsersCount = async (): Promise<number> => {
-  if (!adminDb) return 0;
+  if (!adminDb) {
+    console.warn("Firebase Admin SDK (adminDb) is not initialized in getTotalUsersCount. Returning 0.");
+    return 0;
+  }
   const snapshot = await adminDb.collection("usuarios").count().get();
   return snapshot.data().count;
 };
 const getTotalAccessoriesCount = async (): Promise<number> => {
-  if (!adminDb) return 0;
+  if (!adminDb) {
+    console.warn("Firebase Admin SDK (adminDb) is not initialized in getTotalAccessoriesCount. Returning 0.");
+    return 0;
+  }
   const snapshot = await adminDb.collection("acessorios").count().get();
   return snapshot.data().count;
 };
 
 const getAccessoriesPerCategory = async (): Promise<CategoryCount[]> => {
-  if (!adminDb) return [];
+  if (!adminDb) {
+    console.warn("Firebase Admin SDK (adminDb) is not initialized in getAccessoriesPerCategory. Returning empty array.");
+    return [];
+  }
   const accessoriesSnapshot = await adminDb.collection('acessorios').get();
   const accessoriesList = accessoriesSnapshot.docs.map(d => d.data() as Accessory);
   const counts: Record<string, number> = {};
@@ -378,3 +387,5 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     accessoriesPerCategory: await getAccessoriesPerCategory(),
   };
 }
+
+    
