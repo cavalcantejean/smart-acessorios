@@ -20,7 +20,7 @@ import {
   arrayRemove,
   runTransaction
 } from 'firebase/firestore';
-import { getSiteSettingsAdmin } from './data-admin'; // Import from data-admin
+import { getSiteSettingsAdmin, defaultSiteSettings as adminDefaultSiteSettings } from './data-admin'; 
 import type { ComponentType } from 'react';
 // Import Lucide icons that will be used as fallbacks or defaults
 import {
@@ -42,9 +42,13 @@ const convertTimestampToStringForDisplay = (timestamp: Timestamp | undefined): s
 
 // --- Site Settings (Fetched from Firestore via Admin SDK) ---
 export async function getSiteSettings(): Promise<SiteSettings> {
-  // This function now calls the admin version to fetch from Firestore.
-  // It should ideally be called from Server Components or Server Actions.
-  return getSiteSettingsAdmin();
+  try {
+    const settings = await getSiteSettingsAdmin();
+    return settings;
+  } catch (error) {
+    console.error("Error in getSiteSettings (lib/data.ts), falling back to defaults:", error);
+    return JSON.parse(JSON.stringify(adminDefaultSiteSettings)); 
+  }
 }
 
 // This function provides the default STRUCTURE of social links.
@@ -300,3 +304,4 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
   // console.log(`[checkAndAwardBadges] Called for user ${userId}, but badge system is removed.`);
   return;
 }
+

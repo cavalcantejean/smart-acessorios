@@ -6,15 +6,16 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
-import { getSiteSettings } from '@/lib/data'; // Now async
+import { getSiteSettings } from '@/lib/data';
 import type { SiteSettings } from '@/lib/types'; 
 import NavigationProgress from '@/components/NavigationProgress';
+import { Suspense } from 'react'; // Import Suspense
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const currentSiteSettings = await getSiteSettings(); // Fetch latest settings
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002'; // Ensure your env var is set
+  const currentSiteSettings = await getSiteSettings();
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
   const metadataBase = new URL(baseUrl);
 
   return {
@@ -25,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: currentSiteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
     icons: {
-      icon: currentSiteSettings.siteFaviconUrl || '/favicon.ico', // Use dynamic favicon
+      icon: currentSiteSettings.siteFaviconUrl || '/favicon.ico',
     },
     applicationName: currentSiteSettings.siteTitle || 'SmartAcessorios',
     appleWebApp: {
@@ -33,12 +34,11 @@ export async function generateMetadata(): Promise<Metadata> {
       title: currentSiteSettings.siteTitle || 'SmartAcessorios',
       statusBarStyle: 'default',
     },
-    // Open Graph and Twitter card metadata can also use currentSiteSettings
     openGraph: {
         title: currentSiteSettings.siteTitle,
         description: currentSiteSettings.siteDescription,
         images: currentSiteSettings.siteLogoUrl ? [{ url: currentSiteSettings.siteLogoUrl }] : [],
-        url: metadataBase, // Base URL of the site
+        url: metadataBase,
         siteName: currentSiteSettings.siteTitle,
     },
     twitter: {
@@ -51,13 +51,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export async function generateViewport(): Promise<Viewport> {
-  const currentSiteSettings = await getSiteSettings(); // Fetch latest settings
-  // Example: if you store a theme color HEX in socialLinks or a dedicated field
-  // For now, using a default or a hardcoded one from your CSS if not dynamically set
-  // const themeColorFromSettings = currentSiteSettings.socialLinks.find(l => l.platform === 'ThemeColorHex')?.url; 
-  const themeColorFromSettings = null; // Placeholder
+  const currentSiteSettings = await getSiteSettings();
+  const themeColorFromSettings = null; 
   return {
-    themeColor: themeColorFromSettings || '#3F51B5', // Fallback to your primary theme color
+    themeColor: themeColorFromSettings || '#3F51B5',
   };
 }
 
@@ -66,14 +63,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const currentSiteSettings = await getSiteSettings(); // Fetch latest settings
+  const currentSiteSettings = await getSiteSettings();
 
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
-          <NavigationProgress />
-          {/* Pass fetched settings to Header and Footer */}
+          <Suspense fallback={null}> {/* Wrap NavigationProgress with Suspense */}
+            <NavigationProgress />
+          </Suspense>
           <Header siteLogoUrl={currentSiteSettings.siteLogoUrl} siteTitle={currentSiteSettings.siteTitle} />
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}

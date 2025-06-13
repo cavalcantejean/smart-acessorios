@@ -37,7 +37,7 @@ const defaultSocialLinksStructure: SocialLinkSetting[] = [
     { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", placeholderUrl: "https://k.kwai.com/u/@seu_usuario", customImageUrl: "" }
 ];
 
-const defaultSiteSettings: SiteSettings = {
+export const defaultSiteSettings: SiteSettings = {
   siteTitle: 'SmartAcessorios',
   siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
   siteLogoUrl: '', 
