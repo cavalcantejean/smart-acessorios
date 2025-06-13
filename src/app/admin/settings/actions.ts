@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { SettingsFormSchema, type SettingsFormValues } from '@/lib/schemas/settings-schema';
-import { getSiteSettings, updateSiteSettings, getBaseSocialLinkSettings } from '@/lib/data';
+import { getSiteSettingsAdmin, updateSiteSettingsAdmin } from '@/lib/data-admin'; // Use admin functions
 import type { SiteSettings, SocialLinkSetting } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
@@ -24,28 +24,33 @@ export async function updateSettingsAction(
     siteDescription: formData.get('siteDescription'),
     siteLogoUrl: formData.get('siteLogoUrl'),
     siteFaviconUrl: formData.get('siteFaviconUrl'),
-    socialLinks: [],
+    socialLinks: [], // This will be populated based on submitted form data
   };
 
-  const baseLinks = getBaseSocialLinkSettings(); 
-  const submittedSocialLinks: Partial<SettingsFormValues['socialLinks'][0]>[] = [];
-
-  baseLinks.forEach((_, index) => {
-    const platform = formData.get(`socialLinks[${index}].platform`) as string;
-    const label = formData.get(`socialLinks[${index}].label`) as string;
-    const url = formData.get(`socialLinks[${index}].url`) as string;
-    const customImageUrl = formData.get(`socialLinks[${index}].customImageUrl`) as string;
-
-    if (platform) { 
-      submittedSocialLinks.push({ platform, label, url, customImageUrl });
-    }
-  });
+  // Dynamically build socialLinks array from FormData
+  const submittedSocialLinks: Array<Omit<SocialLinkSetting, 'IconComponent' | 'placeholderUrl'>> = [];
+  let i = 0;
+  while (formData.has(`socialLinks[${i}].platform`)) {
+    const platform = formData.get(`socialLinks[${i}].platform`) as string;
+    const label = formData.get(`socialLinks[${i}].label`) as string; // Label is submitted from form, though not directly editable by user
+    const url = formData.get(`socialLinks[${i}].url`) as string;
+    const customImageUrl = formData.get(`socialLinks[${i}].customImageUrl`) as string;
+    
+    // We only need to store what's editable or essential for re-fetching
+    submittedSocialLinks.push({ 
+        platform, 
+        label, // Keep label to ensure consistency if it's part of the submitted form
+        url: url || '', 
+        customImageUrl: customImageUrl || '' 
+    });
+    i++;
+  }
   rawFormData.socialLinks = submittedSocialLinks;
 
   const validatedFields = SettingsFormSchema.safeParse(rawFormData);
 
   if (!validatedFields.success) {
-    console.error("Validation errors:", validatedFields.error.flatten().fieldErrors);
+    console.error("Validation errors in updateSettingsAction:", validatedFields.error.flatten().fieldErrors);
     return {
       success: false,
       message: "Falha na validação. Verifique os campos.",
@@ -55,36 +60,30 @@ export async function updateSettingsAction(
   }
 
   try {
-    const currentSettings = getSiteSettings();
-    
-    const updatedSocialLinks = currentSettings.socialLinks.map(currentLink => {
-      const submittedLink = validatedFields.data.socialLinks.find(sl => sl.platform === currentLink.platform);
-      return {
-        ...currentLink, 
-        url: submittedLink?.url || '',
-        customImageUrl: submittedLink?.customImageUrl || '',
-        label: submittedLink?.label || currentLink.label, 
-      };
-    });
-
-    const newSettingsData: SiteSettings = {
-      siteTitle: validatedFields.data.siteTitle,
-      siteDescription: validatedFields.data.siteDescription,
-      siteLogoUrl: validatedFields.data.siteLogoUrl || '',
-      siteFaviconUrl: validatedFields.data.siteFaviconUrl || '',
-      socialLinks: updatedSocialLinks,
+    // The data sent to updateSiteSettingsAdmin should match SiteSettings type (without IconComponent)
+    const settingsToUpdate: SiteSettings = {
+        siteTitle: validatedFields.data.siteTitle,
+        siteDescription: validatedFields.data.siteDescription,
+        siteLogoUrl: validatedFields.data.siteLogoUrl || '',
+        siteFaviconUrl: validatedFields.data.siteFaviconUrl || '',
+        socialLinks: validatedFields.data.socialLinks.map(sl => ({
+            platform: sl.platform,
+            label: sl.label, // label comes from validatedFields which should be from default structure
+            url: sl.url || '',
+            customImageUrl: sl.customImageUrl || '',
+            // placeholderUrl is not stored, it's part of the default structure
+        })) as Array<Omit<SocialLinkSetting, 'IconComponent' | 'placeholderUrl'>>,
     };
     
-    const updatedSettings = updateSiteSettings(newSettingsData);
+    const updatedSettings = await updateSiteSettingsAdmin(settingsToUpdate);
 
     revalidatePath('/admin/settings');
-    revalidatePath('/'); 
-    revalidatePath('/layout'); 
+    revalidatePath('/', 'layout'); // Revalidate the root layout to pick up new metadata/footer settings
 
     return {
       success: true,
       message: "Configurações do site atualizadas com sucesso!",
-      updatedSettings,
+      updatedSettings, // This will include the full structure with placeholders merged in getSiteSettingsAdmin
     };
   } catch (error) {
     console.error("Error in updateSettingsAction:", error);

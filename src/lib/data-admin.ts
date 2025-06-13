@@ -15,7 +15,108 @@ const convertAdminTimestampToStringForDisplay = (timestamp: admin.firestore.Time
   return timestamp ? timestamp.toDate().toLocaleDateString('pt-BR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : 'N/A';
 };
 
+// --- Site Settings (Firestore - Admin SDK) ---
+const SITE_SETTINGS_COLLECTION = 'configuracoes';
+const SITE_SETTINGS_DOC_ID = 'site_settings_doc';
 
+// Default site settings, used if no document is found in Firestore.
+// IconComponent is NOT part of SiteSettings type for Firestore.
+const defaultSocialLinksStructure: SocialLinkSetting[] = [
+    { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
+    { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
+    { platform: "Twitter", label: "X (Twitter)", url: "https://x.com/Smart_acessorio", placeholderUrl: "https://x.com/seu_usuario", customImageUrl: "" },
+    { platform: "TikTok", label: "TikTok", url: "https://tiktok.com/@smartacessorio", placeholderUrl: "https://tiktok.com/@seu_usuario", customImageUrl: "" },
+    { platform: "WhatsApp", label: "WhatsApp", url: "https://whatsapp.com/channel/0029VbAKxmx5PO18KEZQkJ2V", placeholderUrl: "https://wa.me/seu_numero_ou_link_canal", customImageUrl: "" },
+    { platform: "Pinterest", label: "Pinterest", url: "https://pinterest.com/smartacessorios", placeholderUrl: "https://pinterest.com/seu_usuario", customImageUrl: "" },
+    { platform: "Telegram", label: "Telegram", url: "https://t.me/smartacessorios", placeholderUrl: "https://t.me/seu_canal", customImageUrl: "" },
+    { platform: "Discord", label: "Discord", url: "https://discord.gg/89bwDJWh3y", placeholderUrl: "https://discord.gg/seu_servidor", customImageUrl: "" },
+    { platform: "Snapchat", label: "Snapchat", url: "https://snapchat.com/add/smartacessorios", placeholderUrl: "https://snapchat.com/add/seu_usuario", customImageUrl: "" },
+    { platform: "Threads", label: "Threads", url: "https://threads.net/@smart.acessorios", placeholderUrl: "https://threads.net/@seu_usuario", customImageUrl: "" },
+    { platform: "Email", label: "Email", url: "mailto:smartacessori@gmail.com", placeholderUrl: "mailto:seu_email@example.com", customImageUrl: "" },
+    { platform: "YouTube", label: "YouTube", url: "https://youtube.com/@smart.acessorios", placeholderUrl: "https://youtube.com/@seu_canal", customImageUrl: "" },
+    { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", placeholderUrl: "https://k.kwai.com/u/@seu_usuario", customImageUrl: "" }
+];
+
+const defaultSiteSettings: SiteSettings = {
+  siteTitle: 'SmartAcessorios',
+  siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
+  siteLogoUrl: '', 
+  siteFaviconUrl: '',
+  socialLinks: defaultSocialLinksStructure.map(({ IconComponent, ...rest }) => rest), // Remove IconComponent for storage
+};
+
+export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
+  if (!adminDb) {
+    console.warn("Firebase Admin SDK (adminDb) is not initialized in getSiteSettingsAdmin. Returning default settings.");
+    return JSON.parse(JSON.stringify(defaultSiteSettings)); // Deep copy
+  }
+  try {
+    const settingsDocRef = adminDb.collection(SITE_SETTINGS_COLLECTION).doc(SITE_SETTINGS_DOC_ID);
+    const docSnap = await settingsDocRef.get();
+
+    if (docSnap.exists) {
+      const data = docSnap.data() as SiteSettings;
+      // Ensure all social link platforms from default structure are present, merging URLs
+      const mergedSocialLinks = defaultSocialLinksStructure.map(defaultLink => {
+        const storedLink = data.socialLinks.find(sl => sl.platform === defaultLink.platform);
+        return {
+          platform: defaultLink.platform,
+          label: defaultLink.label, // Keep default label as it's not admin-editable
+          placeholderUrl: defaultLink.placeholderUrl, // Keep default placeholder
+          url: storedLink?.url || "", // Use stored URL or empty if not set
+          customImageUrl: storedLink?.customImageUrl || "", // Use stored custom image or empty
+        };
+      });
+      return { ...defaultSiteSettings, ...data, socialLinks: mergedSocialLinks };
+    } else {
+      console.log("Site settings document not found in Firestore. Returning default settings and creating document.");
+      // Create the document with default settings if it doesn't exist
+      await settingsDocRef.set(defaultSiteSettings);
+      return JSON.parse(JSON.stringify(defaultSiteSettings)); // Deep copy
+    }
+  } catch (error) {
+    console.error("Error fetching site settings from Firestore with Admin SDK:", error);
+    return JSON.parse(JSON.stringify(defaultSiteSettings)); // Return default on error, deep copy
+  }
+}
+
+export async function updateSiteSettingsAdmin(newSettings: Partial<SiteSettings>): Promise<SiteSettings> {
+  if (!adminDb) {
+    console.error("Firebase Admin SDK (adminDb) is not initialized in updateSiteSettingsAdmin.");
+    throw new Error("Admin SDK not initialized.");
+  }
+  const settingsDocRef = adminDb.collection(SITE_SETTINGS_COLLECTION).doc(SITE_SETTINGS_DOC_ID);
+  try {
+    const currentSettings = await getSiteSettingsAdmin(); // Get current or default settings
+    
+    // Prepare the data to update, ensuring socialLinks are handled correctly
+    const dataToUpdate: Partial<SiteSettings> = {};
+    if (newSettings.siteTitle !== undefined) dataToUpdate.siteTitle = newSettings.siteTitle;
+    if (newSettings.siteDescription !== undefined) dataToUpdate.siteDescription = newSettings.siteDescription;
+    if (newSettings.siteLogoUrl !== undefined) dataToUpdate.siteLogoUrl = newSettings.siteLogoUrl;
+    if (newSettings.siteFaviconUrl !== undefined) dataToUpdate.siteFaviconUrl = newSettings.siteFaviconUrl;
+    
+    if (newSettings.socialLinks) {
+      // Only store platform, url, and customImageUrl. Label and placeholder are from defaults.
+      dataToUpdate.socialLinks = newSettings.socialLinks.map(sl => ({
+        platform: sl.platform,
+        url: sl.url || "", // Ensure empty string if null/undefined
+        customImageUrl: sl.customImageUrl || "", // Ensure empty string if null/undefined
+        // Do NOT store label or placeholderUrl from admin form, use defaults from defaultSocialLinksStructure
+      }));
+    }
+
+    await settingsDocRef.set(dataToUpdate, { merge: true });
+    console.log("Site settings updated successfully in Firestore.");
+    return getSiteSettingsAdmin(); // Return the freshly updated settings
+  } catch (error) {
+    console.error("Error updating site settings in Firestore with Admin SDK:", error);
+    throw error;
+  }
+}
+
+
+// --- User Management (Admin SDK) ---
 export async function toggleUserAdminStatus(userId: string): Promise<UserFirestoreData | null> {
   if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in toggleUserAdminStatus."); return null; }
   const userDocRef = adminDb.collection("usuarios").doc(userId);
@@ -41,6 +142,7 @@ export async function toggleUserAdminStatus(userId: string): Promise<UserFiresto
   }
 }
 
+// --- Accessory Management (Admin SDK) ---
 export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
   if (!adminDb) {
     console.error("[Data:addAccessoryWithAdmin] Firebase Admin SDK (adminDb) is not initialized.");
@@ -49,8 +151,6 @@ export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' 
   const newAccessoryData = {
     ...accessoryData,
     price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : null,
-    // likedBy: [], // REMOVED
-    // comments: [], // REMOVED
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     category: accessoryData.category || null,
@@ -83,7 +183,6 @@ export async function updateAccessory(accessoryId: string, accessoryData: Partia
   try {
     const updateData: any = { ...accessoryData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
     if (updateData.price) updateData.price = updateData.price.toString().replace(',', '.');
-    // Ensure likedBy and comments are not part of accessoryData or remove them
     delete updateData.likedBy;
     delete updateData.comments;
 
@@ -112,9 +211,7 @@ export async function deleteAccessory(accessoryId: string): Promise<boolean> {
   }
 }
 
-// updateCommentStatus REMOVED
-// getPendingComments REMOVED
-
+// --- Coupon Management (Admin SDK) ---
 export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt'>): Promise<Coupon> {
   if (!adminDb) { throw new Error("Firebase Admin SDK (adminDb) is not initialized in addCoupon."); }
   const newCouponData: any = {
@@ -173,14 +270,13 @@ export async function deleteCoupon(couponId: string): Promise<boolean> {
   }
 }
 
+// --- Post Management (Admin SDK) ---
 export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>): Promise<Post> {
   if (!adminDb) {
     console.error("[Data:addPost] Firebase Admin SDK (adminDb) is not initialized.");
     throw new Error("Firebase Admin SDK (adminDb) is not initialized in addPost.");
   }
   
-  console.log("[Data:addPost] Data received for Firestore:", JSON.stringify(postData, null, 2));
-
   const newPostData: any = {
     ...postData,
     publishedAt: postData.publishedAt 
@@ -195,32 +291,22 @@ export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updated
   Object.keys(newPostData).forEach(key => {
     if (newPostData[key] === undefined) {
       delete newPostData[key];
-      console.warn(`[Data:addPost] Removed undefined field: ${key}`);
     }
   });
   
-  console.log("[Data:addPost] Data being sent to Firestore add():", JSON.stringify(newPostData, null, 2));
-
   try {
     const docRef = await adminDb.collection('posts').add(newPostData);
-    console.log("[Data:addPost] Document added with ID:", docRef.id);
-    
     const newDocSnap = await docRef.get();
     if (!newDocSnap.exists) {
-      console.error("[Data:addPost] Newly created post document not found after add. ID:", docRef.id);
       throw new Error("Newly created post document not found.");
     }
     const createdPostData = newDocSnap.data();
-    console.log("[Data:addPost] Fetched created post data:", createdPostData);
-
     return { 
       id: newDocSnap.id, 
       ...createdPostData 
     } as Post; 
   } catch (error: any) {
     console.error("[Data:addPost] Error during Firestore add/get operation:", error);
-    if (error.message) console.error("[Data:addPost] Error message:", error.message);
-    if (error.stack) console.error("[Data:addPost] Error stack:", error.stack);
     throw error; 
   }
 }
@@ -251,8 +337,6 @@ export async function updatePost(postId: string, postData: Partial<Omit<Post, 'i
     return null;
   } catch (error: any) {
     console.error(`Error updating post ${postId} with Admin SDK:`, error);
-    if (error.message) console.error(`Error message: ${error.message}`);
-    if (error.stack) console.error(`Error stack: ${error.stack}`);
     return null;
   }
 }
@@ -269,6 +353,7 @@ export async function deletePost(postId: string): Promise<boolean> {
   }
 }
 
+// --- Analytics Data (Admin SDK) ---
 const getTotalUsersCount = async (): Promise<number> => {
   if (!adminDb) return 0;
   const snapshot = await adminDb.collection("usuarios").count().get();
@@ -279,7 +364,6 @@ const getTotalAccessoriesCount = async (): Promise<number> => {
   const snapshot = await adminDb.collection("acessorios").count().get();
   return snapshot.data().count;
 };
-// getTotalApprovedCommentsCount REMOVED
 
 const getAccessoriesPerCategory = async (): Promise<CategoryCount[]> => {
   if (!adminDb) return [];
@@ -290,18 +374,10 @@ const getAccessoriesPerCategory = async (): Promise<CategoryCount[]> => {
   return Object.entries(counts).map(([category, count]) => ({ category, count })).sort((a,b) => b.count - a.count);
 };
 
-// getMostLikedAccessories REMOVED
-// getMostCommentedAccessories REMOVED
-// getRecentComments REMOVED
-
 export async function getAnalyticsData(): Promise<AnalyticsData> {
   return {
     totalUsers: await getTotalUsersCount(),
     totalAccessories: await getTotalAccessoriesCount(),
-    // totalApprovedComments: await getTotalApprovedCommentsCount(), // REMOVED
     accessoriesPerCategory: await getAccessoriesPerCategory(),
-    // mostLikedAccessories: await getMostLikedAccessories(), // REMOVED
-    // mostCommentedAccessories: await getMostCommentedAccessories(), // REMOVED
-    // recentComments: await getRecentComments(), // REMOVED
   };
 }

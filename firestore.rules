@@ -4,94 +4,99 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is an admin
+    // Helper functions
     function isAdmin() {
       return request.auth != null && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.isAdmin == true;
     }
-
-    // Helper function to check if the user is the owner of the document
-    // (typically used for user's own data)
     function isOwner(docUserId) {
       return request.auth != null && request.auth.uid == docUserId;
     }
 
-    // Usuarios Collection
+    // Coleção de Usuários
     match /usuarios/{userId} {
-      allow read: if true; // Anyone can read user profiles
+      allow read: if true; // Qualquer um pode ler perfis de usuário (para páginas de perfil públicas)
+      
+      allow create: if isOwner(userId) &&
+                       request.resource.data.email == request.auth.token.email &&
+                       request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                       request.resource.data.isAdmin == false &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time) &&
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time);
+                       // Badge-related fields and follower/following removed from create rule
+                       
+      allow update: if (isOwner(userId) && 
+                        request.resource.data.email == resource.data.email && // Email não pode ser alterado pelo usuário
+                        request.resource.data.isAdmin == resource.data.isAdmin && // Admin status não pode ser alterado pelo usuário
+                        // Badge-related fields and follower/following removed from update rule
+                        (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time) &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'avatarUrl', 'avatarHint', 'bio', 'updatedAt'])) || 
+                       (isAdmin() && (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time)); // Admins podem atualizar mais campos
 
-      allow create: if isOwner(userId) && // User can create their own profile document
-                      request.resource.data.name is string &&
-                      request.resource.data.email is string &&
-                      request.resource.data.isAdmin == false && // New users are not admins by default
-                      request.resource.data.followers is list && request.resource.data.followers.size() == 0 &&
-                      request.resource.data.following is list && request.resource.data.following.size() == 0 &&
-                      request.resource.data.badges is list && request.resource.data.badges.size() == 0 &&
-                      (!('avatarUrl' in request.resource.data) || request.resource.data.avatarUrl is string) &&
-                      (!('avatarHint' in request.resource.data) || request.resource.data.avatarHint is string) &&
-                      (!('bio' in request.resource.data) || request.resource.data.bio is string) &&
-                      request.resource.data.createdAt == request.time; // Must set createdAt to server time
-
-      allow update: if
-                      // User can update specific, non-sensitive fields of their own profile
-                      (isOwner(userId) &&
-                        request.writeFields.hasAny(['name', 'avatarUrl', 'avatarHint', 'bio', 'updatedAt']) &&
-                        !request.writeFields.hasAny(['email', 'isAdmin', 'followers', 'following', 'badges', 'createdAt']) && // Cannot change these sensitive fields directly
-                        request.resource.data.updatedAt == request.time
-                       ) ||
-                       // Admin can update user profiles (includes making another user admin)
-                       (isAdmin() && request.resource.data.updatedAt == request.time);
-
-      allow delete: if isAdmin(); // Only admins can delete user documents
+      allow delete: if isAdmin(); // Apenas admins podem deletar usuários
     }
 
-    // Acessorios Collection
+    // Coleção de Acessórios
     match /acessorios/{accessoryId} {
-      allow read: if true; // Anyone can read accessories
+      allow read: if true; // Qualquer um pode ler acessórios
+      
+      allow create: if isAdmin() && 
+                       request.resource.data.name is string &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time) &&
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time);
+                       // LikedBy and comments are not set on create by admin
 
-      allow create: if isAdmin() &&
-                       request.resource.data.createdAt == request.time &&
-                       request.resource.data.updatedAt == request.time; // Admin creates, sets timestamps
+      allow update: if isAdmin() && 
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time);
+                       // Admin can update all fields. User-specific updates like like/comment were removed.
 
-      allow delete: if isAdmin(); // Only admins can delete
-
-      allow update: if
-        // Admins can update all fields (ensure updatedAt is also set)
-        (isAdmin() && request.resource.data.updatedAt == request.time) ||
-        // Authenticated users can update specific fields for likes/comments
-        (request.auth != null &&
-         request.resource.data.updatedAt == request.time && // User updates must also set updatedAt
-          (
-            // Liking/Unliking: Only 'likedBy' and 'updatedAt' can change
-            (request.writeFields.toSet().hasOnly(['likedBy', 'updatedAt'])) ||
-            // Commenting: Only 'comments' and 'updatedAt' can change
-            // The client/server action is responsible for the content of the comment (e.g., userId, status)
-            (request.writeFields.toSet().hasOnly(['comments', 'updatedAt']))
-          )
-        );
+      allow delete: if isAdmin(); // Apenas admins podem deletar acessórios
     }
 
-    // Cupons Collection
+    // Coleção de Cupons
     match /cupons/{couponId} {
-      allow read: if true; // Anyone can read coupons
+      allow read: if true; // Qualquer um pode ler cupons
+      
       allow create: if isAdmin() &&
-                       request.resource.data.createdAt == request.time &&
-                       request.resource.data.updatedAt == request.time;
+                       request.resource.data.code is string &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time) &&
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time);
+                       
       allow update: if isAdmin() &&
-                       request.resource.data.updatedAt == request.time;
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time);
+                       
       allow delete: if isAdmin();
     }
 
-    // Posts Collection
+    // Coleção de Posts do Blog
     match /posts/{postId} {
-      allow read: if true; // Anyone can read posts
+      allow read: if true; // Qualquer um pode ler posts
+      
       allow create: if isAdmin() &&
-                       request.resource.data.createdAt == request.time &&
-                       request.resource.data.updatedAt == request.time &&
-                       request.resource.data.publishedAt is timestamp; // Ensure publishedAt is a timestamp
+                       request.resource.data.title is string &&
+                       request.resource.data.slug is string &&
+                       (!('publishedAt' in request.resource.data) || request.resource.data.publishedAt is timestamp) &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time) &&
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time);
+                       
       allow update: if isAdmin() &&
-                       request.resource.data.updatedAt == request.time &&
-                       (!('publishedAt' in request.resource.data) || request.resource.data.publishedAt is timestamp);
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time);
+                       
       allow delete: if isAdmin();
+    }
+
+    // Coleção de Configurações do Site
+    match /configuracoes/{docId} {
+      allow read: if true; // Configurações do site podem ser lidas por todos (para renderização do layout, metadados)
+      
+      // Apenas um documento específico deve existir, ex: 'site_settings_doc'
+      allow create: if isAdmin() && docId == "site_settings_doc" &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == request.time) && // Opcional
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time); // Opcional
+                       
+      allow update: if isAdmin() && docId == "site_settings_doc" &&
+                       (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt == request.time); // Opcional
+                       
+      allow delete: if false; // Geralmente não se deleta o documento de configurações, apenas atualiza
     }
   }
 }

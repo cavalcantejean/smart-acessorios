@@ -100,20 +100,23 @@ export interface AnalyticsData {
   accessoriesPerCategory: CategoryCount[];
 }
 
-// Site Settings Types (remains local)
+// Site Settings Types
+// This type is used for both in-app representation and Firestore storage.
+// The IconComponent is only for client-side rendering hints in `data.ts`'s default structure
+// and is NOT stored in Firestore.
 export interface SocialLinkSetting {
   platform: string;
   label: string;
-  url: string;
-  placeholderUrl: string;
-  customImageUrl?: string;
+  url: string; // URL provided by the admin
+  placeholderUrl: string; // Example URL for admin UI
+  customImageUrl?: string; // Admin-provided custom image URL (data URI or external)
+  IconComponent?: ComponentType<{ className?: string }>; // Only for client-side default rendering, NOT stored
 }
 
 export interface SiteSettings {
   siteTitle: string;
   siteDescription: string;
-  socialLinks: SocialLinkSetting[];
+  socialLinks: Array<Omit<SocialLinkSetting, 'IconComponent'>>; // Ensure IconComponent is not part of the stored type
   siteLogoUrl?: string;
   siteFaviconUrl?: string;
 }
-

@@ -1,6 +1,6 @@
 
-import { getSiteSettings } from '@/lib/data';
-import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; // Keep SocialLinkSetting for currentSettings
+import { getSiteSettings, getBaseSocialLinkSettings } from '@/lib/data';
+import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
@@ -14,13 +14,12 @@ export const metadata: Metadata = {
 };
 
 // This interface is for the data passed to the Client Component (SettingsForm)
-// It should only contain serializable data. IconComponent is removed.
 export interface SocialLinkFormData {
   platform: string;
   label: string;
-  url: string;
-  placeholderUrl: string;
-  customImageUrl?: string;
+  url: string; // User-editable URL
+  placeholderUrl: string; // Default placeholder
+  customImageUrl?: string; // User-editable custom image
 }
 
 export interface SettingsFormDataForClient {
@@ -33,24 +32,27 @@ export interface SettingsFormDataForClient {
 
 
 export default async function SiteSettingsPage() {
-  const currentSettings: SiteSettings = getSiteSettings(); 
+  const currentSettings: SiteSettings = await getSiteSettings(); // Now async
+  const baseSocialLinks = getBaseSocialLinkSettings(); // Sync, gets default structure
+  
+  // Merge current settings with base social link structure
+  const mergedSocialLinks: SocialLinkFormData[] = baseSocialLinks.map(baseLink => {
+    const currentLinkData = currentSettings.socialLinks.find(cs => cs.platform === baseLink.platform);
+    return {
+      platform: baseLink.platform,
+      label: baseLink.label, // Use label from base structure
+      placeholderUrl: baseLink.placeholderUrl, // Use placeholder from base structure
+      url: currentLinkData?.url || "", // Use stored URL or empty
+      customImageUrl: currentLinkData?.customImageUrl || "", // Use stored custom image or empty
+    };
+  });
   
   const initialDataForForm: SettingsFormDataForClient = {
     siteTitle: currentSettings.siteTitle,
     siteDescription: currentSettings.siteDescription,
     siteLogoUrl: currentSettings.siteLogoUrl || '',
     siteFaviconUrl: currentSettings.siteFaviconUrl || '',
-    socialLinks: currentSettings.socialLinks.map(linkWithIcon => {
-      // Destructure to explicitly exclude IconComponent
-      const { IconComponent, ...linkDataForClient } = linkWithIcon;
-      return {
-        platform: linkDataForClient.platform,
-        label: linkDataForClient.label,
-        url: linkDataForClient.url || '',
-        placeholderUrl: linkDataForClient.placeholderUrl,
-        customImageUrl: linkDataForClient.customImageUrl || '',
-      };
-    }),
+    socialLinks: mergedSocialLinks,
   };
 
   return (

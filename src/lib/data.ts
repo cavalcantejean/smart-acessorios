@@ -1,7 +1,5 @@
 
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting } from './types';
-// Removed Comment, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, CommentWithAccessoryInfo, Badge, BadgeCriteriaData
-// Removed allBadges, generateBadgeCriteriaData
 import { db } from './firebase'; 
 import {
   collection,
@@ -22,6 +20,15 @@ import {
   arrayRemove,
   runTransaction
 } from 'firebase/firestore';
+import { getSiteSettingsAdmin } from './data-admin'; // Import from data-admin
+import type { ComponentType } from 'react';
+// Import Lucide icons that will be used as fallbacks or defaults
+import {
+  Facebook, Instagram, Twitter, Youtube, Mail, HelpCircle,
+  MessageSquare, Send, MessageCircle as DiscordIconLucide, Ghost, AtSign, PlaySquare, Film
+} from 'lucide-react';
+import PinterestIcon from '@/components/icons/PinterestIcon'; 
+
 
 // --- Helper Functions for Firestore ---
 const convertTimestampToISO = (timestamp: Timestamp | undefined): string | undefined => {
@@ -33,42 +40,32 @@ const convertTimestampToStringForDisplay = (timestamp: Timestamp | undefined): s
 };
 
 
-// --- Site Settings (Stays Local/Mock for now) ---
-let siteSettings: SiteSettings = {
-  siteTitle: 'SmartAcessorios',
-  siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-  siteLogoUrl: '',
-  siteFaviconUrl: '',
-  socialLinks: [
-    { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
-    { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
-    { platform: "Twitter", label: "X (Twitter)", url: "https://x.com/Smart_acessorio", placeholderUrl: "https://x.com/seu_usuario", customImageUrl: "" },
-    { platform: "TikTok", label: "TikTok", url: "https://tiktok.com/@smartacessorio", placeholderUrl: "https://tiktok.com/@seu_usuario", customImageUrl: "" },
-    { platform: "WhatsApp", label: "WhatsApp", url: "https://whatsapp.com/channel/0029VbAKxmx5PO18KEZQkJ2V", placeholderUrl: "https://wa.me/seu_numero_ou_link_canal", customImageUrl: "" },
-    { platform: "Pinterest", label: "Pinterest", url: "https://pinterest.com/smartacessorios", placeholderUrl: "https://pinterest.com/seu_usuario", customImageUrl: "" },
-    { platform: "Telegram", label: "Telegram", url: "https://t.me/smartacessorios", placeholderUrl: "https://t.me/seu_canal", customImageUrl: "" },
-    { platform: "Discord", label: "Discord", url: "https://discord.gg/89bwDJWh3y", placeholderUrl: "https://discord.gg/seu_servidor", customImageUrl: "" },
-    { platform: "Snapchat", label: "Snapchat", url: "https://snapchat.com/add/smartacessorios", placeholderUrl: "https://snapchat.com/add/seu_usuario", customImageUrl: "" },
-    { platform: "Threads", label: "Threads", url: "https://threads.net/@smart.acessorios", placeholderUrl: "https://threads.net/@seu_usuario", customImageUrl: "" },
-    { platform: "Email", label: "Email", url: "mailto:smartacessori@gmail.com", placeholderUrl: "mailto:seu_email@example.com", customImageUrl: "" },
-    { platform: "YouTube", label: "YouTube", url: "https://youtube.com/@smart.acessorios", placeholderUrl: "https://youtube.com/@seu_canal", customImageUrl: "" },
-    { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", placeholderUrl: "https://k.kwai.com/u/@seu_usuario", customImageUrl: "" }
-  ]
-};
-export function getSiteSettings(): SiteSettings { return { ...siteSettings, socialLinks: siteSettings.socialLinks.map(link => ({ ...link })) }; }
-export function getBaseSocialLinkSettings(): SocialLinkSetting[] { return siteSettings.socialLinks.map(link => ({ ...link }));}
-export function updateSiteSettings(newSettings: Partial<SiteSettings>): SiteSettings {
-  if (newSettings.siteTitle !== undefined) siteSettings.siteTitle = newSettings.siteTitle;
-  if (newSettings.siteDescription !== undefined) siteSettings.siteDescription = newSettings.siteDescription;
-  if (newSettings.siteLogoUrl !== undefined) siteSettings.siteLogoUrl = newSettings.siteLogoUrl;
-  if (newSettings.siteFaviconUrl !== undefined) siteSettings.siteFaviconUrl = newSettings.siteFaviconUrl;
-  if (newSettings.socialLinks) {
-    siteSettings.socialLinks = siteSettings.socialLinks.map(currentLink => {
-      const submittedLinkData = newSettings.socialLinks.find(sl => sl.platform === currentLink.platform);
-      return { ...currentLink, url: submittedLinkData?.url ?? currentLink.url, customImageUrl: submittedLinkData?.customImageUrl ?? currentLink.customImageUrl, };
-    });
-  }
-  return getSiteSettings();
+// --- Site Settings (Fetched from Firestore via Admin SDK) ---
+export async function getSiteSettings(): Promise<SiteSettings> {
+  // This function now calls the admin version to fetch from Firestore.
+  // It should ideally be called from Server Components or Server Actions.
+  return getSiteSettingsAdmin();
+}
+
+// This function provides the default STRUCTURE of social links.
+// The actual URLs and custom images will be populated from the SiteSettings fetched from Firestore.
+// IconComponent is a client-side rendering hint and is NOT stored in Firestore.
+export function getBaseSocialLinkSettings(): SocialLinkSetting[] {
+  return [
+    { platform: "Facebook", label: "Facebook", url: "", placeholderUrl: "https://facebook.com/seu_usuario", IconComponent: Facebook, customImageUrl: "" },
+    { platform: "Instagram", label: "Instagram", url: "", placeholderUrl: "https://instagram.com/seu_usuario", IconComponent: Instagram, customImageUrl: "" },
+    { platform: "Twitter", label: "X (Twitter)", url: "", placeholderUrl: "https://x.com/seu_usuario", IconComponent: Twitter, customImageUrl: "" },
+    { platform: "TikTok", label: "TikTok", url: "", placeholderUrl: "https://tiktok.com/@seu_usuario", IconComponent: Film, customImageUrl: "" },
+    { platform: "WhatsApp", label: "WhatsApp", url: "", placeholderUrl: "https://wa.me/seu_numero_ou_link_canal", IconComponent: MessageSquare, customImageUrl: "" },
+    { platform: "Pinterest", label: "Pinterest", url: "", placeholderUrl: "https://pinterest.com/seu_usuario", IconComponent: PinterestIcon, customImageUrl: "" },
+    { platform: "Telegram", label: "Telegram", url: "", placeholderUrl: "https://t.me/seu_canal", IconComponent: Send, customImageUrl: "" },
+    { platform: "Discord", label: "Discord", url: "", placeholderUrl: "https://discord.gg/seu_servidor", IconComponent: DiscordIconLucide, customImageUrl: "" },
+    { platform: "Snapchat", label: "Snapchat", url: "", placeholderUrl: "https://snapchat.com/add/seu_usuario", IconComponent: Ghost, customImageUrl: "" },
+    { platform: "Threads", label: "Threads", url: "", placeholderUrl: "https://threads.net/@seu_usuario", IconComponent: AtSign, customImageUrl: "" },
+    { platform: "Email", label: "Email", url: "", placeholderUrl: "mailto:seu_email@example.com", IconComponent: Mail, customImageUrl: "" },
+    { platform: "YouTube", label: "YouTube", url: "", placeholderUrl: "https://youtube.com/@seu_canal", IconComponent: Youtube, customImageUrl: "" },
+    { platform: "Kwai", label: "Kwai", url: "", placeholderUrl: "https://k.kwai.com/u/@seu_usuario", IconComponent: PlaySquare, customImageUrl: "" }
+  ];
 }
 
 // --- Testimonials (Stays Local/Mock for now) ---
@@ -292,4 +289,14 @@ export async function getLatestPosts(count: number): Promise<Post[]> {
     console.error("Error fetching latest posts from Firestore:", error);
     return [];
   }
+}
+
+// Badge functions and criteria removed
+// User interaction count functions removed
+// Comment related data functions removed
+// User badge awarding logic removed
+export async function checkAndAwardBadges(userId: string): Promise<void> {
+  // This function is now a no-op as badges are removed.
+  // console.log(`[checkAndAwardBadges] Called for user ${userId}, but badge system is removed.`);
+  return;
 }
