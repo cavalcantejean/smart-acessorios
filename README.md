@@ -50,7 +50,7 @@ If you are working within an environment like Firebase Studio where you might no
 **2. Query Requires an Index:**
 
 *   **Error Message:** `FirebaseError: The query requires an index. You can create it here: [link]`
-*   **Cause:** Firestore requires composite indexes for queries that combine filters (e.g., `where()`) on multiple fields or combine filters with ordering (`orderBy()`) on a different field. The error message itself usually provides a direct link to create the necessary index.
+*   **Cause:** Firestore requires composite indexes for queries that combine filters (e.g., `where()`) on multiple fields or combine filters with ordering (`orderBy()`) on a different field. The error message itself usually provides a direct link to create the necessary composite index.
 *   **Solution:**
     *   **Click the link provided in the error message.** This link will take you to the Firebase Console, pre-filled with the details for the required composite index.
     *   Confirm the creation of the index in the Firebase Console.
@@ -70,3 +70,82 @@ If you are working within an environment like Firebase Studio where you might no
     *   Check your Firestore data converters if you are using them.
 
 By addressing these common Firestore issues, you can ensure your application interacts smoothly with the database.
+
+## Deploying Your Application
+
+To deploy your Next.js application using Firebase App Hosting and make it available at a URL like `<your-project-id>.web.app`, follow these steps:
+
+### Prerequisites
+
+1.  **Install Firebase CLI:** If you don't have it installed, open your terminal and run:
+    ```bash
+    npm install -g firebase-tools
+    ```
+2.  **Login to Firebase:**
+    ```bash
+    firebase login
+    ```
+    This will open a browser window for you to log in with your Google account.
+3.  **Create a Firebase Project:** If you haven't already, go to the [Firebase Console](https://console.firebase.google.com/) and create a new project. Note your **Project ID**.
+4.  **Target Your Firebase Project:** In your project's root directory (where `package.json` is), run:
+    ```bash
+    firebase use YOUR_PROJECT_ID
+    ```
+    Replace `YOUR_PROJECT_ID` with your actual Firebase Project ID.
+
+### Step 1: Deploy to Firebase App Hosting
+
+Firebase App Hosting will build and deploy your Next.js application as a backend service.
+
+1.  **Deploy the Backend:**
+    In your project's root directory, run:
+    ```bash
+    firebase apphosting:backends:deploy --project YOUR_PROJECT_ID
+    ```
+    *   You might be prompted to select a region and a backend name if it's the first time. The backend name often defaults to the name of your current directory.
+    *   This command will build your Next.js app and deploy it.
+    *   After a successful deploy, the CLI will output information about your backend, including its **Backend ID** and a default URL (e.g., `<backend-id>--<project-id>.<region>.firebaseapp.com`). Make a note of the **Backend ID**.
+
+### Step 2: Connect to Firebase Hosting for a `.web.app` URL
+
+To use the `<your-project-id>.web.app` URL, you need to set up Firebase Hosting to point to your App Hosting backend.
+
+1.  **Initialize Firebase Hosting (if not already done):**
+    If you haven't initialized Firebase features in your project, you might need to run `firebase init` and select "Hosting". However, if you only want to connect to an existing App Hosting backend, you might be able to skip directly to creating/updating `firebase.json`.
+
+2.  **Create or Update `firebase.json`:**
+    In the root of your project, create or update a file named `firebase.json` with the following content:
+
+    ```json
+    {
+      "hosting": {
+        "site": "YOUR_PROJECT_ID", // Or a custom hosting site name if you created one
+        "rewrites": [
+          {
+            "source": "**",
+            "apphosting": {
+              "backendId": "YOUR_APP_HOSTING_BACKEND_ID" // Replace with the Backend ID from Step 1
+            }
+          }
+        ]
+      }
+    }
+    ```
+    *   Replace `YOUR_PROJECT_ID` with your Firebase Project ID (this is often the default site name for Firebase Hosting).
+    *   Replace `YOUR_APP_HOSTING_BACKEND_ID` with the Backend ID you noted after deploying to App Hosting.
+
+3.  **Deploy Hosting Configuration:**
+    Run the following command to deploy your Firebase Hosting settings:
+    ```bash
+    firebase deploy --only hosting --project YOUR_PROJECT_ID
+    ```
+
+After these steps, your Next.js application should be accessible via `https://<your-project-id>.web.app` (or `https://<your-custom-site-name>.web.app` if you used a custom site name).
+
+### Important Notes:
+
+*   **Billing:** Firebase App Hosting and other Firebase services may have associated costs depending on your usage. Ensure your Firebase project is on a billing plan that supports App Hosting (Blaze plan is typically required).
+*   **Build Process:** Firebase App Hosting handles the build of your Next.js application in the cloud. Ensure your `package.json` has the correct `build` script (e.g., `next build`).
+*   **Environment Variables:** If your application relies on environment variables, configure them in the Firebase App Hosting settings in the Google Cloud Console, not just in a local `.env` file.
+*   **Custom Domains:** Once deployed, you can also connect custom domains to your Firebase Hosting site through the Firebase Console.
+```
