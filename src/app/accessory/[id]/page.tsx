@@ -28,7 +28,7 @@ interface AccessoryPageProps {
 }
 
 export async function generateMetadata({ params }: AccessoryPageProps): Promise<Metadata> {
-  const localAccessoryId = params.id; // Usar uma variável local claramente definida
+  const localAccessoryId = params.id; 
   console.log('[generateMetadata] Extracted localAccessoryId:', localAccessoryId);
 
   if (!localAccessoryId) {
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
 }
 
 export default async function AccessoryDetailPage({ params }: AccessoryPageProps) {
-  const localAccessoryId = params.id; // Usar uma variável local claramente definida
+  const localAccessoryId = params.id; 
   console.log('[AccessoryDetailPage] Extracted localAccessoryId:', localAccessoryId);
 
   if (!localAccessoryId) {
