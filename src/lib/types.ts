@@ -17,6 +17,22 @@ export interface Accessory {
   embedHtml?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  comments?: Comment[]; // Updated to use the new Comment type
+}
+
+export interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  status: 'pending_review' | 'approved' | 'rejected';
+  createdAt: Timestamp; // Firestore Timestamp initially
+}
+
+export interface PendingCommentDisplay {
+  comment: Comment;
+  accessoryId: string;
+  accessoryName: string;
 }
 
 export interface Coupon {

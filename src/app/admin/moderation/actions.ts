@@ -2,9 +2,9 @@
 "use server";
 
 import { z } from 'zod';
-import { updateCommentStatus } from '@/lib/data-admin'; // Importar de data-admin.ts
+import { updateCommentStatus } from '@/lib/data-admin';
 import { revalidatePath } from 'next/cache';
-import type { Comment } from '@/lib/types';
+import type { Comment } from '@/lib/types'; // Import Comment type
 
 const ModerateCommentSchema = z.object({
   commentId: z.string().min(1, "ID do comentário é obrigatório."),
@@ -40,7 +40,7 @@ async function performModeration(
   const { commentId, accessoryId } = validatedFields.data;
 
   try {
-    const updatedComment = await updateCommentStatus(accessoryId, commentId, decision); // Usa updateCommentStatus de data-admin.ts
+    const updatedComment: Comment | null = await updateCommentStatus(accessoryId, commentId, decision); 
 
     if (!updatedComment) {
       return { success: false, error: `Falha ao ${decision === 'approved' ? 'aprovar' : 'rejeitar'} comentário. Comentário não encontrado.`, moderatedCommentId: commentId };

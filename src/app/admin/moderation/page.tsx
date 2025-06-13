@@ -1,86 +1,74 @@
 
-import { getPendingComments } from '@/lib/data-admin';
-import type { PendingCommentDisplay, Comment } from '@/lib/types';
+import { getPendingComments, type PendingCommentDisplayWithISOStringDate } from '@/lib/data-admin';
+import type { Comment } from '@/lib/types'; // Base Comment type with Timestamp
 import PendingCommentsList from './components/PendingCommentsList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, MessageSquareWarning, AlertTriangle } from 'lucide-react'; // Added AlertTriangle
+import { ArrowLeft, MessageSquareWarning, AlertTriangle } from 'lucide-react';
 import type { Metadata } from 'next';
-import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
-import type { Timestamp as ClientTimestamp } from 'firebase/firestore'; // For client-side type hints
 
 export const metadata: Metadata = {
   title: 'Moderar Conteúdo | Admin SmartAcessorios',
   description: 'Revise e aprove ou rejeite comentários pendentes.',
 };
 
-interface ClientReadyComment extends Omit<Comment, 'createdAt'> {
-  createdAt: string;
+// This is the type that PendingCommentsList component expects
+// It's derived from Comment, but createdAt is always a string (ISO)
+export interface ClientReadyComment {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  status: 'pending_review' | 'approved' | 'rejected';
+  createdAt: string; // ISO string
 }
 
-interface ClientReadyPendingCommentDisplay extends Omit<PendingCommentDisplay, 'comment'> {
+export interface ClientReadyPendingCommentDisplay {
   comment: ClientReadyComment;
+  accessoryId: string;
+  accessoryName: string;
 }
 
+// This function converts the data fetched by getPendingComments
+// (which already has createdAt as string) into the ClientReadyPendingCommentDisplay structure,
+// ensuring all fields are present with fallbacks.
 const preparePendingCommentForClient = (
-  pendingComment: PendingCommentDisplay | null | undefined
+  pendingCommentInput: PendingCommentDisplayWithISOStringDate | null | undefined
 ): ClientReadyPendingCommentDisplay | null => {
-  if (!pendingComment || !pendingComment.comment) {
-    console.warn('Invalid pendingComment data (missing comment object):', pendingComment);
+  if (!pendingCommentInput || !pendingCommentInput.comment) {
+    console.warn('preparePendingCommentForClient: Invalid input (missing comment object):', pendingCommentInput);
     return null;
   }
 
-  const originalComment = pendingComment.comment;
+  const { comment: inputComment, accessoryId, accessoryName } = pendingCommentInput;
 
-  if (!originalComment.createdAt) {
-    console.warn('Invalid pendingComment data (missing createdAt):', pendingComment);
-    // Fallback: create a comment with a default date or skip
-    return {
-      ...pendingComment,
-      comment: {
-        ...originalComment,
-        id: originalComment.id || 'unknown-id-' + Math.random().toString(36).substring(7),
-        userId: originalComment.userId || 'unknown-user',
-        userName: originalComment.userName || 'Usuário Desconhecido',
-        text: originalComment.text || '',
-        status: originalComment.status || 'pending_review',
-        createdAt: new Date().toISOString(), // Fallback createdAt
-      },
-    } as ClientReadyPendingCommentDisplay;
+  // Validate if createdAt is a parsable date string, otherwise fallback
+  let validatedIsoCreatedAt: string = inputComment.createdAt;
+  if (typeof validatedIsoCreatedAt !== 'string' || isNaN(new Date(validatedIsoCreatedAt).getTime())) {
+    console.warn(`preparePendingCommentForClient: Malformed or non-string createdAt for comment ID ${inputComment.id || 'unknown'}: ${validatedIsoCreatedAt}. Using current date as fallback.`);
+    validatedIsoCreatedAt = new Date().toISOString();
   }
 
-  const createdAtVal = originalComment.createdAt;
-  let isoCreatedAt: string;
-
-  if (typeof createdAtVal === 'string') {
-    const parsedDate = new Date(createdAtVal);
-    if (!isNaN(parsedDate.getTime())) {
-      isoCreatedAt = parsedDate.toISOString();
-    } else {
-      console.warn(`preparePendingCommentForClient: Could not parse date string: ${createdAtVal} for comment ID ${originalComment.id}`);
-      isoCreatedAt = new Date().toISOString(); // Fallback
-    }
-  } else if (createdAtVal && typeof createdAtVal === 'object' && typeof (createdAtVal as any).toDate === 'function') {
-    // Handles both Firebase client Timestamp and Admin Timestamp (duck typing)
-    isoCreatedAt = (createdAtVal as AdminTimestamp | ClientTimestamp).toDate().toISOString();
-  } else {
-    console.warn(`preparePendingCommentForClient: Unhandled createdAt type for comment ID ${originalComment.id}:`, createdAtVal);
-    isoCreatedAt = new Date().toISOString(); // Fallback
-  }
+  const clientReadyComment: ClientReadyComment = {
+    id: inputComment.id || `unknown-id-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    userId: inputComment.userId || 'unknown-user',
+    userName: inputComment.userName || 'Usuário Desconhecido',
+    text: inputComment.text || '',
+    status: inputComment.status || 'pending_review', // status should be 'pending_review' from query
+    createdAt: validatedIsoCreatedAt,
+  };
 
   return {
-    ...pendingComment,
-    comment: {
-      ...originalComment,
-      createdAt: isoCreatedAt,
-    },
-  } as ClientReadyPendingCommentDisplay;
+    comment: clientReadyComment,
+    accessoryId: accessoryId,
+    accessoryName: accessoryName,
+  };
 };
 
 
 export default async function ModerationPage() {
-  let rawPendingComments: PendingCommentDisplay[] = [];
+  let rawPendingComments: PendingCommentDisplayWithISOStringDate[] = [];
   let fetchError: string | null = null;
 
   try {
@@ -139,7 +127,7 @@ export default async function ModerationPage() {
               </p>
             </div>
           ) : (
-            <PendingCommentsList initialPendingComments={pendingComments as any} />
+            <PendingCommentsList initialPendingComments={pendingComments} />
           )}
         </CardContent>
       </Card>

@@ -1,5 +1,5 @@
 
-import { getPostById } from '@/lib/data'; // Now async
+import { getPostById, getAllPosts } from '@/lib/data'; // Now async, added getAllPosts
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -9,6 +9,13 @@ import PostForm from '@/components/admin/PostForm';
 import { updatePostAction } from '../../actions';
 import type { Post } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
+
+export async function generateStaticParams() {
+  const posts = await getAllPosts();
+  return posts.map((post) => ({
+    id: post.id,
+  }));
+}
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const post = await getPostById(params.id); // Await async call

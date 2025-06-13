@@ -2,23 +2,24 @@
 "use client";
 
 import { useState, useEffect, useActionState, startTransition } from 'react';
-import type { PendingCommentDisplay } from '@/lib/types';
+// Use the ClientReadyPendingCommentDisplay type from the parent page
+import type { ClientReadyPendingCommentDisplay } from '../page';
 import { approveCommentAction, rejectCommentAction, type ModerationActionResult } from '../actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, XCircle, MessageSquare, ExternalLink, Loader2, UserCircle } from 'lucide-react';
+import { CheckCircle, XCircle, MessageSquare, Loader2, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
 interface PendingCommentsListProps {
-  initialPendingComments: PendingCommentDisplay[];
+  initialPendingComments: ClientReadyPendingCommentDisplay[];
 }
 
 const initialActionState: ModerationActionResult = { success: false };
 
 export default function PendingCommentsList({ initialPendingComments }: PendingCommentsListProps) {
-  const [pendingComments, setPendingComments] = useState<PendingCommentDisplay[]>(initialPendingComments);
+  const [pendingComments, setPendingComments] = useState<ClientReadyPendingCommentDisplay[]>(initialPendingComments);
   const [approveState, handleApproveAction, isApprovePending] = useActionState(approveCommentAction, initialActionState);
   const [rejectState, handleRejectAction, isRejectPending] = useActionState(rejectCommentAction, initialActionState);
   const { toast } = useToast();
@@ -65,7 +66,6 @@ export default function PendingCommentsList({ initialPendingComments }: PendingC
           title: "Sucesso!",
           description: state.message || `Comentário ${actionType} com sucesso.`,
         });
-         // Ensure removal from list on success
         setPendingComments(prevComments => 
           prevComments.filter(pc => pc.comment.id !== state.moderatedCommentId)
         );
@@ -101,6 +101,7 @@ export default function PendingCommentsList({ initialPendingComments }: PendingC
   };
 
   const formatDate = (dateString: string) => {
+    // dateString is now expected to be an ISO string
     return new Date(dateString).toLocaleDateString('pt-BR', {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
