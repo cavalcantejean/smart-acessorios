@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    ppr: false, // Explicitly disable Partial Prerendering
+  },
   images: {
     remotePatterns: [
       {
