@@ -23,8 +23,13 @@ const prepareAccessoryForClient = (accessory: Accessory): any => {
   };
 };
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const accessoryId: string = params.id;
+interface AccessoryPageProps {
+  params: { id: string };
+}
+
+export async function generateMetadata({ params }: AccessoryPageProps): Promise<Metadata> {
+  const { id: accessoryId } = params; // Destructure id directly
+
   if (!accessoryId) {
     return { title: 'Acessório Inválido' };
   }
@@ -43,8 +48,8 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   };
 }
 
-export default async function AccessoryDetailPage({ params }: { params: { id: string } }) {
-  const accessoryId: string = params.id;
+export default async function AccessoryDetailPage({ params }: AccessoryPageProps) {
+  const { id: accessoryId } = params; // Destructure id directly
 
   if (!accessoryId) {
     return (
