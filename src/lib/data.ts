@@ -1,7 +1,7 @@
 
-import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, BadgeCriteriaData, SiteSettings, SocialLinkSetting } from './types';
-// Removed Comment, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, CommentWithAccessoryInfo
-import { allBadges, generateBadgeCriteriaData } from './badges';
+import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting } from './types';
+// Removed Comment, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, CommentWithAccessoryInfo, Badge, BadgeCriteriaData
+// Removed allBadges, generateBadgeCriteriaData
 import { db } from './firebase'; 
 import {
   collection,
@@ -113,8 +113,6 @@ export async function getAllUsers(): Promise<UserFirestoreData[]> {
     return [];
   }
 }
-
-// toggleFollowUser REMOVED
 
 // --- Accessory Management (Client SDK for reads and user-initiated writes) ---
 const accessoriesClientCollection = collection(db, "acessorios");
@@ -293,33 +291,5 @@ export async function getLatestPosts(count: number): Promise<Post[]> {
   } catch (error) {
     console.error("Error fetching latest posts from Firestore:", error);
     return [];
-  }
-}
-
-// --- Badge System (Client SDK) ---
-export async function checkAndAwardBadges(userId: string): Promise<void> {
-  if (!db) { console.error("Firestore client db instance not available for badge checking."); return; }
-  const user = await getUserById(userId);
-  if (!user) { console.warn(`User ${userId} not found for badge checking.`); return; }
-
-  const criteriaData = await generateBadgeCriteriaData(user);
-  let userBadges = user.badges || [];
-  let badgesUpdated = false;
-
-  for (const badge of allBadges) {
-    if (!userBadges.includes(badge.id) && badge.criteria(user, criteriaData)) {
-      userBadges.push(badge.id);
-      badgesUpdated = true;
-    }
-  }
-
-  if (badgesUpdated) {
-    const userDocRef = doc(db, "usuarios", userId);
-    try {
-      await updateDoc(userDocRef, { badges: userBadges, updatedAt: serverTimestamp() });
-      console.log(`Badges updated for user ${userId}. New badges: ${userBadges.join(', ')}`);
-    } catch (error) {
-      console.error(`Error updating badges for user ${userId} in Firestore (client SDK):`, error);
-    }
   }
 }

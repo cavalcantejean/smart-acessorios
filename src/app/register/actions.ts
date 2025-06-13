@@ -58,25 +58,18 @@ export async function registerUserAction(
   }
 
   try {
-    // REMOVIDA: Verificação de e-mail duplicado no Firestore.
-    // Firebase Auth cuidará disso com 'auth/email-already-in-use'.
-
     console.log("registerUserAction: Calling createUserWithEmailAndPassword...");
     const userCredential = await createUserWithEmailAndPassword(auth, lowercasedEmail, password);
     const firebaseAuthUser = userCredential.user;
     console.log("registerUserAction: Firebase Auth user CREATED successfully. UID:", firebaseAuthUser.uid);
     console.log("registerUserAction: auth.currentUser immediately after createUserWithEmailAndPassword:", auth.currentUser ? auth.currentUser.uid : "null");
 
-
-    const newUserFirestoreData: Omit<UserFirestoreData, 'followers' | 'following'> = { // Omit removed fields
+    const newUserFirestoreData: Omit<UserFirestoreData, 'createdAt' | 'updatedAt'> = { 
       id: firebaseAuthUser.uid,
       name,
       email: lowercasedEmail,
       isAdmin: false,
-      // followers: [], // REMOVED
-      // following: [], // REMOVED
-      badges: [],
-      createdAt: serverTimestamp(),
+      // badges: [], // REMOVED
       avatarUrl: `https://placehold.co/150x150.png?text=${name.charAt(0).toUpperCase()}`,
       avatarHint: "user avatar placeholder",
       bio: `Novo membro da comunidade SmartAcessorios!`,
@@ -86,7 +79,11 @@ export async function registerUserAction(
     console.log("registerUserAction: Data to be sent to Firestore (newUserFirestoreData):", JSON.stringify(newUserFirestoreData, null, 2));
 
     console.log("registerUserAction: Calling setDoc to Firestore for UID:", firebaseAuthUser.uid);
-    await setDoc(doc(db, "usuarios", firebaseAuthUser.uid), newUserFirestoreData);
+    await setDoc(doc(db, "usuarios", firebaseAuthUser.uid), {
+        ...newUserFirestoreData,
+        createdAt: serverTimestamp(), // Add serverTimestamp here
+        updatedAt: serverTimestamp()  // Add serverTimestamp here
+    });
     console.log("registerUserAction: Firestore document CREATED for user:", firebaseAuthUser.uid);
 
     try {

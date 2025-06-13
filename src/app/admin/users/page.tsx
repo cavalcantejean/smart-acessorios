@@ -21,8 +21,6 @@ const prepareUserForClient = (user: User): User => {
     ...user,
     createdAt: user.createdAt instanceof Timestamp ? user.createdAt.toDate().toISOString() : (user.createdAt as any),
     updatedAt: user.updatedAt instanceof Timestamp ? user.updatedAt.toDate().toISOString() : (user.updatedAt as any),
-    // followers and following are removed from User type, so no need to map them here
-    badges: Array.isArray(user.badges) ? user.badges : [],
   } as User;
 };
 

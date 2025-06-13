@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   }
   return {
     title: `${user.name} | Perfil SmartAcessorios`,
-    description: `Veja o perfil de ${user.name}, seus seguidores e quem ele segue. ${user.bio || ''}`,
+    description: `Veja o perfil de ${user.name}. ${user.bio || ''}`,
   };
 }
 
@@ -57,11 +57,7 @@ export default async function UserProfilePage({ params }: { params: { id: string
     ...profileUserRaw,
     createdAt: profileUserRaw.createdAt instanceof Timestamp ? profileUserRaw.createdAt.toDate().toISOString() : (profileUserRaw.createdAt as any),
     updatedAt: profileUserRaw.updatedAt instanceof Timestamp ? profileUserRaw.updatedAt.toDate().toISOString() : (profileUserRaw.updatedAt as any),
-    followers: Array.isArray(profileUserRaw.followers) ? profileUserRaw.followers : [],
-    following: Array.isArray(profileUserRaw.following) ? profileUserRaw.following : [],
-    badges: Array.isArray(profileUserRaw.badges) ? profileUserRaw.badges : [],
   };
 
-  // Cast to `any` if UserProfileClientView expects the original User type, or update UserProfileClientView's prop type.
   return <UserProfileClientView profileUser={profileUser as any} />;
 }

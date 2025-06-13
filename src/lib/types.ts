@@ -16,8 +16,6 @@ export interface Accessory {
   category?: string;
   aiSummary?: string;
   isDeal?: boolean;
-  // likedBy: string[]; // REMOVED
-  // comments: Comment[]; // REMOVED
   embedHtml?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -49,12 +47,9 @@ export interface UserFirestoreData {
   name: string;
   email: string;
   isAdmin: boolean;
-  // followers: string[]; // REMOVED
-  // following: string[]; // REMOVED
   avatarUrl?: string;
   avatarHint?: string;
   bio?: string;
-  badges?: string[];
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -65,28 +60,6 @@ export interface AuthUser {
   email: string | null;
   isAdmin: boolean;
 }
-
-export interface BadgeCriteriaData {
-  // userCommentsCount: number; // REMOVED
-  // userLikesCount: number; // REMOVED
-  // userFollowingCount: number; // REMOVED
-  // userFollowersCount: number; // REMOVED
-  // Add other criteria data points here if new badges require them
-  placeholder?: boolean; // Added placeholder as all criteria were removed
-}
-
-export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color?: string;
-  criteria: (user: UserFirestoreData, data: BadgeCriteriaData) => boolean;
-}
-
-// PendingCommentDisplay type REMOVED
-// CommentWithAccessoryInfo type REMOVED
-
 
 export interface Post {
   id: string;
@@ -117,20 +90,14 @@ export interface CategoryCount {
 export interface TopAccessoryInfo {
   id: string;
   name: string;
-  count: number; // This will now be for other metrics if TopItemsList is reused, or this type might become unused.
+  count: number; 
   imageUrl?: string;
 }
-
-// RecentCommentInfo type REMOVED
 
 export interface AnalyticsData {
   totalUsers: number;
   totalAccessories: number;
-  // totalApprovedComments: number; // REMOVED
   accessoriesPerCategory: CategoryCount[];
-  // mostLikedAccessories: TopAccessoryInfo[]; // REMOVED
-  // mostCommentedAccessories: TopAccessoryInfo[]; // REMOVED
-  // recentComments: RecentCommentInfo[]; // REMOVED
 }
 
 // Site Settings Types (remains local)

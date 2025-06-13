@@ -8,7 +8,7 @@ import {
   type User as FirebaseUser,
   type UserCredential 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; // Removed collection, query, where, getDocs as they are not used here
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; 
 import type { AuthUser, UserFirestoreData } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -63,20 +63,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (isSocialLogin) {
             console.log(`useAuth: User ${fbUser.uid} is a new social login (e.g., Google). Creating Firestore document.`);
-            const newUserFirestoreData: Omit<UserFirestoreData, 'followers' | 'following'> = { // Adjusted type
+            const newUserFirestoreData: Omit<UserFirestoreData, 'createdAt' | 'updatedAt'> = { 
               id: fbUser.uid,
               name: fbUser.displayName || "Usuário Social",
               email: fbUser.email || "email.social@desconhecido.com",
               isAdmin: false,
-              // followers: [], // REMOVED
-              // following: [], // REMOVED
-              badges: [],
-              createdAt: serverTimestamp(),
               avatarUrl: fbUser.photoURL || `https://placehold.co/150x150.png?text=${(fbUser.displayName || 'S').charAt(0).toUpperCase()}`,
               avatarHint: "user avatar social",
               bio: `Novo membro via login social!`,
             };
-            await setDoc(userDocRef, newUserFirestoreData);
+            await setDoc(userDocRef, {
+                ...newUserFirestoreData,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            });
             console.log(`useAuth: Firestore document CREATED for new social user: ${fbUser.uid}`);
             const currentAuthUser: AuthUser = {
               id: newUserFirestoreData.id,
