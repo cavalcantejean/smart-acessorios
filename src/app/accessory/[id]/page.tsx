@@ -28,16 +28,16 @@ interface AccessoryPageProps {
 }
 
 export async function generateMetadata({ params }: AccessoryPageProps): Promise<Metadata> {
-  const localAccessoryId = params.id; 
-  console.log('[generateMetadata] Extracted localAccessoryId:', localAccessoryId);
+  const id = params.id; // Use 'id' diretamente
+  console.log('[generateMetadata] Extracted id:', id);
 
-  if (!localAccessoryId) {
-    console.error('[generateMetadata] Error: localAccessoryId is falsy. Value:', localAccessoryId);
+  if (!id) {
+    console.error('[generateMetadata] Error: id is falsy. Value:', id);
     return { title: 'Acessório Inválido (Metadata)' };
   }
-  const accessory = await getAccessoryById(localAccessoryId);
+  const accessory = await getAccessoryById(id);
   if (!accessory) {
-    console.error('[generateMetadata] Error: Accessory not found for ID:', localAccessoryId);
+    console.error('[generateMetadata] Error: Accessory not found for ID:', id);
     return { title: 'Acessório Não Encontrado (Metadata)' };
   }
   return {
@@ -52,11 +52,11 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
 }
 
 export default async function AccessoryDetailPage({ params }: AccessoryPageProps) {
-  const localAccessoryId = params.id; 
-  console.log('[AccessoryDetailPage] Extracted localAccessoryId:', localAccessoryId);
+  const id = params.id; // Use 'id' diretamente
+  console.log('[AccessoryDetailPage] Extracted id:', id);
 
-  if (!localAccessoryId) {
-    console.error('[AccessoryDetailPage] Error: localAccessoryId is falsy. Value:', localAccessoryId);
+  if (!id) {
+    console.error('[AccessoryDetailPage] Error: id is falsy. Value:', id);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">
@@ -79,10 +79,10 @@ export default async function AccessoryDetailPage({ params }: AccessoryPageProps
     );
   }
 
-  const accessoryData = await getAccessoryById(localAccessoryId);
+  const accessoryData = await getAccessoryById(id);
 
   if (!accessoryData) {
-    console.error('[AccessoryDetailPage] Error: Accessory not found for ID:', localAccessoryId);
+    console.error('[AccessoryDetailPage] Error: Accessory not found for ID:', id);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">
@@ -92,7 +92,7 @@ export default async function AccessoryDetailPage({ params }: AccessoryPageProps
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-6">
-              O acessório com o ID '{localAccessoryId}' não foi encontrado.
+              O acessório com o ID '{id}' não foi encontrado.
             </p>
             <Button asChild>
               <Link href="/">
@@ -113,4 +113,3 @@ export default async function AccessoryDetailPage({ params }: AccessoryPageProps
     </div>
   );
 }
-    
