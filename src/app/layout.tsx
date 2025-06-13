@@ -7,9 +7,9 @@ import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import { getSiteSettings } from '@/lib/data';
-import type { SiteSettings } from '@/lib/types'; 
+import type { SiteSettings, SiteSettingsForClient } from '@/lib/types'; 
 import NavigationProgress from '@/components/NavigationProgress';
-import { Suspense } from 'react'; // Import Suspense
+import { Suspense } from 'react';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -52,9 +52,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export async function generateViewport(): Promise<Viewport> {
   const currentSiteSettings = await getSiteSettings();
+  // Se você tiver uma cor de tema nas configurações, pode usá-la aqui.
+  // Ex: const themeColorFromSettings = currentSiteSettings.themeColor;
   const themeColorFromSettings = null; 
   return {
-    themeColor: themeColorFromSettings || '#3F51B5',
+    themeColor: themeColorFromSettings || '#3F51B5', // Cor primária como fallback
   };
 }
 
@@ -63,7 +65,25 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const currentSiteSettings = await getSiteSettings();
+  const currentSiteSettings: SiteSettingsForClient = await getSiteSettings();
+
+  // Prepara uma versão serializável de socialLinks para o Footer
+  const serializableSocialLinks = currentSiteSettings.socialLinks.map(link => ({
+    platform: link.platform,
+    label: link.label,
+    url: link.url,
+    customImageUrl: link.customImageUrl,
+    // IconComponent e placeholderUrl são omitidos aqui
+  }));
+
+  const settingsForFooter: SiteSettings = {
+    siteTitle: currentSiteSettings.siteTitle,
+    siteDescription: currentSiteSettings.siteDescription,
+    siteLogoUrl: currentSiteSettings.siteLogoUrl,
+    siteFaviconUrl: currentSiteSettings.siteFaviconUrl,
+    socialLinks: serializableSocialLinks,
+  };
+
 
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
@@ -76,7 +96,7 @@ export default async function RootLayout({
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}
           </main>
-          <Footer siteSettings={currentSiteSettings} />
+          <Footer siteSettings={settingsForFooter} />
           <Toaster />
         </AuthProvider>
       </body>

@@ -3,8 +3,9 @@
 
 import Link from 'next/link';
 import Image, { type StaticImageData } from 'next/image';
-import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; // SocialLinkSetting type will be without IconComponent
-import React, { useEffect, useState } from 'react';
+import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; // Mudado para SiteSettings
+import React from 'react';
+import { getBaseSocialLinkSettings } from '@/lib/data'; // Para buscar IconComponent no cliente
 
 // Import Lucide icons that will be used as fallbacks or defaults
 import {
@@ -12,7 +13,7 @@ import {
   MessageSquare, Send, MessageCircle as DiscordIconLucide, Ghost, AtSign, PlaySquare, Film
 } from 'lucide-react';
 // Import your custom PinterestIcon if it's an SVG component
-import PinterestIcon from '@/components/icons/PinterestIcon'; 
+import PinterestIcon from '@/components/icons/PinterestIcon';
 
 // Import the local PNG icon assets
 import facebookIconPng from '@/img/social/facebook.png';
@@ -47,7 +48,7 @@ const localIconMap: Record<string, StaticImageData | undefined> = {
 };
 
 interface FooterProps {
-  siteSettings: SiteSettings | null; // SiteSettings prop from RootLayout
+  siteSettings: SiteSettings | null; // Modificado para SiteSettings (serializável)
 }
 
 export default function Footer({ siteSettings }: FooterProps) {
@@ -61,39 +62,56 @@ export default function Footer({ siteSettings }: FooterProps) {
     );
   }
 
-  const socialLinksToRender = siteSettings.socialLinks.filter(
-    link => link.url && link.url.trim() !== ''
-  );
+  const baseLinksWithIcons = getBaseSocialLinkSettings();
+
+  const socialLinksToRender = siteSettings.socialLinks
+    .filter(propLink => propLink.url && propLink.url.trim() !== '')
+    .map(propLink => {
+      const baseLink = baseLinksWithIcons.find(b => b.platform === propLink.platform);
+      return {
+        platform: propLink.platform,
+        label: propLink.label, // Label vem da prop (que foi originada da base)
+        url: propLink.url,
+        customImageUrl: propLink.customImageUrl,
+        IconComponent: baseLink?.IconComponent, // Pega o IconComponent da base
+        placeholderUrl: baseLink?.placeholderUrl || '', // Pega o placeholderUrl da base
+      };
+    });
+
 
   // Helper function within Footer to get the correct icon
-  const getIconForPlatform = (platform: string, customImageUrl?: string) => {
+  const getIconForPlatform = (link: typeof socialLinksToRender[0]) => {
     const iconSizeClass = "h-6 w-6";
 
-    if (customImageUrl) {
-      return <Image src={customImageUrl} alt={`${platform} icon`} width={24} height={24} className={iconSizeClass} unoptimized={customImageUrl.startsWith('data:')}/>;
-    }
-    
-    const localPng = localIconMap[platform];
-    if (localPng) {
-      return <Image src={localPng} alt={`${platform} icon`} width={24} height={24} className={iconSizeClass} />;
+    if (link.customImageUrl) {
+      return <Image src={link.customImageUrl} alt={`${link.platform} icon`} width={24} height={24} className={iconSizeClass} unoptimized={link.customImageUrl.startsWith('data:')}/>;
     }
 
-    // Fallback to Lucide icons or custom SVG components
-    switch (platform) {
+    const localPng = localIconMap[link.platform];
+    if (localPng) {
+      return <Image src={localPng} alt={`${link.platform} icon`} width={24} height={24} className={iconSizeClass} />;
+    }
+    
+    if (link.IconComponent) {
+        return <link.IconComponent className={iconSizeClass} />;
+    }
+
+    // Fallback para ícones Lucide (redundante se IconComponent sempre existir na base, mas seguro)
+    switch (link.platform) {
       case "Facebook": return <Facebook className={iconSizeClass} />;
       case "Instagram": return <Instagram className={iconSizeClass} />;
-      case "Twitter": return <Twitter className={iconSizeClass} />; // For X (Twitter)
-      case "TikTok": return <Film className={iconSizeClass} />; // Using Film as a generic for TikTok
-      case "WhatsApp": return <MessageSquare className={iconSizeClass} />; // Lucide's MessageSquare
-      case "Pinterest": return <PinterestIcon className={iconSizeClass} />; // Your custom SVG
+      case "Twitter": return <Twitter className={iconSizeClass} />;
+      case "TikTok": return <Film className={iconSizeClass} />;
+      case "WhatsApp": return <MessageSquare className={iconSizeClass} />;
+      case "Pinterest": return <PinterestIcon className={iconSizeClass} />;
       case "Telegram": return <Send className={iconSizeClass} />;
       case "Discord": return <DiscordIconLucide className={iconSizeClass} />;
       case "Snapchat": return <Ghost className={iconSizeClass} />;
       case "Threads": return <AtSign className={iconSizeClass} />;
       case "Email": return <Mail className={iconSizeClass} />;
       case "YouTube": return <Youtube className={iconSizeClass} />;
-      case "Kwai": return <PlaySquare className={iconSizeClass} />; // Using PlaySquare for Kwai
-      default: return <HelpCircle className={iconSizeClass} />; // Default fallback
+      case "Kwai": return <PlaySquare className={iconSizeClass} />;
+      default: return <HelpCircle className={iconSizeClass} />;
     }
   };
 
@@ -124,7 +142,7 @@ export default function Footer({ siteSettings }: FooterProps) {
               <h3 className="text-lg font-semibold text-foreground mb-2">Siga-nos</h3>
               <div className="flex flex-wrap gap-4">
                 {socialLinksToRender.map((link) => {
-                  const iconContent = getIconForPlatform(link.platform, link.customImageUrl);
+                  const iconContent = getIconForPlatform(link);
                   return (
                     <Link
                       key={link.platform}

@@ -2,8 +2,6 @@
 import type { ComponentType } from 'react';
 import type { Timestamp } from 'firebase/firestore';
 
-// Comment type REMOVED
-
 export interface Accessory {
   id: string;
   name: string;
@@ -26,7 +24,7 @@ export interface Coupon {
   code: string;
   description: string;
   discount: string;
-  expiryDate?: Timestamp; 
+  expiryDate?: Timestamp;
   store?: string;
   applyUrl?: string;
   createdAt?: Timestamp;
@@ -66,7 +64,7 @@ export interface Post {
   slug: string;
   title: string;
   excerpt: string;
-  content: string; 
+  content: string;
   imageUrl: string;
   imageHint?: string;
   authorName: string;
@@ -74,7 +72,7 @@ export interface Post {
   authorAvatarHint?: string;
   category?: string;
   tags: string[];
-  publishedAt: Timestamp; 
+  publishedAt: Timestamp;
   embedHtml?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -90,7 +88,7 @@ export interface CategoryCount {
 export interface TopAccessoryInfo {
   id: string;
   name: string;
-  count: number; 
+  count: number;
   imageUrl?: string;
 }
 
@@ -101,22 +99,27 @@ export interface AnalyticsData {
 }
 
 // Site Settings Types
-// This type is used for both in-app representation and Firestore storage.
-// The IconComponent is only for client-side rendering hints in `data.ts`'s default structure
-// and is NOT stored in Firestore.
+
+// Base SocialLinkSetting type (includes IconComponent for client-side use definition)
 export interface SocialLinkSetting {
   platform: string;
   label: string;
-  url: string; // URL provided by the admin
-  placeholderUrl: string; // Example URL for admin UI
-  customImageUrl?: string; // Admin-provided custom image URL (data URI or external)
-  IconComponent?: ComponentType<{ className?: string }>; // Only for client-side default rendering, NOT stored
+  url: string;
+  placeholderUrl: string;
+  customImageUrl?: string;
+  IconComponent?: ComponentType<{ className?: string }>;
 }
 
+// Type for SiteSettings stored in Firestore (omits IconComponent)
 export interface SiteSettings {
   siteTitle: string;
   siteDescription: string;
-  socialLinks: Array<Omit<SocialLinkSetting, 'IconComponent'>>; // Ensure IconComponent is not part of the stored type
+  socialLinks: Array<Omit<SocialLinkSetting, 'IconComponent' | 'placeholderUrl'>>; // Only store essential data
   siteLogoUrl?: string;
   siteFaviconUrl?: string;
+}
+
+// Type for SiteSettings when used on the client (includes IconComponent)
+export interface SiteSettingsForClient extends Omit<SiteSettings, 'socialLinks'> {
+  socialLinks: SocialLinkSetting[]; // This will be the fully merged structure with Icons and placeholders
 }

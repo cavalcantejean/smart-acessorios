@@ -1,11 +1,11 @@
 
-'use server'; 
+'use server';
 
-import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, BadgeCriteriaData, CategoryCount, TopAccessoryInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
-// Removed Comment, PendingCommentDisplay, RecentCommentInfo
-import admin, { type App as AdminApp } from 'firebase-admin'; 
-import { adminDb, adminAuth } from './firebase-admin'; 
-import { checkAndAwardBadges } from './data'; 
+import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting } from './types';
+import admin, { type App as AdminApp } from 'firebase-admin';
+import { adminDb, adminAuth } from './firebase-admin';
+import { checkAndAwardBadges } from './data'; // This might be an issue if data.ts uses data-admin.ts - circular dependency risk
+import { defaultSiteSettings as importedDefaultSiteSettings } from './data'; // Import from data.ts
 
 const convertAdminTimestampToISO = (timestamp: admin.firestore.Timestamp | undefined): string | undefined => {
   return timestamp ? timestamp.toDate().toISOString() : undefined;
@@ -19,64 +19,53 @@ const convertAdminTimestampToStringForDisplay = (timestamp: admin.firestore.Time
 const SITE_SETTINGS_COLLECTION = 'configuracoes';
 const SITE_SETTINGS_DOC_ID = 'site_settings_doc';
 
-// Default site settings, used if no document is found in Firestore.
-// IconComponent is NOT part of SiteSettings type for Firestore.
-const defaultSocialLinksStructure: SocialLinkSetting[] = [
-    { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", placeholderUrl: "https://facebook.com/seu_usuario", customImageUrl: "" },
-    { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", placeholderUrl: "https://instagram.com/seu_usuario", customImageUrl: "" },
-    { platform: "Twitter", label: "X (Twitter)", url: "https://x.com/Smart_acessorio", placeholderUrl: "https://x.com/seu_usuario", customImageUrl: "" },
-    { platform: "TikTok", label: "TikTok", url: "https://tiktok.com/@smartacessorio", placeholderUrl: "https://tiktok.com/@seu_usuario", customImageUrl: "" },
-    { platform: "WhatsApp", label: "WhatsApp", url: "https://whatsapp.com/channel/0029VbAKxmx5PO18KEZQkJ2V", placeholderUrl: "https://wa.me/seu_numero_ou_link_canal", customImageUrl: "" },
-    { platform: "Pinterest", label: "Pinterest", url: "https://pinterest.com/smartacessorios", placeholderUrl: "https://pinterest.com/seu_usuario", customImageUrl: "" },
-    { platform: "Telegram", label: "Telegram", url: "https://t.me/smartacessorios", placeholderUrl: "https://t.me/seu_canal", customImageUrl: "" },
-    { platform: "Discord", label: "Discord", url: "https://discord.gg/89bwDJWh3y", placeholderUrl: "https://discord.gg/seu_servidor", customImageUrl: "" },
-    { platform: "Snapchat", label: "Snapchat", url: "https://snapchat.com/add/smartacessorios", placeholderUrl: "https://snapchat.com/add/seu_usuario", customImageUrl: "" },
-    { platform: "Threads", label: "Threads", url: "https://threads.net/@smart.acessorios", placeholderUrl: "https://threads.net/@seu_usuario", customImageUrl: "" },
-    { platform: "Email", label: "Email", url: "mailto:smartacessori@gmail.com", placeholderUrl: "mailto:seu_email@example.com", customImageUrl: "" },
-    { platform: "YouTube", label: "YouTube", url: "https://youtube.com/@smart.acessorios", placeholderUrl: "https://youtube.com/@seu_canal", customImageUrl: "" },
-    { platform: "Kwai", label: "Kwai", url: "https://k.kwai.com/u/@SmartAcessorios", placeholderUrl: "https://k.kwai.com/u/@seu_usuario", customImageUrl: "" }
-];
-
-export const defaultSiteSettings: SiteSettings = {
-  siteTitle: 'SmartAcessorios',
-  siteDescription: 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-  siteLogoUrl: '', 
-  siteFaviconUrl: '',
-  socialLinks: defaultSocialLinksStructure.map(({ IconComponent, ...rest }) => rest), // Remove IconComponent for storage
-};
+// defaultSocialLinksDataForStorage and defaultSiteSettings are now imported or derived from importedDefaultSiteSettings
 
 export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
   if (!adminDb) {
     console.warn("Firebase Admin SDK (adminDb) is not initialized in getSiteSettingsAdmin. Returning default settings.");
-    return JSON.parse(JSON.stringify(defaultSiteSettings)); // Deep copy
+    return JSON.parse(JSON.stringify(importedDefaultSiteSettings)); // Deep copy of imported defaults
   }
   try {
     const settingsDocRef = adminDb.collection(SITE_SETTINGS_COLLECTION).doc(SITE_SETTINGS_DOC_ID);
     const docSnap = await settingsDocRef.get();
 
     if (docSnap.exists) {
-      const data = docSnap.data() as SiteSettings;
-      // Ensure all social link platforms from default structure are present, merging URLs
-      const mergedSocialLinks = defaultSocialLinksStructure.map(defaultLink => {
-        const storedLink = data.socialLinks.find(sl => sl.platform === defaultLink.platform);
+      const storedData = docSnap.data() as Partial<SiteSettings>;
+
+      const storedSocialLinks: Array<Omit<SocialLinkSetting, 'IconComponent' | 'placeholderUrl'>> =
+        storedData.socialLinks?.map(sl => ({
+          platform: sl.platform,
+          label: sl.label,
+          url: sl.url || "",
+          customImageUrl: sl.customImageUrl || "",
+        })) || [];
+
+      const mergedSocialLinksForStorage = importedDefaultSiteSettings.socialLinks.map(defaultLinkEntry => {
+        const storedLinkEntry = storedSocialLinks.find(sl => sl.platform === defaultLinkEntry.platform);
         return {
-          platform: defaultLink.platform,
-          label: defaultLink.label, // Keep default label as it's not admin-editable
-          placeholderUrl: defaultLink.placeholderUrl, // Keep default placeholder
-          url: storedLink?.url || "", // Use stored URL or empty if not set
-          customImageUrl: storedLink?.customImageUrl || "", // Use stored custom image or empty
+          platform: defaultLinkEntry.platform,
+          label: defaultLinkEntry.label,
+          url: storedLinkEntry?.url ?? defaultLinkEntry.url,
+          customImageUrl: storedLinkEntry?.customImageUrl ?? defaultLinkEntry.customImageUrl,
         };
       });
-      return { ...defaultSiteSettings, ...data, socialLinks: mergedSocialLinks };
+
+      return {
+        siteTitle: storedData.siteTitle ?? importedDefaultSiteSettings.siteTitle,
+        siteDescription: storedData.siteDescription ?? importedDefaultSiteSettings.siteDescription,
+        siteLogoUrl: storedData.siteLogoUrl ?? importedDefaultSiteSettings.siteLogoUrl,
+        siteFaviconUrl: storedData.siteFaviconUrl ?? importedDefaultSiteSettings.siteFaviconUrl,
+        socialLinks: mergedSocialLinksForStorage,
+      };
     } else {
-      console.log("Site settings document not found in Firestore. Returning default settings and creating document.");
-      // Create the document with default settings if it doesn't exist
-      await settingsDocRef.set(defaultSiteSettings);
-      return JSON.parse(JSON.stringify(defaultSiteSettings)); // Deep copy
+      console.log("Site settings document not found in Firestore (admin). Returning default settings and creating document.");
+      await settingsDocRef.set(importedDefaultSiteSettings);
+      return JSON.parse(JSON.stringify(importedDefaultSiteSettings));
     }
   } catch (error) {
     console.error("Error fetching site settings from Firestore with Admin SDK:", error);
-    return JSON.parse(JSON.stringify(defaultSiteSettings)); // Return default on error, deep copy
+    return JSON.parse(JSON.stringify(importedDefaultSiteSettings));
   }
 }
 
@@ -87,28 +76,24 @@ export async function updateSiteSettingsAdmin(newSettings: Partial<SiteSettings>
   }
   const settingsDocRef = adminDb.collection(SITE_SETTINGS_COLLECTION).doc(SITE_SETTINGS_DOC_ID);
   try {
-    const currentSettings = await getSiteSettingsAdmin(); // Get current or default settings
-    
-    // Prepare the data to update, ensuring socialLinks are handled correctly
     const dataToUpdate: Partial<SiteSettings> = {};
     if (newSettings.siteTitle !== undefined) dataToUpdate.siteTitle = newSettings.siteTitle;
     if (newSettings.siteDescription !== undefined) dataToUpdate.siteDescription = newSettings.siteDescription;
     if (newSettings.siteLogoUrl !== undefined) dataToUpdate.siteLogoUrl = newSettings.siteLogoUrl;
     if (newSettings.siteFaviconUrl !== undefined) dataToUpdate.siteFaviconUrl = newSettings.siteFaviconUrl;
-    
+
     if (newSettings.socialLinks) {
-      // Only store platform, url, and customImageUrl. Label and placeholder are from defaults.
       dataToUpdate.socialLinks = newSettings.socialLinks.map(sl => ({
         platform: sl.platform,
-        url: sl.url || "", // Ensure empty string if null/undefined
-        customImageUrl: sl.customImageUrl || "", // Ensure empty string if null/undefined
-        // Do NOT store label or placeholderUrl from admin form, use defaults from defaultSocialLinksStructure
+        label: sl.label,
+        url: sl.url || "",
+        customImageUrl: sl.customImageUrl || "",
       }));
     }
 
     await settingsDocRef.set(dataToUpdate, { merge: true });
     console.log("Site settings updated successfully in Firestore.");
-    return getSiteSettingsAdmin(); // Return the freshly updated settings
+    return getSiteSettingsAdmin();
   } catch (error) {
     console.error("Error updating site settings in Firestore with Admin SDK:", error);
     throw error;
@@ -128,11 +113,11 @@ export async function toggleUserAdminStatus(userId: string): Promise<UserFiresto
     const updatedUserDoc = await userDocRef.get();
     const data = updatedUserDoc.data();
     if (data) {
-        return { 
-            id: updatedUserDoc.id, 
+        return {
+            id: updatedUserDoc.id,
             ...data,
-            createdAt: data.createdAt, 
-            updatedAt: data.updatedAt  
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt
         } as UserFirestoreData;
     }
     return null;
@@ -170,7 +155,7 @@ export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' 
     return {
       id: newDocSnap.id,
       ...createdAccessoryData,
-    } as Accessory; 
+    } as Accessory;
   } catch (error: any) {
     console.error("[Data:addAccessoryWithAdmin] Detailed error during addDoc/get (Admin SDK):", error);
     throw error;
@@ -216,7 +201,7 @@ export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'u
   if (!adminDb) { throw new Error("Firebase Admin SDK (adminDb) is not initialized in addCoupon."); }
   const newCouponData: any = {
     ...couponData,
-    expiryDate: couponData.expiryDate ? admin.firestore.Timestamp.fromDate(new Date(couponData.expiryDate as any)) : null, 
+    expiryDate: couponData.expiryDate ? admin.firestore.Timestamp.fromDate(new Date(couponData.expiryDate as any)) : null,
     store: couponData.store || null,
     applyUrl: couponData.applyUrl || null,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -238,7 +223,7 @@ export async function updateCoupon(couponId: string, couponData: Partial<Omit<Co
   try {
     const updateData: Record<string, any> = { ...couponData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
     if (couponData.expiryDate === "") {
-        updateData.expiryDate = null; 
+        updateData.expiryDate = null;
     } else if (couponData.expiryDate) {
         updateData.expiryDate = admin.firestore.Timestamp.fromDate(new Date(couponData.expiryDate as any));
     }
@@ -276,13 +261,13 @@ export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updated
     console.error("[Data:addPost] Firebase Admin SDK (adminDb) is not initialized.");
     throw new Error("Firebase Admin SDK (adminDb) is not initialized in addPost.");
   }
-  
+
   const newPostData: any = {
     ...postData,
-    publishedAt: postData.publishedAt 
-                 ? admin.firestore.Timestamp.fromDate(new Date(postData.publishedAt as any)) 
+    publishedAt: postData.publishedAt
+                 ? admin.firestore.Timestamp.fromDate(new Date(postData.publishedAt as any))
                  : admin.firestore.Timestamp.now(),
-    tags: Array.isArray(postData.tags) ? postData.tags : [], 
+    tags: Array.isArray(postData.tags) ? postData.tags : [],
     embedHtml: postData.embedHtml || '',
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -293,7 +278,7 @@ export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updated
       delete newPostData[key];
     }
   });
-  
+
   try {
     const docRef = await adminDb.collection('posts').add(newPostData);
     const newDocSnap = await docRef.get();
@@ -301,13 +286,13 @@ export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updated
       throw new Error("Newly created post document not found.");
     }
     const createdPostData = newDocSnap.data();
-    return { 
-      id: newDocSnap.id, 
-      ...createdPostData 
-    } as Post; 
+    return {
+      id: newDocSnap.id,
+      ...createdPostData
+    } as Post;
   } catch (error: any) {
     console.error("[Data:addPost] Error during Firestore add/get operation:", error);
-    throw error; 
+    throw error;
   }
 }
 
@@ -320,10 +305,10 @@ export async function updatePost(postId: string, postData: Partial<Omit<Post, 'i
     if (postData.publishedAt) {
         updateData.publishedAt = admin.firestore.Timestamp.fromDate(new Date(postData.publishedAt as any));
     }
-    if (postData.tags && !Array.isArray(postData.tags)) { 
+    if (postData.tags && !Array.isArray(postData.tags)) {
         updateData.tags = (postData.tags as unknown as string).split(',').map(t => t.trim()).filter(t => t);
     }
-    
+
     Object.keys(updateData).forEach(key => {
         if (updateData[key] === undefined) delete updateData[key];
     });
@@ -353,7 +338,19 @@ export async function deletePost(postId: string): Promise<boolean> {
   }
 }
 
-// --- Analytics Data (Admin SDK) ---
+// Analytics Data (Admin SDK) - Type definition for CategoryCount
+interface CategoryCount {
+  category: string;
+  count: number;
+}
+// Analytics Data (Admin SDK) - Type definition for AnalyticsData
+interface AnalyticsData {
+  totalUsers: number;
+  totalAccessories: number;
+  accessoriesPerCategory: CategoryCount[];
+}
+
+
 const getTotalUsersCount = async (): Promise<number> => {
   if (!adminDb) return 0;
   const snapshot = await adminDb.collection("usuarios").count().get();
