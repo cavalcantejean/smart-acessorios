@@ -8,7 +8,7 @@ To get started, take a look at src/app/page.tsx.
 
 ### Build Errors (Next.js/Turbopack)
 
-If you encounter errors like "Cannot find module '../chunks/ssr/[turbopack]_runtime.js'" or other build-related issues, try the following steps in your development environment:
+If you encounter errors like "Cannot find module '../chunks/ssr/[turbopack]_runtime.js'", or persistent errors like "Route ... used `params.id`. `params` should be awaited..." (even when `params.id` is correctly accessed), these often point to issues with the Next.js build process, particularly with Turbopack. Try the following steps in your development environment:
 
 1.  **Clean the Next.js Cache and Restart:**
     *   Stop your Next.js development server.
@@ -58,6 +58,7 @@ If you are working within an environment like Firebase Studio where you might no
     *   Once the index is active ("Enabled"), retry the operation in your application.
     *   **Why this happens:** Firestore uses indexes to make queries fast. For complex queries, it needs you to explicitly define these indexes so it can prepare the data for efficient retrieval.
     *   **Example:** A query like `collection('products').where('category', '==', 'electronics').orderBy('price', 'asc')` would likely require a composite index on `category` (ascending) and `price` (ascending).
+    After you create the index in the Firebase console and it finishes building, the error should be resolved.
 
 **3. Function `X` called with invalid data:**
 
@@ -69,6 +70,3 @@ If you are working within an environment like Firebase Studio where you might no
     *   Check your Firestore data converters if you are using them.
 
 By addressing these common Firestore issues, you can ensure your application interacts smoothly with the database.
-```
-
-After you create the index in the Firebase console and it finishes building, the error should be resolved.
