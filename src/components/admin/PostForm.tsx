@@ -211,8 +211,10 @@ export default function PostForm({
         <FormField control={form.control} name="content" render={({ field }) => (
             <FormItem>
               <FormLabel>Conteúdo Principal do Post</FormLabel>
-              <FormControl><Textarea placeholder="Escreva o conteúdo completo do seu post aqui. Você pode usar HTML básico se precisar." {...field} rows={15} /></FormControl>
-              <FormDescription>Por enquanto, use texto simples ou HTML básico. Um editor rico será adicionado no futuro.</FormDescription>
+              <FormControl><Textarea placeholder="Escreva o conteúdo completo do seu post aqui..." {...field} rows={15} /></FormControl>
+              <FormDescription>
+                Use HTML para formatação (ex: &lt;p&gt;parágrafo&lt;/p&gt;, &lt;strong&gt;negrito&lt;/strong&gt;, &lt;br&gt; para quebra de linha, &lt;ul&gt;&lt;li&gt;lista&lt;/li&gt;&lt;/ul&gt;). Um editor rico será adicionado no futuro.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
