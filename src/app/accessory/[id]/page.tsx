@@ -1,11 +1,12 @@
 
 import { getAccessoryById } from '@/lib/data'; // Now async
-import type { Accessory } from '@/lib/types';
+import type { Accessory, Comment } from '@/lib/types';
 import AccessoryDetailsClientWrapper from './components/AccessoryDetailsClientWrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { Timestamp } from 'firebase/firestore';
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const accessory = await getAccessoryById(params.id); // Await async call
@@ -19,6 +20,14 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     description: accessory.shortDescription,
   };
 }
+
+// Client-safe Accessory structure for the prop
+interface ClientSafeAccessoryForPage extends Omit<Accessory, 'comments' | 'createdAt' | 'updatedAt'> {
+  comments: Array<Omit<Comment, 'createdAt'> & { createdAt: string }>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 
 export default async function AccessoryDetailPage({ params }: { params: { id:string } }) {
   const accessory: Accessory | undefined = await getAccessoryById(params.id); // Await async call
@@ -46,15 +55,20 @@ export default async function AccessoryDetailPage({ params }: { params: { id:str
   }
 
   // Comments need to be prepared for client (convert Timestamps to strings)
-  const preparedAccessory = {
+  // Also convert accessory's own createdAt and updatedAt
+  const preparedAccessory: ClientSafeAccessoryForPage = {
     ...accessory,
+    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : (accessory.createdAt as any),
+    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : (accessory.updatedAt as any),
     comments: (accessory.comments || []).map(comment => ({
       ...comment,
-      createdAt: comment.createdAt instanceof Object && 'toDate' in comment.createdAt 
-                 ? (comment.createdAt as import('firebase/firestore').Timestamp).toDate().toISOString() 
+      createdAt: comment.createdAt instanceof Timestamp
+                 ? comment.createdAt.toDate().toISOString()
                  : (typeof comment.createdAt === 'string' ? comment.createdAt : new Date().toISOString()),
     })),
   };
-
-  return <AccessoryDetailsClientWrapper accessory={preparedAccessory as Accessory & { comments: Array<Comment & { createdAt: string }>}} />;
+  
+  // Cast to any for the wrapper if its prop type is still the original Accessory
+  // Ideally, AccessoryDetailsClientWrapper would also expect ClientSafeAccessoryForPage
+  return <AccessoryDetailsClientWrapper accessory={preparedAccessory as any} />;
 }

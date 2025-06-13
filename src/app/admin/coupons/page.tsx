@@ -7,14 +7,26 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, TicketPercent, PlusCircle } from 'lucide-react';
 import type { Metadata } from 'next';
+import { Timestamp } from 'firebase/firestore';
 
 export const metadata: Metadata = {
   title: 'Gerenciar Cupons | Admin SmartAcessorios',
   description: 'Adicione, edite ou remova cupons promocionais da plataforma.',
 };
 
+// Helper to prepare coupon for client (convert Timestamps to strings)
+const prepareCouponForClient = (coupon: Coupon): Coupon => {
+  return {
+    ...coupon,
+    expiryDate: coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate().toISOString() : (coupon.expiryDate as any),
+    createdAt: coupon.createdAt instanceof Timestamp ? coupon.createdAt.toDate().toISOString() : (coupon.createdAt as any),
+    updatedAt: coupon.updatedAt instanceof Timestamp ? coupon.updatedAt.toDate().toISOString() : (coupon.updatedAt as any),
+  } as Coupon; // Cast to ensure type compatibility
+};
+
 export default async function ManageCouponsPage() {
-  const coupons: Coupon[] = await getCoupons(); // Await async call
+  const rawCoupons: Coupon[] = await getCoupons(); // Await async call
+  const coupons = rawCoupons.map(prepareCouponForClient);
 
   return (
     <div className="space-y-6">

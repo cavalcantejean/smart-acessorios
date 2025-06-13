@@ -21,10 +21,16 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   };
 }
 
-export default async function UserProfilePage({ params }: { params: { id: string } }) {
-  const profileUser: User | undefined = await getUserById(params.id); // Await async call
+// Client-safe User structure for the prop
+interface ClientSafeUserForPage extends Omit<User, 'createdAt' | 'updatedAt'> {
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-  if (!profileUser) {
+export default async function UserProfilePage({ params }: { params: { id: string } }) {
+  const profileUserRaw: User | undefined = await getUserById(params.id); // Await async call
+
+  if (!profileUserRaw) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">
@@ -47,16 +53,15 @@ export default async function UserProfilePage({ params }: { params: { id: string
   }
 
   // Prepare user data for client (convert Timestamps to strings)
-  const clientReadyProfileUser = {
-    ...profileUser,
-    createdAt: profileUser.createdAt instanceof Timestamp ? profileUser.createdAt.toDate().toISOString() : profileUser.createdAt,
-    updatedAt: profileUser.updatedAt instanceof Timestamp ? profileUser.updatedAt.toDate().toISOString() : profileUser.updatedAt,
-    // Ensure followers/following/badges are arrays
-    followers: Array.isArray(profileUser.followers) ? profileUser.followers : [],
-    following: Array.isArray(profileUser.following) ? profileUser.following : [],
-    badges: Array.isArray(profileUser.badges) ? profileUser.badges : [],
+  const profileUser: ClientSafeUserForPage = {
+    ...profileUserRaw,
+    createdAt: profileUserRaw.createdAt instanceof Timestamp ? profileUserRaw.createdAt.toDate().toISOString() : (profileUserRaw.createdAt as any),
+    updatedAt: profileUserRaw.updatedAt instanceof Timestamp ? profileUserRaw.updatedAt.toDate().toISOString() : (profileUserRaw.updatedAt as any),
+    followers: Array.isArray(profileUserRaw.followers) ? profileUserRaw.followers : [],
+    following: Array.isArray(profileUserRaw.following) ? profileUserRaw.following : [],
+    badges: Array.isArray(profileUserRaw.badges) ? profileUserRaw.badges : [],
   };
 
-
-  return <UserProfileClientView profileUser={clientReadyProfileUser as User} />;
+  // Cast to `any` if UserProfileClientView expects the original User type, or update UserProfileClientView's prop type.
+  return <UserProfileClientView profileUser={profileUser as any} />;
 }

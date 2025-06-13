@@ -12,14 +12,14 @@ export const metadata: Metadata = {
   description: 'Encontre os melhores cupons de desconto para acessórios de smartphone.',
 };
 
-// Helper to prepare coupon for client (convert Timestamps)
+// Helper to prepare coupon for client (convert Timestamps to strings)
 const prepareCouponForClient = (coupon: Coupon): Coupon => {
   return {
     ...coupon,
-    expiryDate: coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate().toISOString() : coupon.expiryDate as any,
-    createdAt: coupon.createdAt instanceof Timestamp ? coupon.createdAt.toDate().toISOString() : coupon.createdAt as any,
-    updatedAt: coupon.updatedAt instanceof Timestamp ? coupon.updatedAt.toDate().toISOString() : coupon.updatedAt as any,
-  };
+    expiryDate: coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate().toISOString() : (coupon.expiryDate as any),
+    createdAt: coupon.createdAt instanceof Timestamp ? coupon.createdAt.toDate().toISOString() : (coupon.createdAt as any),
+    updatedAt: coupon.updatedAt instanceof Timestamp ? coupon.updatedAt.toDate().toISOString() : (coupon.updatedAt as any),
+  } as Coupon; // Cast to ensure type compatibility
 };
 
 export default async function CouponsPage() {

@@ -19,13 +19,12 @@ export const metadata: Metadata = {
 const prepareUserForClient = (user: User): User => {
   return {
     ...user,
-    createdAt: user.createdAt instanceof Timestamp ? user.createdAt.toDate().toISOString() : user.createdAt,
-    updatedAt: user.updatedAt instanceof Timestamp ? user.updatedAt.toDate().toISOString() : user.updatedAt,
-    // Ensure followers/following/badges are arrays for client components if they rely on it
+    createdAt: user.createdAt instanceof Timestamp ? user.createdAt.toDate().toISOString() : (user.createdAt as any),
+    updatedAt: user.updatedAt instanceof Timestamp ? user.updatedAt.toDate().toISOString() : (user.updatedAt as any),
     followers: Array.isArray(user.followers) ? user.followers : [],
     following: Array.isArray(user.following) ? user.following : [],
     badges: Array.isArray(user.badges) ? user.badges : [],
-  } as User; // Cast as User to satisfy downstream components expecting string dates
+  } as User;
 };
 
 

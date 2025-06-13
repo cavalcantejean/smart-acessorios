@@ -7,14 +7,26 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, FileText, PlusCircle } from 'lucide-react';
 import type { Metadata } from 'next';
+import { Timestamp } from 'firebase/firestore';
 
 export const metadata: Metadata = {
   title: 'Gerenciar Posts do Blog | Admin SmartAcessorios',
   description: 'Adicione, edite ou remova posts do blog da plataforma.',
 };
 
+// Helper to prepare post for client (convert Timestamps to strings)
+const preparePostForClient = (post: Post): Post => {
+  return {
+    ...post,
+    publishedAt: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : (post.publishedAt as any),
+    createdAt: post.createdAt instanceof Timestamp ? post.createdAt.toDate().toISOString() : (post.createdAt as any),
+    updatedAt: post.updatedAt instanceof Timestamp ? post.updatedAt.toDate().toISOString() : (post.updatedAt as any),
+  } as Post; // Cast to ensure type compatibility
+};
+
 export default async function ManageBlogPostsPage() {
-  const posts: Post[] = await getAllPosts(); // Await async call
+  const rawPosts: Post[] = await getAllPosts(); // Await async call
+  const posts = rawPosts.map(preparePostForClient);
 
   return (
     <div className="space-y-6">

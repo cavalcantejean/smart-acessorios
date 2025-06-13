@@ -1,6 +1,6 @@
 
 import { getDailyDeals } from '@/lib/data'; // Now async
-import type { Accessory } from '@/lib/types';
+import type { Accessory, Comment } from '@/lib/types';
 import AccessoryCard from '@/components/AccessoryCard';
 import { Tag } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -11,17 +11,17 @@ export const metadata: Metadata = {
   description: 'Confira as melhores ofertas do dia em acessórios para smartphones.',
 };
 
-// Helper to prepare accessory for client (convert Timestamps)
+// Helper to prepare accessory for client (convert Timestamps to strings)
 const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
   return {
     ...accessory,
-    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : accessory.createdAt as any,
-    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : accessory.updatedAt as any,
+    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : (accessory.createdAt as any),
+    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : (accessory.updatedAt as any),
     comments: (accessory.comments || []).map(comment => ({
       ...comment,
-      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : comment.createdAt as any,
+      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : (comment.createdAt as any),
     })),
-  };
+  } as Accessory; // Cast to ensure type compatibility
 };
 
 export default async function DealsPage() {

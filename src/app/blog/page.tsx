@@ -11,14 +11,14 @@ export const metadata: Metadata = {
   description: 'Leia nossos últimos artigos, guias e notícias sobre acessórios para smartphones e tecnologia.',
 };
 
-// Helper to prepare post for client (convert Timestamps)
+// Helper to prepare post for client (convert Timestamps to strings)
 const preparePostForClient = (post: Post): Post => {
   return {
     ...post,
-    publishedAt: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : post.publishedAt as any,
-    createdAt: post.createdAt instanceof Timestamp ? post.createdAt.toDate().toISOString() : post.createdAt as any,
-    updatedAt: post.updatedAt instanceof Timestamp ? post.updatedAt.toDate().toISOString() : post.updatedAt as any,
-  };
+    publishedAt: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : (post.publishedAt as any),
+    createdAt: post.createdAt instanceof Timestamp ? post.createdAt.toDate().toISOString() : (post.createdAt as any),
+    updatedAt: post.updatedAt instanceof Timestamp ? post.updatedAt.toDate().toISOString() : (post.updatedAt as any),
+  } as Post; // Cast to ensure type compatibility
 };
 
 

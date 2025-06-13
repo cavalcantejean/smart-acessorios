@@ -1,35 +1,37 @@
 
-import { getPendingComments } from '@/lib/data'; // Now async
-import type { PendingCommentDisplay } from '@/lib/types';
+import { getPendingComments } from '@/lib/data-admin'; // Changed to data-admin as it uses admin SDK for reads
+import type { PendingCommentDisplay, Comment } from '@/lib/types';
 import PendingCommentsList from './components/PendingCommentsList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, MessageSquareWarning } from 'lucide-react';
 import type { Metadata } from 'next';
-import { Timestamp } from 'firebase/firestore';
+import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore'; // Use AdminTimestamp
 
 export const metadata: Metadata = {
   title: 'Moderar Conteúdo | Admin SmartAcessorios',
   description: 'Revise e aprove ou rejeite comentários pendentes.',
 };
 
-// Helper to convert Timestamp to string for client components
-const preparePendingCommentForClient = (pendingComment: PendingCommentDisplay): PendingCommentDisplay => {
+// Helper to convert AdminTimestamp to string for client components
+// Note: getPendingComments from data-admin already returns createdAt as AdminTimestamp within comment object
+const preparePendingCommentForClient = (pendingComment: PendingCommentDisplay): PendingCommentDisplay & { comment: { createdAt: string }} => {
+  const comment = pendingComment.comment as Comment & { createdAt: AdminTimestamp | string };
   return {
     ...pendingComment,
     comment: {
-      ...pendingComment.comment,
-      createdAt: pendingComment.comment.createdAt instanceof Timestamp
-                 ? pendingComment.comment.createdAt.toDate().toISOString()
-                 : pendingComment.comment.createdAt as any, // Assume it might already be string
+      ...comment,
+      createdAt: comment.createdAt instanceof Object && 'toDate' in comment.createdAt
+                 ? (comment.createdAt as AdminTimestamp).toDate().toISOString()
+                 : (typeof comment.createdAt === 'string' ? comment.createdAt : new Date().toISOString()),
     }
   };
 };
 
 
 export default async function ModerationPage() {
-  const rawPendingComments: PendingCommentDisplay[] = await getPendingComments(); // Await async call
+  const rawPendingComments: PendingCommentDisplay[] = await getPendingComments();
   const pendingComments = rawPendingComments.map(preparePendingCommentForClient);
 
   return (
@@ -58,7 +60,7 @@ export default async function ModerationPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <PendingCommentsList initialPendingComments={pendingComments} />
+          <PendingCommentsList initialPendingComments={pendingComments as any} />
         </CardContent>
       </Card>
     </div>

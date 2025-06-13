@@ -1,16 +1,18 @@
 
-import { getAnalyticsData, type AnalyticsData } from '@/lib/data'; // Now async
+import { getAnalyticsData as getAnalyticsDataAdmin } from '@/lib/data-admin'; // Renamed to avoid conflict if client-side version exists
+import type { AnalyticsData, RecentCommentInfo } from '@/lib/types'; // Ensure AnalyticsData type is correct
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, BarChart3 } from 'lucide-react'; // Removed unused icons
+import { ArrowLeft, BarChart3 } from 'lucide-react';
 import type { Metadata } from 'next';
 import AnalyticsSummaryCards from './components/AnalyticsSummaryCards';
 import AccessoriesByCategoryChart from './components/AccessoriesByCategoryChart';
 import TopItemsList from './components/TopItemsList';
 import RecentCommentsList from './components/RecentCommentsList';
 import { Separator } from '@/components/ui/separator';
-import { Timestamp } from 'firebase/firestore';
+// AdminTimestamp is not directly used here, but data from data-admin might contain it
+// and it needs to be converted to string before sending to client.
 
 export const metadata: Metadata = {
   title: 'Analytics | Admin SmartAcessorios',
@@ -18,20 +20,20 @@ export const metadata: Metadata = {
 };
 
 // Helper to ensure dates in recentComments are strings for client components
+// The getAnalyticsDataAdmin (via getRecentComments in data-admin) should already return strings for createdAt
 const prepareAnalyticsDataForClient = (data: AnalyticsData): AnalyticsData => {
   return {
     ...data,
     recentComments: (data.recentComments || []).map(comment => ({
       ...comment,
-      // createdAt is already string in RecentCommentInfo type, but good to be sure
-      createdAt: typeof comment.createdAt === 'string' ? comment.createdAt : new Date(comment.createdAt).toISOString(),
+      // Assuming getRecentComments from data-admin already converts createdAt to string
+      createdAt: typeof comment.createdAt === 'string' ? comment.createdAt : new Date(comment.createdAt as any).toISOString(),
     })),
   };
 };
 
-
 export default async function AnalyticsPage() {
-  const rawAnalyticsData: AnalyticsData = await getAnalyticsData(); // Await async call
+  const rawAnalyticsData: AnalyticsData = await getAnalyticsDataAdmin();
   const analyticsData = prepareAnalyticsDataForClient(rawAnalyticsData);
 
   return (
