@@ -28,14 +28,18 @@ interface AccessoryPageProps {
 }
 
 export async function generateMetadata({ params }: AccessoryPageProps): Promise<Metadata> {
-  const { id: accessoryId } = params; // Destructure id directly
+  console.log('[generateMetadata] Received params:', JSON.stringify(params, null, 2));
+  const { id: accessoryId } = params;
+  console.log('[generateMetadata] Extracted accessoryId:', accessoryId);
 
   if (!accessoryId) {
-    return { title: 'Acessório Inválido' };
+    console.error('[generateMetadata] Error: accessoryId is falsy. Value:', accessoryId);
+    return { title: 'Acessório Inválido (Metadata)' };
   }
   const accessory = await getAccessoryById(accessoryId);
   if (!accessory) {
-    return { title: 'Acessório Não Encontrado' };
+    console.error('[generateMetadata] Error: Accessory not found for ID:', accessoryId);
+    return { title: 'Acessório Não Encontrado (Metadata)' };
   }
   return {
     title: `${accessory.name} | Detalhes do Acessório`,
@@ -49,9 +53,12 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
 }
 
 export default async function AccessoryDetailPage({ params }: AccessoryPageProps) {
-  const { id: accessoryId } = params; // Destructure id directly
+  console.log('[AccessoryDetailPage] Received params:', JSON.stringify(params, null, 2));
+  const { id: accessoryId } = params;
+  console.log('[AccessoryDetailPage] Extracted accessoryId:', accessoryId);
 
   if (!accessoryId) {
+    console.error('[AccessoryDetailPage] Error: accessoryId is falsy. Value:', accessoryId);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">
@@ -77,6 +84,7 @@ export default async function AccessoryDetailPage({ params }: AccessoryPageProps
   const accessoryData = await getAccessoryById(accessoryId);
 
   if (!accessoryData) {
+    console.error('[AccessoryDetailPage] Error: Accessory not found for ID:', accessoryId);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">
