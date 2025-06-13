@@ -29,7 +29,11 @@ interface AccessoryPageProps {
 
 export async function generateMetadata({ params }: AccessoryPageProps): Promise<Metadata> {
   console.log('[generateMetadata] Received params:', JSON.stringify(params, null, 2));
-  const { id: accessoryId } = params;
+  
+  let accessoryId: string | undefined;
+  if (params && typeof params.id === 'string') {
+    accessoryId = params.id;
+  }
   console.log('[generateMetadata] Extracted accessoryId:', accessoryId);
 
   if (!accessoryId) {
@@ -54,7 +58,11 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
 
 export default async function AccessoryDetailPage({ params }: AccessoryPageProps) {
   console.log('[AccessoryDetailPage] Received params:', JSON.stringify(params, null, 2));
-  const { id: accessoryId } = params;
+
+  let accessoryId: string | undefined;
+  if (params && typeof params.id === 'string') {
+    accessoryId = params.id;
+  }
   console.log('[AccessoryDetailPage] Extracted accessoryId:', accessoryId);
 
   if (!accessoryId) {
