@@ -68,13 +68,13 @@ export async function registerUserAction(
     console.log("registerUserAction: auth.currentUser immediately after createUserWithEmailAndPassword:", auth.currentUser ? auth.currentUser.uid : "null");
 
 
-    const newUserFirestoreData: UserFirestoreData = {
+    const newUserFirestoreData: Omit<UserFirestoreData, 'followers' | 'following'> = { // Omit removed fields
       id: firebaseAuthUser.uid,
       name,
       email: lowercasedEmail,
       isAdmin: false,
-      followers: [],
-      following: [],
+      // followers: [], // REMOVED
+      // following: [], // REMOVED
       badges: [],
       createdAt: serverTimestamp(),
       avatarUrl: `https://placehold.co/150x150.png?text=${name.charAt(0).toUpperCase()}`,

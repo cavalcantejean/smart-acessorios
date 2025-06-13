@@ -49,8 +49,8 @@ export interface UserFirestoreData {
   name: string;
   email: string;
   isAdmin: boolean;
-  followers: string[];
-  following: string[];
+  // followers: string[]; // REMOVED
+  // following: string[]; // REMOVED
   avatarUrl?: string;
   avatarHint?: string;
   bio?: string;
@@ -69,8 +69,10 @@ export interface AuthUser {
 export interface BadgeCriteriaData {
   // userCommentsCount: number; // REMOVED
   // userLikesCount: number; // REMOVED
-  userFollowingCount: number;
-  userFollowersCount: number;
+  // userFollowingCount: number; // REMOVED
+  // userFollowersCount: number; // REMOVED
+  // Add other criteria data points here if new badges require them
+  placeholder?: boolean; // Added placeholder as all criteria were removed
 }
 
 export interface Badge {
@@ -147,3 +149,4 @@ export interface SiteSettings {
   siteLogoUrl?: string;
   siteFaviconUrl?: string;
 }
+

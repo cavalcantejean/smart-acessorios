@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { User, Heart, Settings, LogOut, Loader2, Users, UserCheck, ExternalLink, Award, Lock } from 'lucide-react';
-import { getUserById } from '@/lib/data'; // Now async
+import { User, Heart, Settings, LogOut, Loader2, Award, Lock, ExternalLinkIcon } from 'lucide-react'; // Users, UserCheck REMOVED
+import { getUserById } from '@/lib/data';
 import type { UserFirestoreData as FullUserType, Badge as BadgeType } from '@/lib/types';
 import { allBadges, getBadgeById } from '@/lib/badges';
 import { Badge as ShadBadge } from '@/components/ui/badge';
@@ -99,7 +99,7 @@ export default function DashboardPage() {
             <User className="h-6 w-6 text-primary" />
             Informações da Conta
           </CardTitle>
-          <CardDescription>Seus dados cadastrais e estatísticas.</CardDescription>
+          <CardDescription>Seus dados cadastrais.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -108,18 +108,11 @@ export default function DashboardPage() {
               <p><strong>Email:</strong> {fullUser.email}</p>
               <p><strong>Tipo de Conta:</strong> {fullUser.isAdmin ? 'Administrador' : 'Usuário Comum'}</p>
             </div>
-            <div className="text-left md:text-right">
-              <p className="flex items-center md:justify-end gap-1 text-sm">
-                <Users className="h-4 w-4 text-muted-foreground"/> <strong>Seguidores:</strong> {fullUser.followers?.length ?? 0}
-              </p>
-              <p className="flex items-center md:justify-end gap-1 text-sm">
-                 <UserCheck className="h-4 w-4 text-muted-foreground"/> <strong>Seguindo:</strong> {fullUser.following?.length ?? 0}
-              </p>
-            </div>
+            {/* Follower/Following count display REMOVED */}
           </div>
            <Button asChild variant="link" className="p-0 h-auto">
             <Link href={`/profile/${fullUser.id}`}>
-              Ver meu perfil público <ExternalLink className="ml-1 h-3 w-3"/>
+              Ver meu perfil público <ExternalLinkIcon className="ml-1 h-3 w-3"/>
             </Link>
           </Button>
         </CardContent>

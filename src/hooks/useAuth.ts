@@ -6,13 +6,12 @@ import {
   onAuthStateChanged,
   signOut,
   type User as FirebaseUser,
-  // GoogleAuthProvider e signInWithPopup não são mais necessários aqui
   type UserCredential 
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; // Removed collection, query, where, getDocs as they are not used here
 import type { AuthUser, UserFirestoreData } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'; // Ainda necessário para a lógica de criação de conta social em processAuthStateChange
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 export interface AuthContextType {
   user: AuthUser | null;
@@ -21,7 +20,6 @@ export interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   logout: () => Promise<void>;
-  // signInWithGoogle foi removido da interface pública do hook
   refreshAuthUser: () => Promise<void>;
 }
 
@@ -65,13 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (isSocialLogin) {
             console.log(`useAuth: User ${fbUser.uid} is a new social login (e.g., Google). Creating Firestore document.`);
-            const newUserFirestoreData: UserFirestoreData = {
+            const newUserFirestoreData: Omit<UserFirestoreData, 'followers' | 'following'> = { // Adjusted type
               id: fbUser.uid,
-              name: fbUser.displayName || "Usuário Social", // Nome genérico se displayName for nulo
+              name: fbUser.displayName || "Usuário Social",
               email: fbUser.email || "email.social@desconhecido.com",
               isAdmin: false,
-              followers: [],
-              following: [],
+              // followers: [], // REMOVED
+              // following: [], // REMOVED
               badges: [],
               createdAt: serverTimestamp(),
               avatarUrl: fbUser.photoURL || `https://placehold.co/150x150.png?text=${(fbUser.displayName || 'S').charAt(0).toUpperCase()}`,
@@ -136,15 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/');
     } catch (error) {
       console.error("useAuth: Error during signOut: ", error);
-      setIsLoading(false); // Garante que isLoading seja false em caso de erro no logout
+      setIsLoading(false);
     }
-    // setIsLoading(false) foi movido para dentro do try/catch para garantir que seja chamado mesmo em caso de erro
   }, [router]);
-
-  // signInWithGoogle é removido como método público, mas a lógica de
-  // criar um usuário no Firestore para logins sociais (como Google)
-  // permanece em processAuthStateChange para o caso de usuários existentes
-  // ou se o login social for reintroduzido de outra forma.
 
   const refreshAuthUser = useCallback(async () => {
     console.log("useAuth: refreshAuthUser called.");
@@ -162,7 +154,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return React.createElement(
     AuthContext.Provider,
-    // Removido signInWithGoogle do valor do contexto
     { value: { user: authUser, firebaseUser, isAuthenticated, isAdmin, isLoading, logout, refreshAuthUser } },
     children
   );

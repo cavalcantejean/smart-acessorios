@@ -1,6 +1,6 @@
 
-import type { Badge, UserFirestoreData, Accessory, BadgeCriteriaData } from './types';
-import { UserPlus, Star, Users } from 'lucide-react'; // Removed MessageSquare, ThumbsUp
+import type { Badge, UserFirestoreData, BadgeCriteriaData } from './types';
+import { UserPlus, Star, Users, Award as PlaceholderIcon } from 'lucide-react'; // Removed MessageSquare, ThumbsUp. Added PlaceholderIcon
 import { getAllAccessories, getUserById } from './data'; 
 import { collection, getDocs, query, where, getCountFromServer } from 'firebase/firestore';
 import { db } from './firebase';
@@ -8,43 +8,21 @@ import { db } from './firebase';
 
 // countUserComments REMOVED
 // countUserLikes REMOVED
-
-// Helper function to count how many users a user is following (uses UserFirestoreData)
-export const countUserFollowing = (user: UserFirestoreData): number => {
-  return user.following?.length || 0;
-};
-
-// Helper function to count how many followers a user has (uses UserFirestoreData)
-export const countUserFollowers = (user: UserFirestoreData): number => {
-  return user.followers?.length || 0;
-};
+// countUserFollowing REMOVED
+// countUserFollowers REMOVED
 
 
 export const allBadges: Badge[] = [
-  // Commenter and Liker badges REMOVED
+  // Follower/Following badges REMOVED
+  // Example placeholder badge if all others are removed.
+  // You can add new badges based on different criteria here.
   {
-    id: 'community-connector',
-    name: 'Conector da Comunidade',
-    description: 'Segue 2 usuários ou mais.',
-    icon: UserPlus,
-    color: 'bg-purple-100 text-purple-700 border-purple-300',
-    criteria: (user, data) => data.userFollowingCount >= 2,
-  },
-  {
-    id: 'rising-star',
-    name: 'Estrela em Ascensão',
-    description: 'Tem 1 seguidor ou mais.',
-    icon: Star,
-    color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    criteria: (user, data) => data.userFollowersCount >= 1,
-  },
-  {
-    id: 'local-celebrity',
-    name: 'Celebridade Local',
-    description: 'Tem 5 seguidores ou mais.',
-    icon: Users,
-    color: 'bg-orange-100 text-orange-700 border-orange-300',
-    criteria: (user, data) => data.userFollowersCount >= 5,
+    id: 'early-adopter',
+    name: 'Pioneiro',
+    description: 'Se cadastrou na plataforma.',
+    icon: PlaceholderIcon, // Using a generic icon for now
+    color: 'bg-blue-100 text-blue-700 border-blue-300',
+    criteria: (user, data) => !!user.createdAt, // Example: true if user has a createdAt timestamp
   },
 ];
 
@@ -56,7 +34,9 @@ export const generateBadgeCriteriaData = async (user: UserFirestoreData): Promis
   return {
     // userCommentsCount: await countUserComments(user.id), // REMOVED
     // userLikesCount: await countUserLikes(user.id), // REMOVED
-    userFollowingCount: countUserFollowing(user), 
-    userFollowersCount: countUserFollowers(user), 
+    // userFollowingCount: countUserFollowing(user), // REMOVED
+    // userFollowersCount: countUserFollowers(user), // REMOVED
+    placeholder: true, // Added placeholder as all criteria were removed
   };
 };
+

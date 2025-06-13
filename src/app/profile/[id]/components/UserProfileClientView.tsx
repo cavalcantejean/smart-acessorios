@@ -2,22 +2,21 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import type { UserFirestoreData as User, Badge as BadgeType, Accessory } from '@/lib/types'; // Comment types removed
+import type { UserFirestoreData as User, Badge as BadgeType, Accessory } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, UserCircle, Users, UserCheck, Award, Loader2, ExternalLinkIcon } from 'lucide-react'; // MessageSquare, ThumbsUp removed
-import FollowButton from '@/components/FollowButton';
-import { toggleFollowAction } from '../../actions';
+import { ArrowLeft, UserCircle, Award, Loader2, ExternalLinkIcon } from 'lucide-react';
+// FollowButton and related imports (Users, UserCheck, toggleFollowAction) REMOVED
 import { AuthProviderClientComponent } from '@/components/AuthProviderClientComponent';
 import { getBadgeById } from '@/lib/badges';
 import { Badge as ShadBadge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import UserListItem from "@/components/UserListItem";
-import { getUserById } from '@/lib/data'; // getCommentsByUserId, getAccessoriesLikedByUser removed
+// Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger REMOVED
+// ScrollArea REMOVED
+// UserListItem REMOVED
+import { getUserById } from '@/lib/data';
 import { Separator } from '@/components/ui/separator';
 import { Timestamp } from 'firebase/firestore';
 
@@ -25,7 +24,6 @@ interface ClientUser extends Omit<User, 'createdAt' | 'updatedAt'> {
   createdAt?: string;
   updatedAt?: string;
 }
-// ClientAccessory type removed as it's no longer fetched directly here for liked items list
 
 interface UserProfileClientViewProps {
   profileUser: ClientUser;
@@ -33,56 +31,17 @@ interface UserProfileClientViewProps {
 
 export default function UserProfileClientView({ profileUser: initialProfileUser }: UserProfileClientViewProps) {
   const [profileUser, setProfileUser] = useState<ClientUser>(initialProfileUser);
-  const [followersCount, setFollowersCount] = useState(initialProfileUser.followers?.length ?? 0);
-  const [followingCount, setFollowingCount] = useState(initialProfileUser.following?.length ?? 0);
-
-  const [followersList, setFollowersList] = useState<ClientUser[]>([]);
-  const [followingList, setFollowingList] = useState<ClientUser[]>([]);
-  const [isLoadingFollowLists, setIsLoadingFollowLists] = useState(false);
-  const [isFollowersDialogOpen, setIsFollowersDialogOpen] = useState(false);
-  const [isFollowingDialogOpen, setIsFollowingDialogOpen] = useState(false);
-
-  // recentComments, likedAccessories, isLoadingActivity states REMOVED
+  // followersCount, followingCount, followersList, followingList, isLoadingFollowLists, isFollowersDialogOpen, isFollowingDialogOpen states REMOVED
 
   const earnedBadges = (profileUser.badges || [])
     .map(badgeId => getBadgeById(badgeId))
     .filter(badge => badge !== undefined) as BadgeType[];
 
-  const prepareUserForClient = (user: User): ClientUser => ({
-    ...user,
-    createdAt: user.createdAt instanceof Timestamp ? user.createdAt.toDate().toISOString() : user.createdAt as any,
-    updatedAt: user.updatedAt instanceof Timestamp ? user.updatedAt.toDate().toISOString() : user.updatedAt as any,
-  });
-
   useEffect(() => {
     setProfileUser(initialProfileUser);
-    setFollowersCount(initialProfileUser.followers?.length ?? 0);
-    setFollowingCount(initialProfileUser.following?.length ?? 0);
   }, [initialProfileUser]);
 
-  useEffect(() => {
-    const fetchFollowLists = async () => {
-      if (!profileUser || !(isFollowersDialogOpen || isFollowingDialogOpen)) return;
-      setIsLoadingFollowLists(true);
-      try {
-        const followerPromises = (profileUser.followers || []).map(id => getUserById(id));
-        const followingPromises = (profileUser.following || []).map(id => getUserById(id));
-        
-        const fetchedFollowersRaw = (await Promise.all(followerPromises)).filter(u => u !== undefined) as User[];
-        const fetchedFollowingRaw = (await Promise.all(followingPromises)).filter(u => u !== undefined) as User[];
-
-        setFollowersList(fetchedFollowersRaw.map(prepareUserForClient));
-        setFollowingList(fetchedFollowingRaw.map(prepareUserForClient));
-      } catch (error) {
-        console.error("Error fetching follow lists:", error);
-      } finally {
-        setIsLoadingFollowLists(false);
-      }
-    };
-    fetchFollowLists();
-  }, [profileUser, isFollowersDialogOpen, isFollowingDialogOpen]);
-
-  // useEffect for fetchActivity REMOVED
+  // useEffect for fetchFollowLists REMOVED
 
   return (
     <AuthProviderClientComponent>
@@ -116,67 +75,8 @@ export default function UserProfileClientView({ profileUser: initialProfileUser 
               )}
             </CardHeader>
             <CardContent className="p-6 space-y-6">
-              <div className="flex justify-around text-center">
-                <Dialog open={isFollowersDialogOpen} onOpenChange={setIsFollowersDialogOpen}>
-                  <DialogTrigger asChild>
-                    <button className="text-left hover:opacity-80 transition-opacity">
-                      <p className="text-2xl font-bold">{followersCount}</p>
-                      <p className="text-sm text-muted-foreground">Seguidores</p>
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Seguidores de {profileUser.name}</DialogTitle>
-                      <DialogDescription>Pessoas que seguem {profileUser.name}.</DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="h-[300px] pr-3 -mr-3">
-                      {isLoadingFollowLists ? (
-                         <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                      ) : followersList.length > 0 ? (
-                        <div className="space-y-1 py-1">
-                          {followersList.map(follower => ( <UserListItem key={follower.id} user={follower} onDialogClose={() => setIsFollowersDialogOpen(false)} /> ))}
-                        </div>
-                      ) : ( <p className="text-sm text-muted-foreground text-center py-10">Nenhum seguidor ainda.</p> )}
-                    </ScrollArea>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog open={isFollowingDialogOpen} onOpenChange={setIsFollowingDialogOpen}>
-                  <DialogTrigger asChild>
-                     <button className="text-left hover:opacity-80 transition-opacity">
-                      <p className="text-2xl font-bold">{followingCount}</p>
-                      <p className="text-sm text-muted-foreground">Seguindo</p>
-                    </button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>{profileUser.name} está Seguindo</DialogTitle>
-                      <DialogDescription>Pessoas que {profileUser.name} segue.</DialogDescription>
-                    </DialogHeader>
-                     <ScrollArea className="h-[300px] pr-3 -mr-3">
-                       {isLoadingFollowLists ? (
-                         <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-                       ) : followingList.length > 0 ? (
-                        <div className="space-y-1 py-1">
-                          {followingList.map(followedUser => ( <UserListItem key={followedUser.id} user={followedUser} onDialogClose={() => setIsFollowingDialogOpen(false)}/> ))}
-                        </div>
-                      ) : ( <p className="text-sm text-muted-foreground text-center py-10">{profileUser.name} não segue ninguém ainda.</p> )}
-                    </ScrollArea>
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              {isAuthenticated && currentUser && currentUser.id !== profileUser.id && (
-                <div className="flex justify-center pt-4">
-                  <FollowButton
-                    currentUserId={currentUser.id}
-                    targetUserId={profileUser.id}
-                    initialIsFollowing={currentUser.following?.includes(profileUser.id) ?? false}
-                    initialFollowersCount={followersCount}
-                    formAction={toggleFollowAction}
-                  />
-                </div>
-              )}
+              {/* Follower/Following count display REMOVED */}
+              {/* FollowButton REMOVED */}
 
               {earnedBadges.length > 0 && (
                 <div className="pt-6 border-t">
@@ -197,9 +97,6 @@ export default function UserProfileClientView({ profileUser: initialProfileUser 
                   </TooltipProvider>
                 </div>
               )}
-
-              {/* Recent Activity Section (Comments & Likes) REMOVED */}
-              
             </CardContent>
             <CardFooter className="p-4 bg-secondary/20 border-t">
                <Button variant="outline" size="sm" asChild className="mx-auto"><Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Voltar para a Página Inicial</Link></Button>

@@ -114,52 +114,7 @@ export async function getAllUsers(): Promise<UserFirestoreData[]> {
   }
 }
 
-export async function toggleFollowUser(currentUserId: string, targetUserId: string): Promise<{ isFollowing: boolean; targetFollowersCount: number } | null> {
-  if (!db) { console.error("Firestore client db instance not available in toggleFollowUser."); return null; }
-  if (currentUserId === targetUserId) return null;
-
-  const currentUserDocRef = doc(db, "usuarios", currentUserId);
-  const targetUserDocRef = doc(db, "usuarios", targetUserId);
-
-  try {
-    let isFollowing = false;
-    let finalFollowersCount = 0;
-
-    await runTransaction(db, async (transaction) => {
-      const currentUserDoc = await transaction.get(currentUserDocRef);
-      const targetUserDoc = await transaction.get(targetUserDocRef);
-
-      if (!currentUserDoc.exists() || !targetUserDoc.exists()) {
-        throw new Error("User not found");
-      }
-
-      const currentUserData = currentUserDoc.data() as UserFirestoreData;
-      const targetUserData = targetUserDoc.data() as UserFirestoreData;
-
-      currentUserData.following = currentUserData.following || [];
-      targetUserData.followers = targetUserData.followers || [];
-
-      if (currentUserData.following.includes(targetUserId)) {
-        transaction.update(currentUserDocRef, { following: arrayRemove(targetUserId), updatedAt: serverTimestamp() });
-        transaction.update(targetUserDocRef, { followers: arrayRemove(currentUserId), updatedAt: serverTimestamp() });
-        isFollowing = false;
-        finalFollowersCount = (targetUserData.followers.length || 1) - 1;
-      } else {
-        transaction.update(currentUserDocRef, { following: arrayUnion(targetUserId), updatedAt: serverTimestamp() });
-        transaction.update(targetUserDocRef, { followers: arrayUnion(currentUserId), updatedAt: serverTimestamp() });
-        isFollowing = true;
-        finalFollowersCount = (targetUserData.followers.length || 0) + 1;
-      }
-    });
-
-    await checkAndAwardBadges(currentUserId);
-    await checkAndAwardBadges(targetUserId);
-    return { isFollowing, targetFollowersCount: finalFollowersCount };
-  } catch (error) {
-    console.error("Error in toggleFollowUser transaction:", error);
-    return null;
-  }
-}
+// toggleFollowUser REMOVED
 
 // --- Accessory Management (Client SDK for reads and user-initiated writes) ---
 const accessoriesClientCollection = collection(db, "acessorios");
@@ -171,7 +126,6 @@ export async function getAllAccessories(): Promise<Accessory[]> {
     return accessoriesSnapshot.docs.map(docSnap => ({
       id: docSnap.id,
       ...docSnap.data(),
-      // comments: docSnap.data().comments || [], // REMOVED
     } as Accessory));
   } catch (error) {
     console.error("Error fetching all accessories from Firestore:", error);
@@ -186,7 +140,6 @@ export async function getAccessoryById(id: string): Promise<Accessory | undefine
     const accessoryDocSnap = await getDoc(accessoryDocRef);
     if (accessoryDocSnap.exists()) {
       return { id: accessoryDocSnap.id, ...accessoryDocSnap.data() } as Accessory;
-      // comments: accessoryDocSnap.data().comments || [] // REMOVED
     }
     return undefined;
   } catch (error) {
@@ -194,9 +147,6 @@ export async function getAccessoryById(id: string): Promise<Accessory | undefine
     return undefined;
   }
 }
-
-// toggleLikeOnAccessory REMOVED
-// addCommentToAccessoryData REMOVED
 
 // --- Utility Functions (Client SDK) ---
 export async function getUniqueCategories(): Promise<string[]> {
@@ -373,6 +323,3 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
     }
   }
 }
-
-// getCommentsByUserId REMOVED
-// getAccessoriesLikedByUser REMOVED
