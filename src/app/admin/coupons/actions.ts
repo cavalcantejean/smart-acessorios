@@ -6,7 +6,7 @@ import { CouponFormSchema } from '@/lib/schemas/coupon-schema';
 import { addCoupon, updateCoupon, deleteCoupon as deleteCouponData } from '@/lib/data-admin'; // Importar de data-admin.ts
 import type { Coupon } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin'; // Import adminDb
 import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 
 // Helper type for client-safe coupon, mirroring Coupon type but with string dates
@@ -57,6 +57,10 @@ export async function createCouponAction(
   prevState: CouponActionResult | null,
   formData: FormData
 ): Promise<CouponActionResult> {
+  if (!adminDb) {
+    console.error("[Action:createCoupon] Firebase Admin SDK (adminDb) is not initialized.");
+    return { success: false, error: "Erro crítico na configuração do servidor (Admin SDK)." };
+  }
   const rawFormData = Object.fromEntries(formData.entries());
   const dataToValidate = {
     ...rawFormData,
@@ -115,6 +119,10 @@ export async function updateCouponAction(
   prevState: CouponActionResult | null,
   formData: FormData
 ): Promise<CouponActionResult> {
+  if (!adminDb) {
+    console.error("[Action:updateCoupon] Firebase Admin SDK (adminDb) is not initialized.");
+    return { success: false, error: "Erro crítico na configuração do servidor (Admin SDK)." };
+  }
   const rawFormData = Object.fromEntries(formData.entries());
   const dataToValidate = {
     ...rawFormData,
@@ -162,6 +170,10 @@ export async function deleteCouponAction(
   prevState: CouponActionResult | null,
   formData: FormData
 ): Promise<CouponActionResult> {
+  if (!adminDb) {
+    console.error("[Action:deleteCoupon] Firebase Admin SDK (adminDb) is not initialized.");
+    return { success: false, error: "Erro crítico na configuração do servidor (Admin SDK)." };
+  }
   const couponId = formData.get('couponId') as string;
 
   if (!couponId) {

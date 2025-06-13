@@ -1,5 +1,5 @@
 
-import { getAccessoryById } from '@/lib/data'; // Now async
+import { getAccessoryById, getAllAccessories } from '@/lib/data'; // Now async
 import type { Accessory } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,13 @@ import type { Metadata } from 'next';
 import AccessoryForm from '@/components/admin/AccessoryForm';
 import { updateAccessoryAction } from '../../actions';
 import { Timestamp } from 'firebase/firestore';
+
+export async function generateStaticParams() {
+  const accessories = await getAllAccessories();
+  return accessories.map((accessory) => ({
+    id: accessory.id,
+  }));
+}
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const accessory = await getAccessoryById(params.id); // Await async call

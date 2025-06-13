@@ -7,6 +7,7 @@ import { addPost, updatePost, deletePost as deletePostData } from '@/lib/data-ad
 import { getPostById } from '@/lib/data';
 import type { Post } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
+import { adminDb } from '@/lib/firebase-admin'; // Import adminDb
 import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 
 // Helper type for client-safe post, mirroring Post type but with string dates
@@ -76,6 +77,10 @@ export async function createPostAction(
   prevState: PostActionResult | null,
   formData: FormData
 ): Promise<PostActionResult> {
+  if (!adminDb) {
+    console.error("[Action:createPost] Firebase Admin SDK (adminDb) is not initialized.");
+    return { success: false, error: "Erro crítico na configuração do servidor (Admin SDK)." };
+  }
   console.log("[Action:createPost] Raw form data received:", Object.fromEntries(formData.entries()));
   const rawFormData = Object.fromEntries(formData.entries());
   const dataToValidate = {
@@ -144,6 +149,10 @@ export async function updatePostAction(
   prevState: PostActionResult | null,
   formData: FormData
 ): Promise<PostActionResult> {
+  if (!adminDb) {
+    console.error("[Action:updatePost] Firebase Admin SDK (adminDb) is not initialized.");
+    return { success: false, error: "Erro crítico na configuração do servidor (Admin SDK)." };
+  }
   const rawFormData = Object.fromEntries(formData.entries());
   const dataToValidate = {
     ...rawFormData,
@@ -201,6 +210,10 @@ export async function deletePostAction(
   prevState: PostActionResult | null,
   formData: FormData
 ): Promise<PostActionResult> {
+  if (!adminDb) {
+    console.error("[Action:deletePost] Firebase Admin SDK (adminDb) is not initialized.");
+    return { success: false, error: "Erro crítico na configuração do servidor (Admin SDK)." };
+  }
   const postId = formData.get('postId') as string;
 
   if (!postId) {
