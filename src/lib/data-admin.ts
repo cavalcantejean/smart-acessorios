@@ -1,19 +1,11 @@
 
-'use server'; // Add this directive
+'use server'; 
 
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
-// Removed: import { db } from './firebase'; // adminDb should not use client db
-import admin, { type App as AdminApp } from 'firebase-admin'; // Import 'admin' for admin.firestore.FieldValue and admin.firestore.Timestamp
-import { adminDb, adminAuth } from './firebase-admin'; // Correct: use adminDb and adminAuth
-import {
-  // Timestamp, // Timestamp from 'firebase-admin/firestore' is accessed via admin.firestore.Timestamp
-  // serverTimestamp, // Not used directly from client 'firebase/firestore' here
-  // arrayUnion, // Not used directly from client 'firebase/firestore' here
-  // arrayRemove // Not used directly from client 'firebase/firestore' here
-} from 'firebase-admin/firestore'; // Import Timestamp from admin SDK if needed, or use FieldValue
-import { checkAndAwardBadges } from './data'; // Corrected: checkAndAwardBadges is in data.ts
+import admin, { type App as AdminApp } from 'firebase-admin'; 
+import { adminDb, adminAuth } from './firebase-admin'; 
+import { checkAndAwardBadges } from './data'; 
 
-// --- Helper Functions for Firestore (Admin Context) ---
 const convertAdminTimestampToISO = (timestamp: admin.firestore.Timestamp | undefined): string | undefined => {
   return timestamp ? timestamp.toDate().toISOString() : undefined;
 };
@@ -23,7 +15,6 @@ const convertAdminTimestampToStringForDisplay = (timestamp: admin.firestore.Time
 };
 
 
-// --- User Management (Admin SDK for admin ops) ---
 export async function toggleUserAdminStatus(userId: string): Promise<UserFirestoreData | null> {
   if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in toggleUserAdminStatus."); return null; }
   const userDocRef = adminDb.collection("usuarios").doc(userId);
@@ -33,14 +24,13 @@ export async function toggleUserAdminStatus(userId: string): Promise<UserFiresto
     const currentIsAdmin = userDoc.data()?.isAdmin || false;
     await userDocRef.update({ isAdmin: !currentIsAdmin, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
     const updatedUserDoc = await userDocRef.get();
-    // Ensure Timestamps are handled if they are directly returned
     const data = updatedUserDoc.data();
     if (data) {
         return { 
             id: updatedUserDoc.id, 
             ...data,
-            createdAt: data.createdAt, // Keep as Admin Timestamp
-            updatedAt: data.updatedAt  // Keep as Admin Timestamp
+            createdAt: data.createdAt, 
+            updatedAt: data.updatedAt  
         } as UserFirestoreData;
     }
     return null;
@@ -50,7 +40,6 @@ export async function toggleUserAdminStatus(userId: string): Promise<UserFiresto
   }
 }
 
-// --- Accessory Management (Admin SDK for writes by admin) ---
 export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
   if (!adminDb) {
     console.error("[Data:addAccessoryWithAdmin] Firebase Admin SDK (adminDb) is not initialized.");
@@ -71,14 +60,18 @@ export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' 
   };
   try {
     const docRef = await adminDb.collection('acessorios').add(newAccessoryData);
-    // Firestore Timestamps from admin.firestore.FieldValue.serverTimestamp() are handled correctly by SDK
+    const newDocSnap = await docRef.get();
+    const createdAccessoryData = newDocSnap.data();
+    if (!createdAccessoryData) {
+        console.error("[Data:addAccessoryWithAdmin] Failed to fetch newly created accessory document after add.");
+        throw new Error("Failed to fetch newly created accessory document.");
+    }
     return {
-      id: docRef.id,
-      ...newAccessoryData, // Use the processed data for return
-      // Timestamps are FieldValues initially, on read they become Timestamps
-    } as unknown as Accessory; // Cast because FieldValues are not Timestamps yet
+      id: newDocSnap.id,
+      ...createdAccessoryData,
+    } as Accessory; 
   } catch (error: any) {
-    console.error("[Data:addAccessoryWithAdmin] Detailed error during addDoc (Admin SDK):", error);
+    console.error("[Data:addAccessoryWithAdmin] Detailed error during addDoc/get (Admin SDK):", error);
     throw error;
   }
 }
@@ -128,7 +121,6 @@ export async function updateCommentStatus(accessoryId: string, commentId: string
 
       if (commentIndex === -1) throw new Error("Comment not found in array");
 
-      // Ensure createdAt is an Admin Timestamp before spreading
       const existingComment = commentsArray[commentIndex];
       const createdAtAdminTimestamp = existingComment.createdAt instanceof admin.firestore.Timestamp 
                                       ? existingComment.createdAt 
@@ -143,7 +135,6 @@ export async function updateCommentStatus(accessoryId: string, commentId: string
     });
 
     if (updatedCommentData && newStatus === 'approved') {
-      // checkAndAwardBadges uses client SDK, ensure user data context is appropriate or adapt checkAndAwardBadges
       await checkAndAwardBadges(updatedCommentData.userId); 
     }
     return updatedCommentData;
@@ -154,7 +145,6 @@ export async function updateCommentStatus(accessoryId: string, commentId: string
 }
 
 
-// --- Coupon Management (Admin SDK for writes) ---
 export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt'>): Promise<Coupon> {
   if (!adminDb) { throw new Error("Firebase Admin SDK (adminDb) is not initialized in addCoupon."); }
   const newCouponData: any = {
@@ -166,7 +156,13 @@ export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'u
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
   const docRef = await adminDb.collection('cupons').add(newCouponData);
-  return { id: docRef.id, ...newCouponData } as unknown as Coupon;
+  const newDocSnap = await docRef.get();
+  const createdCouponData = newDocSnap.data();
+   if (!createdCouponData) {
+    console.error("[Data:addCoupon] Failed to fetch newly created coupon document after add.");
+    throw new Error("Failed to fetch newly created coupon document.");
+  }
+  return { id: newDocSnap.id, ...createdCouponData } as Coupon;
 }
 
 export async function updateCoupon(couponId: string, couponData: Partial<Omit<Coupon, 'id'>>): Promise<Coupon | null> {
@@ -207,20 +203,59 @@ export async function deleteCoupon(couponId: string): Promise<boolean> {
   }
 }
 
-// --- Post Management (Admin SDK for writes) ---
 export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>): Promise<Post> {
-  if (!adminDb) { throw new Error("Firebase Admin SDK (adminDb) is not initialized in addPost."); }
+  if (!adminDb) {
+    console.error("[Data:addPost] Firebase Admin SDK (adminDb) is not initialized.");
+    throw new Error("Firebase Admin SDK (adminDb) is not initialized in addPost.");
+  }
+  
+  console.log("[Data:addPost] Data received for Firestore:", JSON.stringify(postData, null, 2));
+
   const newPostData: any = {
     ...postData,
-    publishedAt: postData.publishedAt ? admin.firestore.Timestamp.fromDate(new Date(postData.publishedAt as any)) : admin.firestore.Timestamp.now(),
-    tags: postData.tags || [],
+    publishedAt: postData.publishedAt 
+                 ? admin.firestore.Timestamp.fromDate(new Date(postData.publishedAt as any)) 
+                 : admin.firestore.Timestamp.now(),
+    tags: Array.isArray(postData.tags) ? postData.tags : [], // Ensure tags is an array
     embedHtml: postData.embedHtml || '',
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
-  const docRef = await adminDb.collection('posts').add(newPostData);
-  return { id: docRef.id, ...newPostData } as unknown as Post;
+
+  // Remove undefined fields explicitly to avoid Firestore errors if any value in postData is undefined
+  Object.keys(newPostData).forEach(key => {
+    if (newPostData[key] === undefined) {
+      delete newPostData[key];
+      console.warn(`[Data:addPost] Removed undefined field: ${key}`);
+    }
+  });
+  
+  console.log("[Data:addPost] Data being sent to Firestore add():", JSON.stringify(newPostData, null, 2));
+
+  try {
+    const docRef = await adminDb.collection('posts').add(newPostData);
+    console.log("[Data:addPost] Document added with ID:", docRef.id);
+    
+    const newDocSnap = await docRef.get();
+    if (!newDocSnap.exists) {
+      console.error("[Data:addPost] Newly created post document not found after add. ID:", docRef.id);
+      throw new Error("Newly created post document not found.");
+    }
+    const createdPostData = newDocSnap.data();
+    console.log("[Data:addPost] Fetched created post data:", createdPostData);
+
+    return { 
+      id: newDocSnap.id, 
+      ...createdPostData 
+    } as Post; // Cast to Post, Timestamps will be admin.firestore.Timestamp
+  } catch (error: any) {
+    console.error("[Data:addPost] Error during Firestore add/get operation:", error);
+    if (error.message) console.error("[Data:addPost] Error message:", error.message);
+    if (error.stack) console.error("[Data:addPost] Error stack:", error.stack);
+    throw error; // Re-throw the error to be caught by the server action
+  }
 }
+
 
 export async function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>): Promise<Post | null> {
   if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updatePost."); return null; }
@@ -233,6 +268,11 @@ export async function updatePost(postId: string, postData: Partial<Omit<Post, 'i
     if (postData.tags && !Array.isArray(postData.tags)) { 
         updateData.tags = (postData.tags as unknown as string).split(',').map(t => t.trim()).filter(t => t);
     }
+    
+    Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined) delete updateData[key];
+    });
+
     await postDocRef.update(updateData);
     const updatedDocSnap = await postDocRef.get();
     const updatedData = updatedDocSnap.data();
@@ -240,8 +280,10 @@ export async function updatePost(postId: string, postData: Partial<Omit<Post, 'i
         return { id: updatedDocSnap.id, ...updatedData } as Post;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error updating post ${postId} with Admin SDK:`, error);
+    if (error.message) console.error(`Error message: ${error.message}`);
+    if (error.stack) console.error(`Error stack: ${error.stack}`);
     return null;
   }
 }
@@ -259,7 +301,6 @@ export async function deletePost(postId: string): Promise<boolean> {
 }
 
 
-// --- Moderation (Admin SDK) ---
 export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
   if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in getPendingComments."); return []; }
   const allAccessoriesSnapshot = await adminDb.collection('acessorios').orderBy("createdAt", "desc").get();
@@ -269,7 +310,6 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
   allAccessories.forEach(acc => {
     (acc.comments || []).forEach(comment => {
       if (comment.status === 'pending_review') {
-        // Ensure comment.createdAt is an Admin Timestamp for consistent sorting
         const createdAtAdminTimestamp = comment.createdAt instanceof admin.firestore.Timestamp 
                                         ? comment.createdAt 
                                         : admin.firestore.Timestamp.fromDate(new Date(comment.createdAt as any));
@@ -277,7 +317,7 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
         pending.push({
           comment: {
             ...comment,
-            createdAt: createdAtAdminTimestamp, // Store as Admin Timestamp
+            createdAt: createdAtAdminTimestamp, 
           },
           accessoryId: acc.id,
           accessoryName: acc.name,
@@ -285,12 +325,10 @@ export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
       }
     });
   });
-  // Sort by Admin Timestamp
   return pending.sort((a, b) => (b.comment.createdAt as admin.firestore.Timestamp).toMillis() - (a.comment.createdAt as admin.firestore.Timestamp).toMillis());
 }
 
 
-// --- Analytics Data (Admin SDK for secure counts and reads) ---
 const getTotalUsersCount = async (): Promise<number> => {
   if (!adminDb) return 0;
   const snapshot = await adminDb.collection("usuarios").count().get();
@@ -363,7 +401,6 @@ const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]>
           userId: comment.userId,
           userName: comment.userName,
           text: comment.text,
-          // Convert Admin Timestamp to string for RecentCommentInfo type
           createdAt: convertAdminTimestampToStringForDisplay(comment.createdAt as admin.firestore.Timestamp | undefined), 
           status: comment.status,
           accessoryName: acc.name,
@@ -372,8 +409,6 @@ const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]>
       });
   });
   return allApprovedComments
-    // Sort by the string date (which should be sortable if formatted like ISO or consistent)
-    // Or, if needed, convert back to Date objects for sorting if format is not directly sortable
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) 
     .slice(0, topN);
 };
