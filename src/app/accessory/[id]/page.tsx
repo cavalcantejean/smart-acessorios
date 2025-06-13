@@ -1,5 +1,5 @@
 
-import { getAccessoryById } from '@/lib/data'; 
+import { getAccessoryById, getAllAccessories } from '@/lib/data'; 
 import type { Accessory } from '@/lib/types'; // Comment type removed
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Link from 'next/link';
@@ -21,6 +21,13 @@ const prepareAccessoryForClient = (accessory: Accessory): any => {
 
 interface AccessoryPageProps {
   params: { id: string };
+}
+
+export async function generateStaticParams() {
+  const accessories = await getAllAccessories();
+  return accessories.map((accessory) => ({
+    id: accessory.id,
+  }));
 }
 
 export async function generateMetadata({ params }: AccessoryPageProps): Promise<Metadata> {
