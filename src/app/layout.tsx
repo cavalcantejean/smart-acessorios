@@ -7,58 +7,63 @@ import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import { getSiteSettings } from '@/lib/data';
-import type { SiteSettings } from '@/lib/types'; // Import SiteSettings type
+import type { SiteSettings } from '@/lib/types'; 
 import NavigationProgress from '@/components/NavigationProgress';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-// Fetch siteSettings once at the module level for use in generateMetadata and RootLayout
-const siteSettings: SiteSettings = getSiteSettings();
+// Removido: const siteSettings: SiteSettings = getSiteSettings(); 
+// As configurações serão buscadas dentro das funções/componentes.
 
 export async function generateMetadata(): Promise<Metadata> {
+  const currentSiteSettings = getSiteSettings(); // Busca as configurações mais recentes aqui
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
   const metadataBase = new URL(baseUrl);
 
   return {
     metadataBase,
     title: {
-      default: siteSettings.siteTitle || 'SmartAcessorios',
-      template: `%s | ${siteSettings.siteTitle || 'SmartAcessorios'}`,
+      default: currentSiteSettings.siteTitle || 'SmartAcessorios',
+      template: `%s | ${currentSiteSettings.siteTitle || 'SmartAcessorios'}`,
     },
-    description: siteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
+    description: currentSiteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
     icons: {
-      icon: siteSettings.siteFaviconUrl || '/favicon.ico',
+      icon: currentSiteSettings.siteFaviconUrl || '/favicon.ico',
     },
-    applicationName: siteSettings.siteTitle || 'SmartAcessorios',
+    applicationName: currentSiteSettings.siteTitle || 'SmartAcessorios',
     appleWebApp: {
       capable: true,
-      title: siteSettings.siteTitle || 'SmartAcessorios',
+      title: currentSiteSettings.siteTitle || 'SmartAcessorios',
       statusBarStyle: 'default',
     },
   };
 }
 
-export const viewport: Viewport = {
-  themeColor: siteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url || '#3F51B5', // Assuming you might store theme color in socialLinks or a dedicated field
-};
+export async function generateViewport(): Promise<Viewport> { // Renomeado para generateViewport e tornado async
+  const currentSiteSettings = getSiteSettings();
+  const themeColorFromSettings = currentSiteSettings.socialLinks.find(l => l.platform === 'PrimaryColorHex')?.url;
+  return {
+    themeColor: themeColorFromSettings || '#3F51B5', 
+  };
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const currentSiteSettings = getSiteSettings(); // Busca as configurações mais recentes aqui
+
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
-      {/* No explicit <head> tag here; Next.js generates it from generateMetadata */}
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
           <NavigationProgress />
-          {/* Pass necessary settings to Header and Footer */}
-          <Header siteLogoUrl={siteSettings.siteLogoUrl} siteTitle={siteSettings.siteTitle} />
+          <Header siteLogoUrl={currentSiteSettings.siteLogoUrl} siteTitle={currentSiteSettings.siteTitle} />
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}
           </main>
-          <Footer siteSettings={siteSettings} />
+          <Footer siteSettings={currentSiteSettings} />
           <Toaster />
         </AuthProvider>
       </body>
