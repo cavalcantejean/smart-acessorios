@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, KeyRound } from "lucide-react"; 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; // Removed useActionState and startTransition
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/firebase';
@@ -33,11 +33,11 @@ const loginFormSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
 
+// This local state is for client-side form submission (Firebase Auth)
 interface LocalFormState {
   message: string;
   success: boolean;
   isLoading: boolean;
-  // isGoogleLoading foi removido pois a funcionalidade do Google não é mais usada
 }
 
 const initialLocalState: LocalFormState = {
@@ -47,7 +47,7 @@ const initialLocalState: LocalFormState = {
 };
 
 interface LoginFormProps {
-  formAction?: (prevState: any, formData: FormData) => Promise<any>;
+  // formAction prop and related types removed
   title: string;
   description: string;
   submitButtonText: string;
@@ -70,7 +70,7 @@ function SubmitButtonInternal({ text, pending }: { text: string, pending: boolea
 export default function LoginForm({ title, description, submitButtonText, linkToRegister }: LoginFormProps) {
   const [localFormState, setLocalFormState] = useState<LocalFormState>(initialLocalState);
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth(); // Removido signInWithGoogle
+  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -83,36 +83,35 @@ export default function LoginForm({ title, description, submitButtonText, linkTo
   });
 
   useEffect(() => {
-    console.log(`LoginForm: useEffect[isAuthenticated, isAuthLoading, user] disparado. isAuthenticated: ${isAuthenticated}, isAuthLoading: ${isAuthLoading}, User: ${user?.name}`);
+    // console.log(`LoginForm: useEffect[isAuthenticated, isAuthLoading, user] disparado. isAuthenticated: ${isAuthenticated}, isAuthLoading: ${isAuthLoading}, User: ${user?.name}`);
     if (!isAuthLoading && isAuthenticated && user) {
       const redirectTo = searchParams.get('redirect') || (user.isAdmin ? '/admin/dashboard' : '/dashboard');
-      console.log("LoginForm: Autenticado e não carregando. Redirecionando para:", redirectTo);
+      // console.log("LoginForm: Autenticado e não carregando. Redirecionando para:", redirectTo);
       router.replace(redirectTo);
     } else if (!isAuthLoading && !isAuthenticated) {
-      console.log("LoginForm: Não autenticado e não carregando. Nenhuma ação de redirecionamento.");
+      // console.log("LoginForm: Não autenticado e não carregando. Nenhuma ação de redirecionamento.");
     } else {
-      console.log("LoginForm: Ainda carregando autenticação ou estado de usuário não totalmente definido.");
+      // console.log("LoginForm: Ainda carregando autenticação ou estado de usuário não totalmente definido.");
     }
   }, [isAuthenticated, isAuthLoading, user, router, searchParams]);
 
   const handleEmailPasswordSubmit = async (values: LoginFormValues) => {
-    console.log("LoginForm: handleEmailPasswordSubmit iniciado com valores:", values);
+    // console.log("LoginForm: handleEmailPasswordSubmit iniciado com valores:", values);
     setLocalFormState(prev => ({ ...prev, message: "", success: false, isLoading: true }));
 
     try {
       const lowercasedEmail = values.email.toLowerCase();
-      console.log("LoginForm: Chamando signInWithEmailAndPassword no CLIENTE para:", lowercasedEmail);
+      // console.log("LoginForm: Chamando signInWithEmailAndPassword no CLIENTE para:", lowercasedEmail);
       await signInWithEmailAndPassword(auth, lowercasedEmail, values.password);
       
-      console.log("LoginForm: signInWithEmailAndPassword NO CLIENTE bem-sucedido.");
+      // console.log("LoginForm: signInWithEmailAndPassword NO CLIENTE bem-sucedido.");
       toast({
         title: "Login Bem-Sucedido!",
         description: "Sincronizando seus dados...",
       });
-      // Não precisa definir isLoading: false aqui, o useEffect[isAuthenticated] cuidará do redirecionamento
-      // setLocalFormState(prev => ({ ...prev, message: "Login bem-sucedido! Sincronizando...", success: true, isLoading: false }));
+      // isLoading will be set to false by the useEffect that handles redirection or by error handling
     } catch (error: any) {
-      console.error("LoginForm: Erro no signInWithEmailAndPassword NO CLIENTE:", error);
+      // console.error("LoginForm: Erro no signInWithEmailAndPassword NO CLIENTE:", error);
       let errorMessage = "Credenciais inválidas ou erro ao fazer login.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         errorMessage = "E-mail ou senha incorretos.";
@@ -132,8 +131,6 @@ export default function LoginForm({ title, description, submitButtonText, linkTo
     }
   };
 
-  // handleGoogleSignIn foi removido
-
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl">
       <CardHeader>
@@ -148,7 +145,7 @@ export default function LoginForm({ title, description, submitButtonText, linkTo
       <CardContent>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(handleEmailPasswordSubmit)}
+            onSubmit={form.handleSubmit(handleEmailPasswordSubmit)} // No action prop needed here
             className="space-y-4"
           >
             <FormField
@@ -188,8 +185,6 @@ export default function LoginForm({ title, description, submitButtonText, linkTo
             )}
           </form>
         </Form>
-
-        {/* Separador e botão do Google removidos */}
 
         {linkToRegister && (
           <div className="mt-6 text-center text-sm">
