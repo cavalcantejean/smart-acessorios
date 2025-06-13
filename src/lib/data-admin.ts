@@ -1,11 +1,11 @@
 
 'use server';
 
-import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting } from './types';
-import admin, { type App as AdminApp } from 'firebase-admin';
+import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting, Comment, PendingCommentDisplay } from './types';
+import admin from 'firebase-admin';
 import { adminDb, adminAuth } from './firebase-admin';
-import { checkAndAwardBadges } from './data'; // This might be an issue if data.ts uses data-admin.ts - circular dependency risk
-import { defaultSiteSettings as importedDefaultSiteSettings } from './data'; // Import from data.ts
+// import { checkAndAwardBadges } from './data'; // Badge system removed
+import { defaultSiteSettings as importedDefaultSiteSettings } from './data';
 
 const convertAdminTimestampToISO = (timestamp: admin.firestore.Timestamp | undefined): string | undefined => {
   return timestamp ? timestamp.toDate().toISOString() : undefined;
@@ -19,12 +19,10 @@ const convertAdminTimestampToStringForDisplay = (timestamp: admin.firestore.Time
 const SITE_SETTINGS_COLLECTION = 'configuracoes';
 const SITE_SETTINGS_DOC_ID = 'site_settings_doc';
 
-// defaultSocialLinksDataForStorage and defaultSiteSettings are now imported or derived from importedDefaultSiteSettings
-
 export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
   if (!adminDb) {
     console.warn("Firebase Admin SDK (adminDb) is not initialized in getSiteSettingsAdmin. Returning default settings.");
-    return JSON.parse(JSON.stringify(importedDefaultSiteSettings)); // Deep copy of imported defaults
+    return JSON.parse(JSON.stringify(importedDefaultSiteSettings));
   }
   try {
     const settingsDocRef = adminDb.collection(SITE_SETTINGS_COLLECTION).doc(SITE_SETTINGS_DOC_ID);
@@ -143,6 +141,8 @@ export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' 
     aiSummary: accessoryData.aiSummary || null,
     embedHtml: accessoryData.embedHtml || null,
     isDeal: accessoryData.isDeal || false,
+    comments: [], // Initialize comments array
+    likedBy: [],  // Initialize likedBy array
   };
   try {
     const docRef = await adminDb.collection('acessorios').add(newAccessoryData);
@@ -168,8 +168,11 @@ export async function updateAccessory(accessoryId: string, accessoryData: Partia
   try {
     const updateData: any = { ...accessoryData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
     if (updateData.price) updateData.price = updateData.price.toString().replace(',', '.');
-    delete updateData.likedBy;
-    delete updateData.comments;
+    
+    // Ensure comments and likedBy are not accidentally overwritten if not provided
+    if (updateData.comments === undefined) delete updateData.comments;
+    if (updateData.likedBy === undefined) delete updateData.likedBy;
+
 
     await accessoryDocRef.update(updateData);
     const updatedDocSnap = await accessoryDocRef.get();
@@ -195,6 +198,85 @@ export async function deleteAccessory(accessoryId: string): Promise<boolean> {
     return false;
   }
 }
+
+// --- Comment Moderation (Admin SDK) ---
+export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
+  if (!adminDb) {
+    console.error("Firebase Admin SDK (adminDb) is not initialized in getPendingComments.");
+    throw new Error("Firebase Admin SDK (adminDb) is not initialized in getPendingComments.");
+  }
+
+  const pendingCommentsDisplay: PendingCommentDisplay[] = [];
+  try {
+    const accessoriesSnapshot = await adminDb.collection('acessorios').get();
+
+    for (const accDoc of accessoriesSnapshot.docs) {
+      const accessoryData = accDoc.data() as Accessory;
+      if (accessoryData.comments && Array.isArray(accessoryData.comments)) {
+        accessoryData.comments.forEach((comment: Comment) => {
+          if (comment.status === 'pending_review') {
+            let clientComment = { ...comment } as any;
+            if (comment.createdAt && typeof (comment.createdAt as any).toDate === 'function') {
+               clientComment.createdAt = (comment.createdAt as admin.firestore.Timestamp).toDate().toISOString();
+            } else if (typeof comment.createdAt === 'string') {
+                // Already a string, do nothing
+            } else {
+                clientComment.createdAt = new Date().toISOString(); // Fallback
+            }
+
+            pendingCommentsDisplay.push({
+              comment: clientComment as Comment,
+              accessoryId: accDoc.id,
+              accessoryName: accessoryData.name || 'Acessório Desconhecido',
+            });
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching or processing pending comments in data-admin.ts (getPendingComments):", error);
+    throw error; 
+  }
+  return pendingCommentsDisplay.sort((a, b) => new Date(b.comment.createdAt).getTime() - new Date(a.comment.createdAt).getTime());
+}
+
+export async function updateCommentStatus(accessoryId: string, commentId: string, newStatus: 'approved' | 'rejected'): Promise<Comment | null> {
+  if (!adminDb) {
+    console.error("Firebase Admin SDK (adminDb) is not initialized in updateCommentStatus.");
+    throw new Error("Admin SDK not initialized.");
+  }
+  const accessoryDocRef = adminDb.collection("acessorios").doc(accessoryId);
+  try {
+    const accessoryDoc = await accessoryDocRef.get();
+    if (!accessoryDoc.exists) {
+      console.error(`Accessory ${accessoryId} not found in updateCommentStatus.`);
+      return null;
+    }
+    const accessoryData = accessoryDoc.data() as Accessory;
+    let comments = accessoryData.comments || [];
+    let foundComment: Comment | null = null;
+
+    const updatedComments = comments.map(comment => {
+      if (comment.id === commentId) {
+        foundComment = { ...comment, status: newStatus };
+        return foundComment;
+      }
+      return comment;
+    });
+
+    if (!foundComment) {
+      console.error(`Comment ${commentId} not found in accessory ${accessoryId}.`);
+      return null;
+    }
+
+    await accessoryDocRef.update({ comments: updatedComments, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    return foundComment;
+  } catch (error) {
+    console.error(`Error updating comment ${commentId} status for accessory ${accessoryId}:`, error);
+    throw error;
+  }
+}
+
 
 // --- Coupon Management (Admin SDK) ---
 export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt'>): Promise<Coupon> {
@@ -344,7 +426,7 @@ interface CategoryCount {
   count: number;
 }
 // Analytics Data (Admin SDK) - Type definition for AnalyticsData
-interface AnalyticsData {
+export interface AnalyticsData {
   totalUsers: number;
   totalAccessories: number;
   accessoriesPerCategory: CategoryCount[];
@@ -381,11 +463,31 @@ const getAccessoriesPerCategory = async (): Promise<CategoryCount[]> => {
 };
 
 export async function getAnalyticsData(): Promise<AnalyticsData> {
-  return {
-    totalUsers: await getTotalUsersCount(),
-    totalAccessories: await getTotalAccessoriesCount(),
-    accessoriesPerCategory: await getAccessoriesPerCategory(),
+  const defaultAnalyticsData: AnalyticsData = {
+    totalUsers: 0,
+    totalAccessories: 0,
+    accessoriesPerCategory: [],
   };
-}
 
-    
+  if (!adminDb) {
+    console.warn("Firebase Admin SDK (adminDb) is not initialized in getAnalyticsData. Returning default data.");
+    return defaultAnalyticsData;
+  }
+
+  try {
+    const [totalUsers, totalAccessories, accessoriesPerCategory] = await Promise.all([
+      getTotalUsersCount(),
+      getTotalAccessoriesCount(),
+      getAccessoriesPerCategory(),
+    ]);
+
+    return {
+      totalUsers,
+      totalAccessories,
+      accessoriesPerCategory,
+    };
+  } catch (error) {
+    console.error("Error fetching analytics data in getAnalyticsData (data-admin.ts):", error);
+    return defaultAnalyticsData;
+  }
+}
