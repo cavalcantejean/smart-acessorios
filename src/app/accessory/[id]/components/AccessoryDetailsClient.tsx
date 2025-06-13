@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useActionState, useRef } from 'react';
+import { useState, useEffect, useActionState, useRef, startTransition } from 'react';
 import type { Accessory, Comment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -105,7 +105,9 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     const formData = new FormData();
     formData.append('accessoryId', accessory.id);
     formData.append('userId', user.id);
-    handleLikeAction(formData);
+    startTransition(() => {
+      handleLikeAction(formData);
+    });
   };
 
   // Type for comment when it's added, createdAt will be string
