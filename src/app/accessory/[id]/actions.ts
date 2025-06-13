@@ -1,11 +1,9 @@
 
 "use server";
 import { summarizeProductDescription, type SummarizeProductDescriptionInput, type SummarizeProductDescriptionOutput } from '@/ai/flows/summarize-product-description';
-// import { moderateComment, type ModerateCommentInput, type ModerateCommentOutput } from '@/ai/flows/moderate-comment-flow'; // Moderation removed for testing
 import { z } from 'zod';
-import { addCommentToAccessoryData, toggleLikeOnAccessory as toggleLikeOnAccessoryData, getAccessoryById, checkAndAwardBadges } from '@/lib/data'; // Now async
-import type { Comment } from '@/lib/types';
-import { Timestamp } from 'firebase/firestore';
+// Removed: addCommentToAccessoryData, toggleLikeOnAccessoryData, getAccessoryById, checkAndAwardBadges
+// Removed: Comment type, Timestamp
 
 // --- Summarize Action ---
 const SummarizeInputSchema = z.object({
@@ -27,119 +25,8 @@ export async function summarizeAccessoryDescriptionAction(input: SummarizeProduc
   }
 }
 
-// --- Like Action ---
-interface LikeActionResult {
-  success: boolean;
-  isLiked: boolean;
-  likesCount: number;
-  message?: string;
-}
+// --- Like Action --- REMOVED
+// toggleLikeAccessoryAction REMOVED
 
-// Corrected signature for useActionState:
-export async function toggleLikeAccessoryAction(
-  prevState: LikeActionResult | null, // First argument is the previous state
-  formData: FormData                 // Second argument is the payload (FormData)
-): Promise<LikeActionResult> {
-  const accessoryId = formData.get('accessoryId') as string;
-  const userId = formData.get('userId') as string;
-
-  if (!userId) {
-    return { success: false, isLiked: false, likesCount: 0, message: "Usuário não autenticado." };
-  }
-  if (!accessoryId) {
-    return { success: false, isLiked: false, likesCount: 0, message: "ID do acessório ausente." };
-  }
-
-  const result = await toggleLikeOnAccessoryData(accessoryId, userId); // Await async call
-  const accessory = await getAccessoryById(accessoryId); // Await async call
-
-  if (!result || !accessory) {
-    return { success: false, isLiked: false, likesCount: accessory?.likedBy.length || 0, message: "Falha ao curtir/descurtir." };
-  }
-
-  // Badge checking is now part of toggleLikeOnAccessoryData (which calls checkAndAwardBadges)
-  return {
-    success: true,
-    isLiked: accessory.likedBy.includes(userId),
-    likesCount: accessory.likedBy.length,
-    message: accessory.likedBy.includes(userId) ? "Curtido!" : "Descurtido.",
-  };
-}
-
-
-// --- Comment Action ---
-const CommentActionInputSchema = z.object({
-  accessoryId: z.string(),
-  commentText: z.string().min(1, "O comentário não pode estar vazio.").max(500, "Comentário muito longo."),
-  userId: z.string(),
-  userName: z.string(),
-});
-
-// The Comment type in CommentActionResult will now have createdAt as a string for client consumption
-interface CommentActionResult {
-  success: boolean;
-  comment?: Omit<Comment, 'createdAt'> & { createdAt: string }; // Ensure createdAt is string
-  message?: string;
-  error?: string;
-  errors?: Record<string, string[] | undefined>;
-}
-
-export async function addCommentAccessoryAction(prevState: CommentActionResult | null, formData: FormData): Promise<CommentActionResult> {
-  const rawFormData = {
-    accessoryId: formData.get('accessoryId'),
-    commentText: formData.get('commentText'),
-    userId: formData.get('userId'),
-    userName: formData.get('userName'),
-  };
-
-  const validatedFields = CommentActionInputSchema.safeParse(rawFormData);
-
-  if (!validatedFields.success) {
-    return {
-      success: false,
-      error: "Dados inválidos.",
-      errors: validatedFields.error.flatten().fieldErrors,
-    };
-  }
-
-  const { accessoryId, commentText, userId, userName } = validatedFields.data;
-
-  try {
-    // MODERATION REMOVED FOR TESTING
-    // const moderationResult = await moderateComment({ commentText });
-    // let commentStatus: 'approved' | 'pending_review' = 'approved';
-    // let userMessage = "Comentário adicionado!";
-
-    // if (!moderationResult.isSafe) {
-    //   commentStatus = 'pending_review';
-    //   userMessage = "Seu comentário foi enviado para moderação e será publicado após aprovação.";
-    //   console.log(`Comment by ${userName} on ${accessoryId} flagged as pending: ${moderationResult.reason}`);
-    // }
-
-    const commentStatus: 'approved' | 'pending_review' = 'approved';
-    const userMessage = "Comentário adicionado com sucesso!";
-
-
-    const newCommentFromDb = await addCommentToAccessoryData(accessoryId, userId, userName, commentText, commentStatus); // Await async call
-
-    if (!newCommentFromDb) {
-      return { success: false, error: "Falha ao adicionar comentário." };
-    }
-    
-    // Convert Timestamp to ISO string for the client
-    const clientReadyComment = {
-      ...newCommentFromDb,
-      createdAt: (newCommentFromDb.createdAt as Timestamp).toDate().toISOString(),
-    };
-
-    // Badge check is now handled within addCommentToAccessoryData (which calls checkAndAwardBadges)
-    return { success: true, comment: clientReadyComment, message: userMessage };
-
-  } catch (error) {
-    console.error("Error in addCommentAccessoryAction:", error);
-    // if (error instanceof Error && error.message.includes("Moderation")) { // Moderation error handling not needed for now
-    //     return { success: false, error: "Falha no sistema de moderação. Tente novamente." };
-    // }
-    return { success: false, error: "Erro no servidor ao adicionar comentário." };
-  }
-}
+// --- Comment Action --- REMOVED
+// addCommentAccessoryAction REMOVED

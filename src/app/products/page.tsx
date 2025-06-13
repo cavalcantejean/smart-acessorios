@@ -1,6 +1,6 @@
 
-import { getAllAccessories } from '@/lib/data'; // Now async
-import type { Accessory, Comment } from '@/lib/types';
+import { getAllAccessories } from '@/lib/data'; 
+import type { Accessory } from '@/lib/types'; // Comment type removed
 import AccessoryCard from '@/components/AccessoryCard';
 import { ShoppingBag } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -11,22 +11,18 @@ export const metadata: Metadata = {
   description: 'Navegue por todos os nossos acessórios para smartphones.',
 };
 
-// Helper to prepare accessory for client (convert Timestamps to strings)
 const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
   return {
     ...accessory,
     createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : (accessory.createdAt as any),
     updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : (accessory.updatedAt as any),
-    comments: (accessory.comments || []).map(comment => ({
-      ...comment,
-      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : (comment.createdAt as any),
-    })),
-  } as Accessory; // Cast to ensure type compatibility
+    // comments mapping removed
+  } as Accessory; 
 };
 
 
 export default async function ProductsPage() {
-  const rawAccessories: Accessory[] = await getAllAccessories(); // Await async call
+  const rawAccessories: Accessory[] = await getAllAccessories(); 
   const allAccessories = rawAccessories.map(prepareAccessoryForClient);
 
 

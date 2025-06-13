@@ -1,8 +1,8 @@
 
-import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting, CommentWithAccessoryInfo } from './types';
+import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, BadgeCriteriaData, SiteSettings, SocialLinkSetting } from './types';
+// Removed Comment, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, CommentWithAccessoryInfo
 import { allBadges, generateBadgeCriteriaData } from './badges';
-import { db } from './firebase'; // SDK Cliente
-// REMOVIDO: import { adminDb } from './firebase-admin';
+import { db } from './firebase'; 
 import {
   collection,
   doc,
@@ -91,8 +91,8 @@ export async function getUserById(id: string): Promise<UserFirestoreData | undef
       return {
         ...data,
         id: userDocSnap.id,
-        createdAt: data.createdAt, // Mantém como Timestamp
-        updatedAt: data.updatedAt, // Mantém como Timestamp
+        createdAt: data.createdAt, 
+        updatedAt: data.updatedAt, 
       } as UserFirestoreData;
     }
     return undefined;
@@ -171,7 +171,7 @@ export async function getAllAccessories(): Promise<Accessory[]> {
     return accessoriesSnapshot.docs.map(docSnap => ({
       id: docSnap.id,
       ...docSnap.data(),
-      comments: docSnap.data().comments || [],
+      // comments: docSnap.data().comments || [], // REMOVED
     } as Accessory));
   } catch (error) {
     console.error("Error fetching all accessories from Firestore:", error);
@@ -185,7 +185,8 @@ export async function getAccessoryById(id: string): Promise<Accessory | undefine
     const accessoryDocRef = doc(db, "acessorios", id);
     const accessoryDocSnap = await getDoc(accessoryDocRef);
     if (accessoryDocSnap.exists()) {
-      return { id: accessoryDocSnap.id, ...accessoryDocSnap.data(), comments: accessoryDocSnap.data().comments || [] } as Accessory;
+      return { id: accessoryDocSnap.id, ...accessoryDocSnap.data() } as Accessory;
+      // comments: accessoryDocSnap.data().comments || [] // REMOVED
     }
     return undefined;
   } catch (error) {
@@ -194,84 +195,8 @@ export async function getAccessoryById(id: string): Promise<Accessory | undefine
   }
 }
 
-export async function toggleLikeOnAccessory(accessoryId: string, userId: string): Promise<{ likedBy: string[], likesCount: number } | null> {
-  if (!db) { console.error("Firestore client db instance not available in toggleLikeOnAccessory."); return null; }
-  const accessoryDocRef = doc(db, "acessorios", accessoryId);
-  try {
-    let newLikedBy: string[] = [];
-    await runTransaction(db, async (transaction) => {
-      const accessoryDoc = await transaction.get(accessoryDocRef);
-      if (!accessoryDoc.exists()) throw new Error("Accessory not found");
-      const currentLikedBy = accessoryDoc.data()?.likedBy || [];
-      if (currentLikedBy.includes(userId)) {
-        newLikedBy = currentLikedBy.filter((id: string) => id !== userId);
-        transaction.update(accessoryDocRef, { likedBy: arrayRemove(userId), updatedAt: serverTimestamp() });
-      } else {
-        newLikedBy = [...currentLikedBy, userId];
-        transaction.update(accessoryDocRef, { likedBy: arrayUnion(userId), updatedAt: serverTimestamp() });
-      }
-    });
-    await checkAndAwardBadges(userId);
-    return { likedBy: newLikedBy, likesCount: newLikedBy.length };
-  } catch (error) {
-    console.error(`Error toggling like for accessory ${accessoryId} by user ${userId}:`, error);
-    return null;
-  }
-}
-
-export async function addCommentToAccessoryData(
-  accessoryId: string,
-  userId: string,
-  userName: string,
-  text: string,
-  status: 'approved' | 'pending_review' | 'rejected' = 'approved'
-): Promise<Comment | null> {
-  if (!db) {
-    console.error("[data.ts] Firestore client db instance not available in addCommentToAccessoryData.");
-    return null;
-  }
-  const accessoryDocRef = doc(db, "acessorios", accessoryId);
-  try {
-    const newComment: Omit<Comment, 'id' | 'createdAt'> & { createdAt: any } = {
-      userId,
-      userName,
-      text,
-      status,
-      createdAt: serverTimestamp(), // Firestore server-side timestamp
-    };
-    // Generate a unique ID for the comment client-side for immediate use if needed,
-    // Firestore arrayUnion handles the actual addition to the array.
-    const commentId = doc(collection(db, '_')).id; // Helper to generate a Firestore-like ID
-    const commentWithId = { ...newComment, id: commentId };
-
-    console.log(`[data.ts] Attempting to add comment by user ${userId} to accessory ${accessoryId}. Comment text: ${text.substring(0, 30)}...`);
-    await updateDoc(accessoryDocRef, {
-      comments: arrayUnion(commentWithId), // Add the comment to the array
-      updatedAt: serverTimestamp()
-    });
-    console.log(`[data.ts] Comment successfully submitted to Firestore for accessory ${accessoryId}. Status: ${status}`);
-
-    if (status === 'approved') {
-      await checkAndAwardBadges(userId);
-      console.log(`[data.ts] Badges checked for user ${userId} after approved comment.`);
-    }
-    // Return the comment object with a client-side Timestamp.now() for immediate UI update.
-    // The actual 'createdAt' field in Firestore will be the serverTimestamp.
-    return { ...commentWithId, createdAt: Timestamp.now() } as Comment;
-  } catch (error: any) {
-    console.error(`[data.ts] Error adding comment to accessory ${accessoryId} by user ${userId}. Text: ${text.substring(0,30)}...`, error);
-    if (error.code) {
-      console.error(`[data.ts] Firestore Error Code: ${error.code}`);
-    }
-    if (error.message) {
-      console.error(`[data.ts] Firestore Error Message: ${error.message}`);
-    }
-    if (error.code === 'permission-denied') {
-      console.error("[data.ts] CRITICAL: Firestore permission denied. Check security rules for updating 'acessorios' collection, specifically the 'comments' and 'updatedAt' fields. Authenticated users need write access to these fields to add comments.");
-    }
-    return null;
-  }
-}
+// toggleLikeOnAccessory REMOVED
+// addCommentToAccessoryData REMOVED
 
 // --- Utility Functions (Client SDK) ---
 export async function getUniqueCategories(): Promise<string[]> {
@@ -449,46 +374,5 @@ export async function checkAndAwardBadges(userId: string): Promise<void> {
   }
 }
 
-// --- Functions for User Profile Activity Page (Client SDK) ---
-export async function getCommentsByUserId(userId: string): Promise<CommentWithAccessoryInfo[]> {
-  if (!db) { console.error("Firestore client db instance not available in getCommentsByUserId."); return []; }
-  const userComments: CommentWithAccessoryInfo[] = [];
-  const allAccessoriesList = await getAllAccessories();
-
-  allAccessoriesList.forEach(acc => {
-    (acc.comments || [])
-      .filter(comment => comment.userId === userId && comment.status === 'approved')
-      .forEach(comment => {
-        userComments.push({
-          id: comment.id,
-          userId: comment.userId,
-          userName: comment.userName,
-          text: comment.text,
-          createdAt: convertTimestampToStringForDisplay(comment.createdAt as Timestamp | undefined),
-          status: comment.status,
-          accessoryId: acc.id,
-          accessoryName: acc.name,
-        });
-      });
-  });
-  // @ts-ignore
-  return userComments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
-
-export async function getAccessoriesLikedByUser(userId: string): Promise<Accessory[]> {
-  if (!db) { console.error("Firestore client db instance not available in getAccessoriesLikedByUser."); return []; }
-  try {
-    const q = query(accessoriesClientCollection, where("likedBy", "array-contains", userId), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
-  } catch (error) {
-    console.error(`Error fetching accessories liked by user ${userId}:`, error);
-    return [];
-  }
-}
-// As funções que usavam adminDb foram removidas deste arquivo.
-// Elas devem existir exclusivamente em src/lib/data-admin.ts
-// e as Server Actions devem importar delas.
-
-    
-    
+// getCommentsByUserId REMOVED
+// getAccessoriesLikedByUser REMOVED

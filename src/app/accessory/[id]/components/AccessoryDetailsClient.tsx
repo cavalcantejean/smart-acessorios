@@ -2,44 +2,35 @@
 "use client";
 
 import { useState, useEffect, useActionState, useRef, startTransition } from 'react';
-import type { Accessory, Comment } from '@/lib/types';
+import type { Accessory } from '@/lib/types'; // Comment type removed
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft, ThumbsUp } from 'lucide-react';
-import { summarizeAccessoryDescriptionAction, toggleLikeAccessoryAction, addCommentAccessoryAction } from '../actions';
+import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft } from 'lucide-react'; // ThumbsUp removed
+import { summarizeAccessoryDescriptionAction } from '../actions'; // toggleLikeAccessoryAction, addCommentAccessoryAction removed
 import FavoriteButton from '@/components/FavoriteButton';
-import LikeButton from '@/components/LikeButton';
-import CommentsSection from '@/components/CommentsSection';
+// LikeButton removed
+// CommentsSection removed
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
-import { Timestamp } from 'firebase/firestore';
-
+// Timestamp removed
 
 // Type for Accessory props coming into this client component
 // Dates from Firestore Timestamps should be strings (ISO) or numbers (milliseconds)
-interface ClientAccessory extends Omit<Accessory, 'comments' | 'createdAt' | 'updatedAt' | 'expiryDate'> {
-  comments: Array<Omit<Comment, 'createdAt'> & { createdAt: string }>;
+interface ClientAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'expiryDate'> {
+  // comments: Array<Omit<Comment, 'createdAt'> & { createdAt: string }>; // REMOVED
   createdAt?: string; // ISO string or undefined
   updatedAt?: string; // ISO string or undefined
-  // expiryDate for coupons, if used here, would also be string
 }
 
 interface AccessoryDetailsClientProps {
-  accessory: ClientAccessory; // Use the client-specific type
+  accessory: ClientAccessory; 
   isFavoriteInitial: boolean;
   onToggleFavorite: (id: string) => void;
 }
 
-interface LikeActionResult {
-  success: boolean;
-  isLiked: boolean;
-  likesCount: number;
-  message?: string;
-}
-const initialLikeActionState: LikeActionResult = { success: false, isLiked: false, likesCount: 0 };
-
+// LikeActionResult and initialLikeActionState removed
 
 export default function AccessoryDetailsClient({ accessory: initialAccessory, isFavoriteInitial, onToggleFavorite }: AccessoryDetailsClientProps) {
   const [accessory, setAccessory] = useState<ClientAccessory>(initialAccessory);
@@ -50,35 +41,21 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
   const { toast } = useToast();
   const { user, isAuthenticated, isAdmin, isLoading: isLoadingAuth } = useAuth();
 
-  const [likeState, handleLikeAction, isLikePending] = useActionState(toggleLikeAccessoryAction, initialLikeActionState);
-  const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(false);
-  const [currentLikesCount, setCurrentLikesCount] = useState(0);
-
-  const [currentComments, setCurrentComments] = useState<(Omit<Comment, 'createdAt'> & { createdAt: string })[]>([]);
+  // useActionState for likeState removed
+  // isLikedByCurrentUser and currentLikesCount state removed
+  // currentComments state removed
 
   useEffect(() => {
     setAccessory(initialAccessory);
     setCurrentSummary(initialAccessory.aiSummary || initialAccessory.shortDescription);
     setIsFavorite(isFavoriteInitial);
-    setCurrentLikesCount(initialAccessory.likedBy?.length || 0);
-    setIsLikedByCurrentUser(isAuthenticated && user ? initialAccessory.likedBy?.includes(user.id) : false);
-    // Filter and set comments
-    setCurrentComments(initialAccessory.comments?.filter(c => c.status === 'approved') || []);
+    // setCurrentLikesCount(initialAccessory.likedBy?.length || 0); // REMOVED
+    // setIsLikedByCurrentUser(isAuthenticated && user ? initialAccessory.likedBy?.includes(user.id) : false); // REMOVED
+    // setCurrentComments(initialAccessory.comments?.filter(c => c.status === 'approved') || []); // REMOVED
   }, [initialAccessory, isFavoriteInitial, isAuthenticated, user]);
 
 
-  useEffect(() => {
-    if (likeState?.message) {
-      if (likeState.success) {
-        setIsLikedByCurrentUser(likeState.isLiked);
-        setCurrentLikesCount(likeState.likesCount);
-        toast({ title: "Sucesso!", description: likeState.message });
-      } else {
-        toast({ title: "Erro", description: likeState.message || "Falha ao processar curtida.", variant: "destructive" });
-      }
-    }
-  }, [likeState, toast]);
-
+  // useEffect for likeState removed
 
   const handleToggleFavoriteClient = () => {
     if (!isAuthenticated) {
@@ -97,26 +74,8 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     });
   };
 
-  const handleInternalLikeAction = () => {
-    if (!isAuthenticated || !user) {
-      toast({ title: "Login Necessário", description: "Você precisa estar logado para curtir.", variant: "destructive" });
-      return;
-    }
-    const formData = new FormData();
-    formData.append('accessoryId', accessory.id);
-    formData.append('userId', user.id);
-    startTransition(() => {
-      handleLikeAction(formData);
-    });
-  };
-
-  // Type for comment when it's added, createdAt will be string
-  const handleCommentAdded = (newComment: Omit<Comment, 'createdAt'> & { createdAt: string }) => {
-    if (newComment.status === 'approved') {
-      setCurrentComments(prevComments => [...prevComments, newComment]);
-    }
-  };
-
+  // handleInternalLikeAction removed
+  // handleCommentAdded removed
 
   const handleGenerateSummary = async () => {
     if (!accessory.fullDescription) {
@@ -178,15 +137,7 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
       <CardContent className="p-6 space-y-4">
         <div className="flex justify-between items-start">
             <CardTitle className="text-3xl font-headline">{accessory.name}</CardTitle>
-            {!isLoadingAuth && isAuthenticated && (
-                 <LikeButton
-                    isLiked={isLikedByCurrentUser}
-                    onClick={handleInternalLikeAction}
-                    disabled={isLikePending}
-                    likesCount={currentLikesCount}
-                    className="mt-1"
-                />
-            )}
+            {/* LikeButton removed from here */}
         </div>
 
         {accessory.category && (
@@ -225,12 +176,7 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
           </div>
         )}
 
-        <CommentsSection
-          accessoryId={accessory.id}
-          comments={currentComments}
-          onCommentAdded={handleCommentAdded}
-          serverAddCommentAction={addCommentAccessoryAction}
-        />
+        {/* CommentsSection removed */}
       </CardContent>
       <CardFooter className="p-6 bg-secondary/30">
         <Button asChild className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">

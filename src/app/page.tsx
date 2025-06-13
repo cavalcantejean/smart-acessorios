@@ -1,7 +1,7 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories, getLatestPosts } from '@/lib/data'; // Now async
+import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories, getLatestPosts } from '@/lib/data'; 
 import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
 import TestimonialCard from '@/components/TestimonialCard';
@@ -10,7 +10,7 @@ import type { Accessory, Coupon, Testimonial, Post } from '@/lib/types';
 import { Tag, Ticket, ShoppingBag, ArrowRight, Users, Star, BookOpenText, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
-import Image from 'next/image'; // Keep for hero if added later
+import Image from 'next/image'; 
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,10 +24,7 @@ const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
     ...accessory,
     createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : accessory.createdAt as any,
     updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : accessory.updatedAt as any,
-    comments: (accessory.comments || []).map(comment => ({
-      ...comment,
-      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : comment.createdAt as any,
-    })),
+    // comments mapping removed
   };
 };
 
@@ -54,7 +51,7 @@ export default function HomePage() {
   const [baseAccessoriesData, setBaseAccessoriesData] = useState<Accessory[]>([]);
   const [baseDailyDealsData, setBaseDailyDealsData] = useState<Accessory[]>([]);
   const [basePromotionalCouponsData, setBasePromotionalCouponsData] = useState<Coupon[]>([]);
-  const [baseTestimonialsData, setBaseTestimonialsData] = useState<Testimonial[]>([]); // Testimonials are still mock
+  const [baseTestimonialsData, setBaseTestimonialsData] = useState<Testimonial[]>([]); 
   const [baseLatestPostsData, setBaseLatestPostsData] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -77,14 +74,14 @@ export default function HomePage() {
           accessoriesRaw,
           dealsRaw,
           couponsRaw,
-          testimonials, // from mock
+          testimonials, 
           postsRaw,
           uniqueCategories
         ] = await Promise.all([
           getAllAccessories(),
           getDailyDeals(),
           getCoupons(),
-          getTestimonials(), // Remains synchronous
+          getTestimonials(), 
           getLatestPosts(3),
           getUniqueCategories()
         ]);
@@ -98,7 +95,6 @@ export default function HomePage() {
 
       } catch (error) {
         console.error("Error fetching homepage data:", error);
-        // Handle error state if needed
       } finally {
         setIsLoading(false);
       }
@@ -135,7 +131,7 @@ export default function HomePage() {
 
   const dealsToShowInCarousel = baseDailyDealsData.slice(0, 6);
   const dealsToShowInGrid = baseDailyDealsData.slice(0, 4);
-  const testimonialsToShow = baseTestimonialsData.slice(0, 3); // Still from mock
+  const testimonialsToShow = baseTestimonialsData.slice(0, 3); 
 
   if (isLoading) {
     return (

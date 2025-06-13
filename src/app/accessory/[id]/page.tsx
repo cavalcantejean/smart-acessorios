@@ -1,6 +1,6 @@
 
-import { getAccessoryById } from '@/lib/data'; // Now async
-import type { Accessory, Comment } from '@/lib/types'; // Use Comment from types
+import { getAccessoryById } from '@/lib/data'; 
+import type { Accessory } from '@/lib/types'; // Comment type removed
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,12 @@ import { Timestamp } from 'firebase/firestore';
 import type { Metadata } from 'next';
 
 // Helper to prepare accessory data for client components
-// Converts Timestamps to ISO strings
 const prepareAccessoryForClient = (accessory: Accessory): any => {
   return {
     ...accessory,
     createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : (accessory.createdAt as any),
     updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : (accessory.updatedAt as any),
-    comments: (accessory.comments || []).map(comment => ({
-      ...comment,
-      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : (comment.createdAt as any),
-    })),
+    // comments mapping removed
   };
 };
 
@@ -28,7 +24,7 @@ interface AccessoryPageProps {
 }
 
 export async function generateMetadata({ params }: AccessoryPageProps): Promise<Metadata> {
-  const id = params.id; // Use 'id' diretamente
+  const id = params.id; 
   console.log('[generateMetadata] Extracted id:', id);
 
   if (!id) {
@@ -52,7 +48,7 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
 }
 
 export default async function AccessoryDetailPage({ params }: AccessoryPageProps) {
-  const id = params.id; // Use 'id' diretamente
+  const id = params.id; 
   console.log('[AccessoryDetailPage] Extracted id:', id);
 
   if (!id) {

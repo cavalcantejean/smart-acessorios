@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, Users, MessageSquareWarning, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText, Settings, TicketPercent } from 'lucide-react'; // Removed Bug
+import { LayoutDashboard, Users, BarChart3, Loader2, ShieldAlert, ShoppingBag, FileText, Settings, TicketPercent } from 'lucide-react'; // MessageSquareWarning removed
 
 export default function AdminDashboardPage() {
   const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
@@ -116,20 +116,7 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <MessageSquareWarning className="h-6 w-6 text-orange-500" />
-              Moderar Conteúdo
-            </CardTitle>
-            <CardDescription>Revise comentários e outros conteúdos gerados por usuários.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild className="w-full" variant="outline">
-              <Link href="/admin/moderation">Acessar Moderação</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Moderation Card Removed */}
 
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader>

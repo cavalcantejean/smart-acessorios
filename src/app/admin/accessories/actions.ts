@@ -4,45 +4,40 @@
 import { z } from 'zod';
 import { AccessoryFormSchema } from '@/lib/schemas/accessory-schema';
 import { addAccessoryWithAdmin, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data-admin';
-import type { Accessory, Comment } from '@/lib/types';
+import type { Accessory } from '@/lib/types'; // Comment type removed
 import { revalidatePath } from 'next/cache';
 import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow';
 import { adminDb } from '@/lib/firebase-admin';
 import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 
-// Helper type for client-safe accessory, mirroring Accessory type but with string dates
-interface ClientSafeComment extends Omit<Comment, 'createdAt'> {
-  createdAt?: string;
-}
-interface ClientSafeAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'comments' | 'likedBy' | 'price'> {
-  id: string; // Ensure id is present
+// ClientSafeComment removed
+interface ClientSafeAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'price'> { // likedBy, comments removed
+  id: string; 
   name: string;
   shortDescription: string;
   fullDescription: string;
   imageUrl: string;
   imageHint?: string;
   affiliateLink: string;
-  price?: string; // price is already string or undefined in Accessory
+  price?: string; 
   category?: string;
   isDeal?: boolean;
   aiSummary?: string;
   embedHtml?: string;
-  likedBy: string[]; // likedBy is string[]
+  // likedBy: string[]; // REMOVED
   createdAt?: string;
   updatedAt?: string;
-  comments: ClientSafeComment[];
+  // comments: ClientSafeComment[]; // REMOVED
 }
 
-// Update AccessoryActionResult to use this type
 export interface AccessoryActionResult {
   success: boolean;
   message?: string;
   error?: string;
   errors?: z.ZodIssue[];
-  accessory?: ClientSafeAccessory; // Use the client-safe type
+  accessory?: ClientSafeAccessory; 
 }
 
-// Helper function to serialize an accessory
 function serializeAccessoryForClient(accessory: Accessory | null | undefined): ClientSafeAccessory | undefined {
   if (!accessory) return undefined;
 
@@ -62,21 +57,21 @@ function serializeAccessoryForClient(accessory: Accessory | null | undefined): C
     isDeal: accessory.isDeal,
     aiSummary: accessory.aiSummary,
     embedHtml: accessory.embedHtml,
-    likedBy: accessory.likedBy || [],
+    // likedBy: accessory.likedBy || [], // REMOVED
     createdAt: adminCreatedAt?.toDate?.().toISOString(),
     updatedAt: adminUpdatedAt?.toDate?.().toISOString(),
-    comments: (accessory.comments || []).map(comment => {
-      const adminCommentCreatedAt = comment.createdAt as unknown as AdminTimestamp | undefined;
-      return {
-        ...comment,
-        id: comment.id, // ensure id is present
-        userId: comment.userId,
-        userName: comment.userName,
-        text: comment.text,
-        status: comment.status,
-        createdAt: adminCommentCreatedAt?.toDate?.().toISOString(),
-      };
-    }),
+    // comments: (accessory.comments || []).map(comment => { // REMOVED
+    //   const adminCommentCreatedAt = comment.createdAt as unknown as AdminTimestamp | undefined;
+    //   return {
+    //     ...comment,
+    //     id: comment.id, 
+    //     userId: comment.userId,
+    //     userName: comment.userName,
+    //     text: comment.text,
+    //     status: comment.status,
+    //     createdAt: adminCommentCreatedAt?.toDate?.().toISOString(),
+    //   };
+    // }),
   };
 }
 
@@ -141,16 +136,14 @@ export async function createAccessoryAction(
   console.log("[Action:createAccessory] Validated data for Firestore (via Admin SDK):", JSON.stringify(validatedFields.data, null, 2));
 
   try {
-    // addAccessoryWithAdmin returns data with FieldValue for timestamps initially
-    const tempAccessoryData = await addAccessoryWithAdmin(validatedFields.data);
+    const tempAccessoryData = await addAccessoryWithAdmin(validatedFields.data as Omit<Accessory, 'id' | 'createdAt' | 'updatedAt'>);
 
-    // Fetch the actual document to get resolved Timestamps
     const docRef = adminDb.collection('acessorios').doc(tempAccessoryData.id);
     const newDocSnap = await docRef.get();
     const createdAccessoryDb = newDocSnap.data();
 
     if (createdAccessoryDb) {
-      const createdAccessory = { id: newDocSnap.id, ...createdAccessoryDb } as Accessory; // Cast to base type
+      const createdAccessory = { id: newDocSnap.id, ...createdAccessoryDb } as Accessory; 
 
       revalidatePath('/admin/accessories');
       revalidatePath('/products');
@@ -227,7 +220,7 @@ export async function updateAccessoryAction(
   }
 
   try {
-    const updatedAccessoryFromDb = await updateAccessory(accessoryId, validatedFields.data);
+    const updatedAccessoryFromDb = await updateAccessory(accessoryId, validatedFields.data as Partial<Omit<Accessory, 'id'>>);
     if (updatedAccessoryFromDb) {
       revalidatePath('/admin/accessories');
       revalidatePath(`/admin/accessories/${accessoryId}/edit`);
@@ -340,4 +333,3 @@ export async function generateDescriptionWithAIAction(
     return { success: false, error: errorMessage };
   }
 }
-    

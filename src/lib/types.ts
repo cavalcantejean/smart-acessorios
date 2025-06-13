@@ -2,14 +2,7 @@
 import type { ComponentType } from 'react';
 import type { Timestamp } from 'firebase/firestore';
 
-export interface Comment {
-  id: string;
-  userId: string;
-  userName: string;
-  text: string;
-  createdAt: Timestamp; // Changed to Firestore Timestamp
-  status: 'approved' | 'pending_review' | 'rejected';
-}
+// Comment type REMOVED
 
 export interface Accessory {
   id: string;
@@ -23,8 +16,8 @@ export interface Accessory {
   category?: string;
   aiSummary?: string;
   isDeal?: boolean;
-  likedBy: string[];
-  comments: Comment[]; // Comments will be a subcollection or handled separately
+  // likedBy: string[]; // REMOVED
+  // comments: Comment[]; // REMOVED
   embedHtml?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -35,7 +28,7 @@ export interface Coupon {
   code: string;
   description: string;
   discount: string;
-  expiryDate?: Timestamp; // Changed to Firestore Timestamp
+  expiryDate?: Timestamp; 
   store?: string;
   applyUrl?: string;
   createdAt?: Timestamp;
@@ -74,8 +67,8 @@ export interface AuthUser {
 }
 
 export interface BadgeCriteriaData {
-  userCommentsCount: number;
-  userLikesCount: number;
+  // userCommentsCount: number; // REMOVED
+  // userLikesCount: number; // REMOVED
   userFollowingCount: number;
   userFollowersCount: number;
 }
@@ -89,18 +82,16 @@ export interface Badge {
   criteria: (user: UserFirestoreData, data: BadgeCriteriaData) => boolean;
 }
 
-export interface PendingCommentDisplay {
-  comment: Comment; // Comment object itself
-  accessoryId: string;
-  accessoryName: string;
-}
+// PendingCommentDisplay type REMOVED
+// CommentWithAccessoryInfo type REMOVED
+
 
 export interface Post {
   id: string;
   slug: string;
   title: string;
   excerpt: string;
-  content: string; // HTML content
+  content: string; 
   imageUrl: string;
   imageHint?: string;
   authorName: string;
@@ -108,7 +99,7 @@ export interface Post {
   authorAvatarHint?: string;
   category?: string;
   tags: string[];
-  publishedAt: Timestamp; // Changed to Firestore Timestamp
+  publishedAt: Timestamp; 
   embedHtml?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -124,30 +115,20 @@ export interface CategoryCount {
 export interface TopAccessoryInfo {
   id: string;
   name: string;
-  count: number;
+  count: number; // This will now be for other metrics if TopItemsList is reused, or this type might become unused.
   imageUrl?: string;
 }
 
-export interface RecentCommentInfo {
-  id: string;
-  userId: string;
-  userName: string;
-  text: string;
-  createdAt: string; // Keep as string for display, will be converted from Timestamp
-  status: 'approved' | 'pending_review' | 'rejected';
-  accessoryName: string;
-  accessoryId: string;
-}
-
+// RecentCommentInfo type REMOVED
 
 export interface AnalyticsData {
   totalUsers: number;
   totalAccessories: number;
-  totalApprovedComments: number;
+  // totalApprovedComments: number; // REMOVED
   accessoriesPerCategory: CategoryCount[];
-  mostLikedAccessories: TopAccessoryInfo[];
-  mostCommentedAccessories: TopAccessoryInfo[];
-  recentComments: RecentCommentInfo[];
+  // mostLikedAccessories: TopAccessoryInfo[]; // REMOVED
+  // mostCommentedAccessories: TopAccessoryInfo[]; // REMOVED
+  // recentComments: RecentCommentInfo[]; // REMOVED
 }
 
 // Site Settings Types (remains local)
@@ -155,7 +136,6 @@ export interface SocialLinkSetting {
   platform: string;
   label: string;
   url: string;
-  // IconComponent: ComponentType<{ className?: string }>; // REMOVED
   placeholderUrl: string;
   customImageUrl?: string;
 }
@@ -166,12 +146,4 @@ export interface SiteSettings {
   socialLinks: SocialLinkSetting[];
   siteLogoUrl?: string;
   siteFaviconUrl?: string;
-}
-
-// For User Profile Activity
-export interface CommentWithAccessoryInfo extends Comment {
-  accessoryId: string;
-  accessoryName: string;
-  // Ensure createdAt is string here if directly used in client component expecting string
-  createdAt: string; // Or handle conversion in component
 }

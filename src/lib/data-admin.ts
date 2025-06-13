@@ -1,7 +1,8 @@
 
 'use server'; 
 
-import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, Comment, BadgeCriteriaData, PendingCommentDisplay, CategoryCount, TopAccessoryInfo, RecentCommentInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
+import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, BadgeCriteriaData, CategoryCount, TopAccessoryInfo, AnalyticsData, SiteSettings, SocialLinkSetting } from './types';
+// Removed Comment, PendingCommentDisplay, RecentCommentInfo
 import admin, { type App as AdminApp } from 'firebase-admin'; 
 import { adminDb, adminAuth } from './firebase-admin'; 
 import { checkAndAwardBadges } from './data'; 
@@ -40,7 +41,7 @@ export async function toggleUserAdminStatus(userId: string): Promise<UserFiresto
   }
 }
 
-export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' | 'likedBy' | 'comments' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
+export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
   if (!adminDb) {
     console.error("[Data:addAccessoryWithAdmin] Firebase Admin SDK (adminDb) is not initialized.");
     throw new Error("Firebase Admin SDK (adminDb) is not initialized in addAccessoryWithAdmin.");
@@ -48,8 +49,8 @@ export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' 
   const newAccessoryData = {
     ...accessoryData,
     price: accessoryData.price ? accessoryData.price.toString().replace(',', '.') : null,
-    likedBy: [],
-    comments: [],
+    // likedBy: [], // REMOVED
+    // comments: [], // REMOVED
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     category: accessoryData.category || null,
@@ -76,12 +77,16 @@ export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' 
   }
 }
 
-export async function updateAccessory(accessoryId: string, accessoryData: Partial<Omit<Accessory, 'id' | 'likedBy' | 'comments'>>): Promise<Accessory | null> {
+export async function updateAccessory(accessoryId: string, accessoryData: Partial<Omit<Accessory, 'id'>>): Promise<Accessory | null> {
   if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updateAccessory."); return null; }
   const accessoryDocRef = adminDb.collection("acessorios").doc(accessoryId);
   try {
     const updateData: any = { ...accessoryData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
     if (updateData.price) updateData.price = updateData.price.toString().replace(',', '.');
+    // Ensure likedBy and comments are not part of accessoryData or remove them
+    delete updateData.likedBy;
+    delete updateData.comments;
+
     await accessoryDocRef.update(updateData);
     const updatedDocSnap = await accessoryDocRef.get();
     const updatedData = updatedDocSnap.data();
@@ -107,43 +112,8 @@ export async function deleteAccessory(accessoryId: string): Promise<boolean> {
   }
 }
 
-export async function updateCommentStatus(accessoryId: string, commentId: string, newStatus: 'approved' | 'rejected'): Promise<Comment | null> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updateCommentStatus."); return null; }
-  const accessoryDocRef = adminDb.collection("acessorios").doc(accessoryId);
-  try {
-    let updatedCommentData: Comment | null = null;
-    await adminDb.runTransaction(async (transaction) => {
-      const accessoryDoc = await transaction.get(accessoryDocRef);
-      if (!accessoryDoc.exists) throw new Error("Accessory document does not exist!");
-      
-      const commentsArray = (accessoryDoc.data()?.comments || []) as Comment[];
-      const commentIndex = commentsArray.findIndex(c => c.id === commentId);
-
-      if (commentIndex === -1) throw new Error("Comment not found in array");
-
-      const existingComment = commentsArray[commentIndex];
-      const createdAtAdminTimestamp = existingComment.createdAt instanceof admin.firestore.Timestamp 
-                                      ? existingComment.createdAt 
-                                      : admin.firestore.Timestamp.fromDate(new Date(existingComment.createdAt as any));
-
-      const newCommentsArray = commentsArray.map((c, index) =>
-        index === commentIndex ? { ...c, createdAt: createdAtAdminTimestamp, status: newStatus, updatedAt: admin.firestore.FieldValue.serverTimestamp() } : c 
-      );
-      
-      transaction.update(accessoryDocRef, { comments: newCommentsArray, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-      updatedCommentData = newCommentsArray[commentIndex];
-    });
-
-    if (updatedCommentData && newStatus === 'approved') {
-      await checkAndAwardBadges(updatedCommentData.userId); 
-    }
-    return updatedCommentData;
-  } catch (error) {
-    console.error(`Error updating status for comment ${commentId} on accessory ${accessoryId} with Admin SDK:`, error);
-    return null;
-  }
-}
-
+// updateCommentStatus REMOVED
+// getPendingComments REMOVED
 
 export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt'>): Promise<Coupon> {
   if (!adminDb) { throw new Error("Firebase Admin SDK (adminDb) is not initialized in addCoupon."); }
@@ -216,13 +186,12 @@ export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updated
     publishedAt: postData.publishedAt 
                  ? admin.firestore.Timestamp.fromDate(new Date(postData.publishedAt as any)) 
                  : admin.firestore.Timestamp.now(),
-    tags: Array.isArray(postData.tags) ? postData.tags : [], // Ensure tags is an array
+    tags: Array.isArray(postData.tags) ? postData.tags : [], 
     embedHtml: postData.embedHtml || '',
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
-  // Remove undefined fields explicitly to avoid Firestore errors if any value in postData is undefined
   Object.keys(newPostData).forEach(key => {
     if (newPostData[key] === undefined) {
       delete newPostData[key];
@@ -247,12 +216,12 @@ export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updated
     return { 
       id: newDocSnap.id, 
       ...createdPostData 
-    } as Post; // Cast to Post, Timestamps will be admin.firestore.Timestamp
+    } as Post; 
   } catch (error: any) {
     console.error("[Data:addPost] Error during Firestore add/get operation:", error);
     if (error.message) console.error("[Data:addPost] Error message:", error.message);
     if (error.stack) console.error("[Data:addPost] Error stack:", error.stack);
-    throw error; // Re-throw the error to be caught by the server action
+    throw error; 
   }
 }
 
@@ -300,35 +269,6 @@ export async function deletePost(postId: string): Promise<boolean> {
   }
 }
 
-
-export async function getPendingComments(): Promise<PendingCommentDisplay[]> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in getPendingComments."); return []; }
-  const allAccessoriesSnapshot = await adminDb.collection('acessorios').orderBy("createdAt", "desc").get();
-  const allAccessories = allAccessoriesSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Accessory));
-  
-  const pending: PendingCommentDisplay[] = [];
-  allAccessories.forEach(acc => {
-    (acc.comments || []).forEach(comment => {
-      if (comment.status === 'pending_review') {
-        const createdAtAdminTimestamp = comment.createdAt instanceof admin.firestore.Timestamp 
-                                        ? comment.createdAt 
-                                        : admin.firestore.Timestamp.fromDate(new Date(comment.createdAt as any));
-
-        pending.push({
-          comment: {
-            ...comment,
-            createdAt: createdAtAdminTimestamp, 
-          },
-          accessoryId: acc.id,
-          accessoryName: acc.name,
-        });
-      }
-    });
-  });
-  return pending.sort((a, b) => (b.comment.createdAt as admin.firestore.Timestamp).toMillis() - (a.comment.createdAt as admin.firestore.Timestamp).toMillis());
-}
-
-
 const getTotalUsersCount = async (): Promise<number> => {
   if (!adminDb) return 0;
   const snapshot = await adminDb.collection("usuarios").count().get();
@@ -339,12 +279,8 @@ const getTotalAccessoriesCount = async (): Promise<number> => {
   const snapshot = await adminDb.collection("acessorios").count().get();
   return snapshot.data().count;
 };
-const getTotalApprovedCommentsCount = async (): Promise<number> => {
-  if (!adminDb) return 0;
-  const accessoriesSnapshot = await adminDb.collection('acessorios').get();
-  const accessoriesList = accessoriesSnapshot.docs.map(d => d.data() as Accessory);
-  return accessoriesList.reduce((sum, acc) => sum + (acc.comments?.filter(c => c.status === 'approved').length || 0), 0);
-};
+// getTotalApprovedCommentsCount REMOVED
+
 const getAccessoriesPerCategory = async (): Promise<CategoryCount[]> => {
   if (!adminDb) return [];
   const accessoriesSnapshot = await adminDb.collection('acessorios').get();
@@ -354,75 +290,18 @@ const getAccessoriesPerCategory = async (): Promise<CategoryCount[]> => {
   return Object.entries(counts).map(([category, count]) => ({ category, count })).sort((a,b) => b.count - a.count);
 };
 
-const getMostLikedAccessories = async (topN: number = 5): Promise<TopAccessoryInfo[]> => {
-  if (!adminDb) return [];
-  const accessoriesSnapshot = await adminDb.collection('acessorios').get();
-  const accessoriesList = accessoriesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Accessory));
-  return accessoriesList
-    .map(acc => ({
-      ...acc,
-      likesCount: acc.likedBy?.length || 0
-    }))
-    .sort((a, b) => b.likesCount - a.likesCount)
-    .slice(0, topN)
-    .map(acc => ({
-      id: acc.id,
-      name: acc.name,
-      count: acc.likesCount,
-      imageUrl: acc.imageUrl
-    }));
-};
-
-const getMostCommentedAccessories = async (topN: number = 5): Promise<TopAccessoryInfo[]> => {
-   if (!adminDb) return [];
-  const accessoriesSnapshot = await adminDb.collection('acessorios').get();
-  const accessoriesList = accessoriesSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Accessory));
-  return accessoriesList
-    .map(acc => ({
-        ...acc,
-        approvedCommentCount: acc.comments?.filter(c => c.status === 'approved').length || 0
-    }))
-    .sort((a, b) => b.approvedCommentCount - a.approvedCommentCount)
-    .slice(0, topN)
-    .map(acc => ({ id: acc.id, name: acc.name, count: acc.approvedCommentCount, imageUrl: acc.imageUrl }));
-};
-
-const getRecentComments = async (topN: number = 5): Promise<RecentCommentInfo[]> => {
-  if (!adminDb) return [];
-  const accessoriesSnapshot = await adminDb.collection('acessorios').get();
-  const accessoriesList = accessoriesSnapshot.docs.map(d => ({id: d.id, ...d.data()} as Accessory));
-  const allApprovedComments: RecentCommentInfo[] = [];
-  accessoriesList.forEach(acc => {
-    (acc.comments || [])
-      .filter(c => c.status === 'approved')
-      .forEach(comment => {
-        allApprovedComments.push({
-          id: comment.id,
-          userId: comment.userId,
-          userName: comment.userName,
-          text: comment.text,
-          createdAt: convertAdminTimestampToStringForDisplay(comment.createdAt as admin.firestore.Timestamp | undefined), 
-          status: comment.status,
-          accessoryName: acc.name,
-          accessoryId: acc.id,
-        });
-      });
-  });
-  return allApprovedComments
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) 
-    .slice(0, topN);
-};
+// getMostLikedAccessories REMOVED
+// getMostCommentedAccessories REMOVED
+// getRecentComments REMOVED
 
 export async function getAnalyticsData(): Promise<AnalyticsData> {
   return {
     totalUsers: await getTotalUsersCount(),
     totalAccessories: await getTotalAccessoriesCount(),
-    totalApprovedComments: await getTotalApprovedCommentsCount(),
+    // totalApprovedComments: await getTotalApprovedCommentsCount(), // REMOVED
     accessoriesPerCategory: await getAccessoriesPerCategory(),
-    mostLikedAccessories: await getMostLikedAccessories(),
-    mostCommentedAccessories: await getMostCommentedAccessories(),
-    recentComments: await getRecentComments(),
+    // mostLikedAccessories: await getMostLikedAccessories(), // REMOVED
+    // mostCommentedAccessories: await getMostCommentedAccessories(), // REMOVED
+    // recentComments: await getRecentComments(), // REMOVED
   };
 }
-    
-    
