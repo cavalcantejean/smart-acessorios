@@ -25,10 +25,12 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
+import { db } from "@/lib/firebase"; // Added
+import { doc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // Added
 
 interface AccessoryFormProps {
   // formAction prop removed as Server Actions are not used for static export
-  initialData?: Partial<AccessoryFormValues>;
+  initialData?: Partial<AccessoryFormValues & { id?: string }>; // Added id to initialData
   submitButtonText?: string;
   isStaticExport?: boolean; // Flag to indicate static export mode
 }
@@ -94,7 +96,7 @@ const isLikelyDataURL = (string: string | null | undefined): boolean => {
 export default function AccessoryForm({
   initialData,
   submitButtonText = "Salvar Acessório",
-  isStaticExport = true, // Default to true, disabling form submissions
+  isStaticExport = false, // Default to false, enabling form submissions
 }: AccessoryFormProps) {
   const { toast } = useToast();
   const router = useRouter();
@@ -161,22 +163,67 @@ export default function AccessoryForm({
     }
 
     if (!isAuthenticated || !authUser?.id) {
-      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador.", variant: "destructive" });
+      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador para realizar esta ação.", variant: "destructive" });
       return;
     }
     
     setIsSubmitting(true);
-    // Here you would implement client-side Firebase SDK calls if not using static export
-    // For static export, this logic is effectively disabled by the isStaticExport check.
-    console.log("Form data submitted (client-side):", data);
-    toast({ title: "Simulação de Envio", description: "Dados do formulário registrados no console (cliente)." });
+
+    // Firestore rules should ensure only authenticated admins can write to "acessorios"
+    // e.g., allow write: if request.auth != null && request.auth.token.admin == true;
     
-    // Simulate a delay and success/failure for UI feedback
-    setTimeout(() => {
+    const priceString = data.price?.replace(",", ".") || "0";
+    const priceNumber = parseFloat(priceString);
+
+    if (isNaN(priceNumber)) {
+      toast({ title: "Erro de Validação", description: "O preço inserido não é um número válido.", variant: "destructive" });
       setIsSubmitting(false);
-      // Example: router.push('/admin/accessories');
-      // form.reset();
-    }, 1000);
+      return;
+    }
+
+    try {
+      if (initialData?.id) {
+        // Update existing accessory
+        const dataToUpdate: Partial<AccessoryFormValues & { updatedAt: any }> = {
+          ...data,
+          price: priceNumber, // Store price as a number
+          imageUrl: imagePreview || data.imageUrl || "", // Ensure imagePreview is used if available
+          updatedAt: serverTimestamp(),
+        };
+        // Remove id from dataToUpdate to prevent it from being written to the document data
+        delete (dataToUpdate as any).id;
+
+        await updateDoc(doc(db, "acessorios", initialData.id), dataToUpdate);
+        toast({ title: "Sucesso!", description: "Acessório atualizado com sucesso." });
+        router.push("/admin/accessories");
+      } else {
+        // Add new accessory
+        const dataToAdd: AccessoryFormValues & { createdAt: any; updatedAt: any } = {
+          ...data,
+          price: priceNumber, // Store price as a number
+          imageUrl: imagePreview || data.imageUrl || "", // Ensure imagePreview is used if available
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await addDoc(collection(db, "acessorios"), dataToAdd);
+        toast({ title: "Sucesso!", description: "Novo acessório adicionado com sucesso." });
+        form.reset(); // Reset form for new entry
+        setImagePreview(null); // Clear image preview
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ""; // Clear file input
+        }
+        // Consider redirecting or allowing another entry: router.push("/admin/accessories");
+      }
+    } catch (error) {
+      console.error("Error saving accessory:", error);
+      toast({
+        title: "Erro ao Salvar",
+        description: `Ocorreu um erro: ${error instanceof Error ? error.message : String(error)}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   const displayableImagePreview = imagePreview && (isValidHttpUrl(imagePreview) || isLikelyDataURL(imagePreview)) ? imagePreview : null;

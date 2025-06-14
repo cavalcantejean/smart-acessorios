@@ -29,8 +29,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, doc, deleteDoc } from 'firebase/firestore'; // Added doc, deleteDoc
 import { useAuth } from '@/hooks/useAuth';
+import { db } from '@/lib/firebase'; // Added db
 
 interface AccessoriesTableProps {
   initialAccessories: Accessory[];
@@ -54,7 +55,7 @@ const formatDate = (timestampInput: any): string => {
   return date.toLocaleDateString('pt-BR');
 };
 
-export default function AccessoriesTable({ initialAccessories, isStaticExport = true }: AccessoriesTableProps) {
+export default function AccessoriesTable({ initialAccessories, isStaticExport = false }: AccessoriesTableProps) {
   const [accessories, setAccessories] = useState<Accessory[]>(initialAccessories);
   const { toast } = useToast();
   const [accessoryToDelete, setAccessoryToDelete] = useState<Accessory | null>(null);
@@ -65,24 +66,40 @@ export default function AccessoriesTable({ initialAccessories, isStaticExport = 
     setAccessories(initialAccessories);
   }, [initialAccessories]);
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (isStaticExport) {
-      toast({ title: "Funcionalidade Indisponível", description: "Exclusão não suportada na exportação estática.", variant: "destructive" });
+      toast({ title: "Funcionalidade Indisponível", description: "Exclusão não suportada no modo de exportação estática.", variant: "destructive" });
       setAccessoryToDelete(null);
       return;
     }
-    if (accessoryToDelete && authUser && authUser.id) {
-      setIsDeletePending(true);
-      // Client-side Firebase logic would go here
-      console.log(`Simulating delete for accessory ${accessoryToDelete.id} by user ${authUser.id}`);
-      setTimeout(() => {
-        setAccessories(prev => prev.filter(acc => acc.id !== accessoryToDelete.id));
-        toast({ title: "Sucesso (Simulado)!", description: `Acessório "${accessoryToDelete.name}" excluído.` });
-        setIsDeletePending(false);
-        setAccessoryToDelete(null);
-      }, 1000);
-    } else if (!authUser?.id) {
-      toast({ title: "Erro de Autenticação", description: "ID do usuário não encontrado.", variant: "destructive" });
+
+    if (!authUser?.id) {
+      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador para excluir.", variant: "destructive" });
+      setAccessoryToDelete(null);
+      return;
+    }
+
+    if (!accessoryToDelete) {
+      toast({ title: "Erro Interno", description: "Nenhum acessório selecionado para exclusão.", variant: "destructive" });
+      return;
+    }
+
+    // Firestore rules should ensure only authenticated admins can delete from "acessorios"
+    // e.g., allow delete: if request.auth != null && request.auth.token.admin == true;
+
+    setIsDeletePending(true);
+    try {
+      await deleteDoc(doc(db, "acessorios", accessoryToDelete.id));
+      setAccessories(prev => prev.filter(acc => acc.id !== accessoryToDelete.id));
+      toast({ title: "Sucesso!", description: `Acessório "${accessoryToDelete.name}" excluído.` });
+    } catch (error) {
+      console.error("Error deleting accessory:", error);
+      toast({
+        title: "Erro ao Excluir",
+        description: `Ocorreu um erro: ${error instanceof Error ? error.message : String(error)}`,
+        variant: "destructive",
+      });
+    } finally {
       setIsDeletePending(false);
       setAccessoryToDelete(null);
     }
