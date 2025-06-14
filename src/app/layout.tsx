@@ -33,16 +33,13 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase = new URL(defaultBaseUrl);
   }
 
-  return {
+  const metadataResult: Metadata = {
     metadataBase,
     title: {
       default: currentSiteSettings.siteTitle || 'SmartAcessorios',
       template: `%s | ${currentSiteSettings.siteTitle || 'SmartAcessorios'}`,
     },
     description: currentSiteSettings.siteDescription || 'Descubra os melhores acessórios para smartphones com links de afiliados e resumos de IA.',
-    icons: {
-      icon: currentSiteSettings.siteFaviconUrl || '/favicon.ico',
-    },
     applicationName: currentSiteSettings.siteTitle || 'SmartAcessorios',
     appleWebApp: {
       capable: true,
@@ -63,6 +60,19 @@ export async function generateMetadata(): Promise<Metadata> {
         images: currentSiteSettings.siteLogoUrl ? [currentSiteSettings.siteLogoUrl] : [],
     },
   };
+
+  if (currentSiteSettings.siteFaviconUrl && currentSiteSettings.siteFaviconUrl.trim() !== '') {
+    metadataResult.icons = {
+      icon: currentSiteSettings.siteFaviconUrl,
+    };
+  } else {
+    // If no custom favicon is set, do not include the icons.icon field.
+    // This avoids pointing to a potentially non-existent /favicon.ico
+    // that might cause "Cannot find module for page: /favicon.ico" during static export.
+    // Browsers will still attempt to load /favicon.ico from the root by default if present in public/.
+  }
+  
+  return metadataResult;
 }
 
 export async function generateViewport(): Promise<Viewport> {

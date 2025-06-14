@@ -9,7 +9,7 @@ const nextConfig = {
   },
   experimental: {
     ppr: false, // Explicitly disable Partial Prerendering
-    asyncWebAssembly: true, // Enable WebAssembly
+    // asyncWebAssembly: true, // Removed: Not a recognized option or handled differently now
   },
   images: {
     unoptimized: true, // Disable Image Optimization API for static export
@@ -68,8 +68,11 @@ const nextConfig = {
         "genkit": false, 
         "@genkit-ai/googleai": false,
         // Fallbacks for node: prefixed modules
-        "events": false, // Corresponds to node:events
-        "process": false, // Corresponds to node:process
+        "node:events": false,
+        "node:process": false,
+        "node:stream": false,
+        "events": false, 
+        "process": false, 
         // Add fallbacks for firebase-admin dependencies if necessary
         "farmhash-modern": false,
         "@fastify/busboy": false,

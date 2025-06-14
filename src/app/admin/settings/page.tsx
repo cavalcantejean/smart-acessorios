@@ -1,5 +1,6 @@
 
-import { getSiteSettings, getBaseSocialLinkSettings } from '@/lib/data';
+import { getSiteSettingsAdmin } from '@/lib/data-admin';
+import { getBaseSocialLinkSettings } from '@/lib/data';
 import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -29,11 +30,11 @@ export interface SettingsFormDataForClient {
 }
 
 export default async function SiteSettingsPage() {
-  const currentSettings: SiteSettings = await getSiteSettings(); 
+  const currentAdminSettings = await getSiteSettingsAdmin(); 
   const baseSocialLinks = getBaseSocialLinkSettings(); 
   
   const mergedSocialLinks: SocialLinkFormData[] = baseSocialLinks.map(baseLink => {
-    const currentLinkData = currentSettings.socialLinks.find(cs => cs.platform === baseLink.platform);
+    const currentLinkData = currentAdminSettings.socialLinks.find(cs => cs.platform === baseLink.platform);
     return {
       platform: baseLink.platform,
       label: baseLink.label, 
@@ -44,10 +45,10 @@ export default async function SiteSettingsPage() {
   });
   
   const initialDataForForm: SettingsFormDataForClient = {
-    siteTitle: currentSettings.siteTitle,
-    siteDescription: currentSettings.siteDescription,
-    siteLogoUrl: currentSettings.siteLogoUrl || '',
-    siteFaviconUrl: currentSettings.siteFaviconUrl || '',
+    siteTitle: currentAdminSettings.siteTitle,
+    siteDescription: currentAdminSettings.siteDescription,
+    siteLogoUrl: currentAdminSettings.siteLogoUrl || '',
+    siteFaviconUrl: currentAdminSettings.siteFaviconUrl || '',
     socialLinks: mergedSocialLinks,
   };
 
