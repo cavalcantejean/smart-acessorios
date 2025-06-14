@@ -3,9 +3,9 @@
 
 import Link from 'next/link';
 import Image, { type StaticImageData } from 'next/image';
-import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; // Mudado para SiteSettings
+import type { SiteSettingsForClient, SocialLinkSetting } from '@/lib/types'; // Use SiteSettingsForClient
 import React from 'react';
-import { getBaseSocialLinkSettings } from '@/lib/data'; // Para buscar IconComponent no cliente
+import { getBaseSocialLinkSettings } from '@/lib/data'; 
 
 // Import Lucide icons that will be used as fallbacks or defaults
 import {
@@ -48,7 +48,7 @@ const localIconMap: Record<string, StaticImageData | undefined> = {
 };
 
 interface FooterProps {
-  siteSettings: SiteSettings | null; // Modificado para SiteSettings (serializável)
+  siteSettings: SiteSettingsForClient | null; // Use SiteSettingsForClient
 }
 
 export default function Footer({ siteSettings }: FooterProps) {
@@ -64,17 +64,19 @@ export default function Footer({ siteSettings }: FooterProps) {
 
   const baseLinksWithIcons = getBaseSocialLinkSettings();
 
+  // siteSettings.socialLinks are now SerializableSocialLinkSetting (no IconComponent)
+  // We map them to include IconComponent for rendering by looking it up from baseLinksWithIcons
   const socialLinksToRender = siteSettings.socialLinks
     .filter(propLink => propLink.url && propLink.url.trim() !== '')
     .map(propLink => {
       const baseLink = baseLinksWithIcons.find(b => b.platform === propLink.platform);
       return {
         platform: propLink.platform,
-        label: propLink.label, // Label vem da prop (que foi originada da base)
+        label: propLink.label,
         url: propLink.url,
         customImageUrl: propLink.customImageUrl,
-        IconComponent: baseLink?.IconComponent, // Pega o IconComponent da base
-        placeholderUrl: baseLink?.placeholderUrl || '', // Pega o placeholderUrl da base
+        IconComponent: baseLink?.IconComponent, // Get IconComponent from baseLink
+        placeholderUrl: baseLink?.placeholderUrl || '', 
       };
     });
 
@@ -92,11 +94,10 @@ export default function Footer({ siteSettings }: FooterProps) {
       return <Image src={localPng} alt={`${link.platform} icon`} width={24} height={24} className={iconSizeClass} />;
     }
     
-    if (link.IconComponent) {
+    if (link.IconComponent) { // IconComponent is now correctly sourced from baseLinksWithIcons
         return <link.IconComponent className={iconSizeClass} />;
     }
 
-    // Fallback para ícones Lucide (redundante se IconComponent sempre existir na base, mas seguro)
     switch (link.platform) {
       case "Facebook": return <Facebook className={iconSizeClass} />;
       case "Instagram": return <Instagram className={iconSizeClass} />;

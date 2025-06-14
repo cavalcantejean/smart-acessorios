@@ -104,7 +104,7 @@ export interface SocialLinkSetting {
   url: string;
   placeholderUrl: string;
   customImageUrl?: string;
-  IconComponent?: ComponentType<{ className?: string }>;
+  IconComponent?: ComponentType<{ className?: string }>; // IconComponent is optional
 }
 
 export interface SiteSettings {
@@ -115,6 +115,16 @@ export interface SiteSettings {
   siteFaviconUrl?: string;
 }
 
+// Type for social links that are safe to pass to Client Components
+export interface SerializableSocialLinkSetting {
+  platform: string;
+  label: string;
+  url: string;
+  placeholderUrl: string; // Keep placeholderUrl if Footer might use it for context
+  customImageUrl?: string;
+  // IconComponent is deliberately omitted
+}
+
 export interface SiteSettingsForClient extends Omit<SiteSettings, 'socialLinks'> {
-  socialLinks: SocialLinkSetting[]; 
+  socialLinks: SerializableSocialLinkSetting[]; 
 }

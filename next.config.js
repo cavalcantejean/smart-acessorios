@@ -9,8 +9,10 @@ const nextConfig = {
   },
   experimental: {
     ppr: false, // Explicitly disable Partial Prerendering
+    asyncWebAssembly: true, // Enable WebAssembly
   },
   images: {
+    unoptimized: true, // Disable Image Optimization API for static export
     remotePatterns: [
       {
         protocol: 'https',
@@ -50,7 +52,8 @@ const nextConfig = {
         "crypto": false,
         "fs": false,
         "http": false,
-        "https": false,
+        "https": false, 
+        "http2": false, 
         "net": false,
         "os": false,
         "path": false,
@@ -62,8 +65,19 @@ const nextConfig = {
         // Specific libraries that are server-side only
         "firebase-admin": false,
         "@google-cloud/firestore": false,
-        "genkit": false, // Added fallback for genkit
-        "@genkit-ai/googleai": false, // Added fallback for genkit googleai plugin
+        "genkit": false, 
+        "@genkit-ai/googleai": false,
+        // Fallbacks for node: prefixed modules
+        "events": false, // Corresponds to node:events
+        "process": false, // Corresponds to node:process
+        // Add fallbacks for firebase-admin dependencies if necessary
+        "farmhash-modern": false,
+        "@fastify/busboy": false,
+        // Ensure other problematic modules from the error log have fallbacks
+        "google-logging-utils": false,
+        "gcp-metadata": false,
+        // "google-auth-library": false, // Be cautious if client SDK also uses this
+        "@google-cloud/storage": false,
       };
     }
 

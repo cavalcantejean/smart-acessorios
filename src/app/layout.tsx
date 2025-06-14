@@ -6,19 +6,20 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
-import { getSiteSettings } from '@/lib/data';
-import type { SiteSettings, SiteSettingsForClient } from '@/lib/types'; 
+import { getSiteSettingsAdmin } from '@/lib/data-admin'; 
+import { getBaseSocialLinkSettings } from '@/lib/data'; 
+import type { SiteSettingsForClient, SocialLinkSetting, SerializableSocialLinkSetting } from '@/lib/types'; 
 import NavigationProgress from '@/components/NavigationProgress';
 import { Suspense } from 'react';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const currentSiteSettings = await getSiteSettings();
+  const currentSiteSettings = await getSiteSettingsAdmin(); 
   
   let metadataBase: URL;
   const providedBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  const defaultBaseUrl = 'http://localhost:9002';
+  const defaultBaseUrl = 'http://localhost:9002'; 
 
   try {
     if (providedBaseUrl && providedBaseUrl.trim() !== '') {
@@ -65,12 +66,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export async function generateViewport(): Promise<Viewport> {
-  const currentSiteSettings = await getSiteSettings();
-  // Se você tiver uma cor de tema nas configurações, pode usá-la aqui.
-  // Ex: const themeColorFromSettings = currentSiteSettings.themeColor;
+  // const currentSiteSettings = await getSiteSettingsAdmin(); // Not needed for themeColor
   const themeColorFromSettings = null; 
   return {
-    themeColor: themeColorFromSettings || '#3F51B5', // Cor primária como fallback
+    themeColor: themeColorFromSettings || '#3F51B5', 
   };
 }
 
@@ -79,38 +78,49 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const currentSiteSettings: SiteSettingsForClient = await getSiteSettings();
+  const adminSettings = await getSiteSettingsAdmin();
+  const baseSocialLinks = getBaseSocialLinkSettings();
 
-  // Prepara uma versão serializável de socialLinks para o Footer
-  const serializableSocialLinks = currentSiteSettings.socialLinks.map(link => ({
+  // Merge admin settings with base social link structure (including icons)
+  const mergedSocialLinksFull: SocialLinkSetting[] = baseSocialLinks.map(baseLink => {
+    const adminDataForLink = adminSettings.socialLinks.find(as => as.platform === baseLink.platform);
+    return {
+      ...baseLink, 
+      url: adminDataForLink?.url || baseLink.url || "", 
+      customImageUrl: adminDataForLink?.customImageUrl || baseLink.customImageUrl || "", 
+    };
+  });
+
+  // Create a serializable version of social links for client components
+  const serializableSocialLinks: SerializableSocialLinkSetting[] = mergedSocialLinksFull.map(link => ({
     platform: link.platform,
     label: link.label,
     url: link.url,
+    placeholderUrl: link.placeholderUrl,
     customImageUrl: link.customImageUrl,
-    // IconComponent e placeholderUrl são omitidos aqui
+    // IconComponent is deliberately omitted here
   }));
 
-  const settingsForFooter: SiteSettings = {
-    siteTitle: currentSiteSettings.siteTitle,
-    siteDescription: currentSiteSettings.siteDescription,
-    siteLogoUrl: currentSiteSettings.siteLogoUrl,
-    siteFaviconUrl: currentSiteSettings.siteFaviconUrl,
-    socialLinks: serializableSocialLinks,
+  const settingsForClient: SiteSettingsForClient = {
+    siteTitle: adminSettings.siteTitle,
+    siteDescription: adminSettings.siteDescription,
+    siteLogoUrl: adminSettings.siteLogoUrl,
+    siteFaviconUrl: adminSettings.siteFaviconUrl,
+    socialLinks: serializableSocialLinks, // Pass the serializable links
   };
-
 
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
       <body className="font-body antialiased flex flex-col min-h-screen">
         <AuthProvider>
-          <Suspense fallback={null}> {/* Wrap NavigationProgress with Suspense */}
+          <Suspense fallback={null}>
             <NavigationProgress />
           </Suspense>
-          <Header siteLogoUrl={currentSiteSettings.siteLogoUrl} siteTitle={currentSiteSettings.siteTitle} />
+          <Header siteLogoUrl={settingsForClient.siteLogoUrl} siteTitle={settingsForClient.siteTitle} />
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}
           </main>
-          <Footer siteSettings={settingsForFooter} />
+          <Footer siteSettings={settingsForClient} />
           <Toaster />
         </AuthProvider>
       </body>

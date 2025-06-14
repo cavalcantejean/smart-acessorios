@@ -20,7 +20,7 @@ import {
   arrayRemove,
   runTransaction
 } from 'firebase/firestore';
-import { getSiteSettingsAdmin } from './data-admin';
+// Removed: import { getSiteSettingsAdmin } from './data-admin'; 
 import type { ComponentType } from 'react';
 import {
   Facebook, Instagram, Twitter, Youtube, Mail, HelpCircle,
@@ -63,50 +63,8 @@ export const defaultSiteSettings: SiteSettings = {
   socialLinks: defaultSocialLinksDataForStorage,
 };
 
-
-// --- Site Settings (Fetched from Firestore via Admin SDK, merged for client) ---
-export async function getSiteSettings(): Promise<SiteSettingsForClient> {
-  try {
-    const adminSettings = await getSiteSettingsAdmin();
-    const baseLinksWithIconsAndPlaceholders = getBaseSocialLinkSettings();
-
-    const mergedSocialLinksFull: SocialLinkSetting[] = baseLinksWithIconsAndPlaceholders.map(baseLink => {
-      const adminDataForLink = adminSettings.socialLinks.find(as => as.platform === baseLink.platform);
-      return {
-        ...baseLink,
-        url: adminDataForLink?.url || baseLink.url || "",
-        customImageUrl: adminDataForLink?.customImageUrl || baseLink.customImageUrl || "",
-      };
-    });
-
-    return {
-      siteTitle: adminSettings.siteTitle,
-      siteDescription: adminSettings.siteDescription,
-      siteLogoUrl: adminSettings.siteLogoUrl,
-      siteFaviconUrl: adminSettings.siteFaviconUrl,
-      socialLinks: mergedSocialLinksFull,
-    };
-  } catch (error) {
-    console.error("Error in getSiteSettings (lib/data.ts), falling back to defaults with icons:", error);
-    const adminDefaults = JSON.parse(JSON.stringify(defaultSiteSettings)) as SiteSettings;
-    const baseLinksWithIconsAndPlaceholders = getBaseSocialLinkSettings();
-    const mergedDefaultSocialLinks = baseLinksWithIconsAndPlaceholders.map(baseLink => {
-      const adminDefaultData = adminDefaults.socialLinks.find(adsl => adsl.platform === baseLink.platform);
-      return {
-        ...baseLink,
-        url: adminDefaultData?.url || baseLink.url || "",
-        customImageUrl: adminDefaultData?.customImageUrl || baseLink.customImageUrl || "",
-      };
-    });
-    return {
-        siteTitle: adminDefaults.siteTitle,
-        siteDescription: adminDefaults.siteDescription,
-        siteLogoUrl: adminDefaults.siteLogoUrl,
-        siteFaviconUrl: adminDefaults.siteFaviconUrl,
-        socialLinks: mergedDefaultSocialLinks,
-    };
-  }
-}
+// The getSiteSettings function that called getSiteSettingsAdmin has been removed.
+// RootLayout now handles fetching admin settings and merging with base social link data.
 
 export function getBaseSocialLinkSettings(): SocialLinkSetting[] {
   return [
