@@ -1,6 +1,4 @@
 
-'use server';
-
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting, AnalyticsData as AnalyticsDataTypeFromTypes } from './types'; // Renamed imported AnalyticsData
 import admin from 'firebase-admin';
 import { adminDb, adminAuth } from './firebase-admin';
@@ -58,11 +56,9 @@ export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
         socialLinks: mergedSocialLinksForStorage,
       };
     } else {
-      console.log("Site settings document not found in Firestore (admin). Returning default settings and creating document.");
-      // Avoid writing during build if not necessary for read-only operations.
-      // Consider if this write is essential or if defaults are sufficient for build.
-      // For static export, this write might fail if credentials aren't set for build env.
-      // await settingsDocRef.set(importedDefaultSiteSettings);
+      console.log("Site settings document not found in Firestore (admin). Returning default settings.");
+      // For static export, avoid writes during build if Firestore is not fully available or intended for read-only build steps.
+      // await settingsDocRef.set(importedDefaultSiteSettings); // Consider if this write is essential.
       return JSON.parse(JSON.stringify(importedDefaultSiteSettings));
     }
   } catch (error) {
@@ -73,8 +69,8 @@ export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
 
 export async function updateSiteSettingsAdmin(newSettings: Partial<SiteSettings>): Promise<SiteSettings> {
   if (!adminDb) {
-    console.error("Firebase Admin SDK (adminDb) is not initialized in updateSiteSettingsAdmin.");
-    throw new Error("Admin SDK not initialized.");
+    console.error("Firebase Admin SDK (adminDb) is not initialized in updateSiteSettingsAdmin. Operation aborted.");
+    throw new Error("Admin SDK (adminDb) not initialized. Cannot update site settings.");
   }
   const settingsDocRef = adminDb.collection(SITE_SETTINGS_COLLECTION).doc(SITE_SETTINGS_DOC_ID);
   try {
@@ -95,7 +91,7 @@ export async function updateSiteSettingsAdmin(newSettings: Partial<SiteSettings>
 
     await settingsDocRef.set(dataToUpdate, { merge: true });
     console.log("Site settings updated successfully in Firestore.");
-    return getSiteSettingsAdmin();
+    return getSiteSettingsAdmin(); // Re-fetch to confirm
   } catch (error) {
     console.error("Error updating site settings in Firestore with Admin SDK:", error);
     throw error;
@@ -105,7 +101,10 @@ export async function updateSiteSettingsAdmin(newSettings: Partial<SiteSettings>
 
 // --- User Management (Admin SDK) ---
 export async function toggleUserAdminStatus(userId: string): Promise<UserFirestoreData | null> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in toggleUserAdminStatus."); return null; }
+  if (!adminDb || !adminAuth) { 
+    console.error("Firebase Admin SDK (adminDb or adminAuth) is not initialized in toggleUserAdminStatus. Operation aborted."); 
+    return null; 
+  }
   const userDocRef = adminDb.collection("usuarios").doc(userId);
   try {
     const userDoc = await userDocRef.get();
@@ -132,7 +131,7 @@ export async function toggleUserAdminStatus(userId: string): Promise<UserFiresto
 // --- Accessory Management (Admin SDK) ---
 export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
   if (!adminDb) {
-    console.error("[Data:addAccessoryWithAdmin] Firebase Admin SDK (adminDb) is not initialized.");
+    console.error("[Data:addAccessoryWithAdmin] Firebase Admin SDK (adminDb) is not initialized. Operation aborted.");
     throw new Error("Firebase Admin SDK (adminDb) is not initialized in addAccessoryWithAdmin.");
   }
   const newAccessoryData = {
@@ -165,7 +164,10 @@ export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' 
 }
 
 export async function updateAccessory(accessoryId: string, accessoryData: Partial<Omit<Accessory, 'id'>>): Promise<Accessory | null> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updateAccessory."); return null; }
+  if (!adminDb) { 
+    console.error("Firebase Admin SDK (adminDb) is not initialized in updateAccessory. Operation aborted."); 
+    return null; 
+  }
   const accessoryDocRef = adminDb.collection("acessorios").doc(accessoryId);
   try {
     const updateData: any = { ...accessoryData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
@@ -175,7 +177,6 @@ export async function updateAccessory(accessoryId: string, accessoryData: Partia
         console.warn("Attempted to update 'comments' field in updateAccessory (data-admin.ts), but comments system is removed.");
         delete updateData.comments;
     }
-
 
     await accessoryDocRef.update(updateData);
     const updatedDocSnap = await accessoryDocRef.get();
@@ -191,7 +192,10 @@ export async function updateAccessory(accessoryId: string, accessoryData: Partia
 }
 
 export async function deleteAccessory(accessoryId: string): Promise<boolean> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in deleteAccessory."); return false; }
+  if (!adminDb) { 
+    console.error("Firebase Admin SDK (adminDb) is not initialized in deleteAccessory. Operation aborted."); 
+    return false; 
+  }
   const accessoryDocRef = adminDb.collection("acessorios").doc(accessoryId);
   try {
     await accessoryDocRef.delete();
@@ -204,7 +208,10 @@ export async function deleteAccessory(accessoryId: string): Promise<boolean> {
 
 // --- Coupon Management (Admin SDK) ---
 export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt'>): Promise<Coupon> {
-  if (!adminDb) { throw new Error("Firebase Admin SDK (adminDb) is not initialized in addCoupon."); }
+  if (!adminDb) { 
+    console.error("Firebase Admin SDK (adminDb) is not initialized in addCoupon. Operation aborted.");
+    throw new Error("Firebase Admin SDK (adminDb) is not initialized in addCoupon."); 
+  }
   const newCouponData: any = {
     ...couponData,
     expiryDate: couponData.expiryDate ? admin.firestore.Timestamp.fromDate(new Date(couponData.expiryDate as any)) : null,
@@ -224,7 +231,10 @@ export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'u
 }
 
 export async function updateCoupon(couponId: string, couponData: Partial<Omit<Coupon, 'id'>>): Promise<Coupon | null> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updateCoupon."); return null; }
+  if (!adminDb) { 
+    console.error("Firebase Admin SDK (adminDb) is not initialized in updateCoupon. Operation aborted."); 
+    return null; 
+  }
   const couponDocRef = adminDb.collection("cupons").doc(couponId);
   try {
     const updateData: Record<string, any> = { ...couponData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
@@ -250,7 +260,10 @@ export async function updateCoupon(couponId: string, couponData: Partial<Omit<Co
 }
 
 export async function deleteCoupon(couponId: string): Promise<boolean> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in deleteCoupon."); return false; }
+  if (!adminDb) { 
+    console.error("Firebase Admin SDK (adminDb) is not initialized in deleteCoupon. Operation aborted."); 
+    return false; 
+  }
   const couponDocRef = adminDb.collection("cupons").doc(couponId);
   try {
     await couponDocRef.delete();
@@ -264,7 +277,7 @@ export async function deleteCoupon(couponId: string): Promise<boolean> {
 // --- Post Management (Admin SDK) ---
 export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>): Promise<Post> {
   if (!adminDb) {
-    console.error("[Data:addPost] Firebase Admin SDK (adminDb) is not initialized.");
+    console.error("[Data:addPost] Firebase Admin SDK (adminDb) is not initialized. Operation aborted.");
     throw new Error("Firebase Admin SDK (adminDb) is not initialized in addPost.");
   }
 
@@ -304,7 +317,10 @@ export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updated
 
 
 export async function updatePost(postId: string, postData: Partial<Omit<Post, 'id'>>): Promise<Post | null> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in updatePost."); return null; }
+  if (!adminDb) { 
+    console.error("Firebase Admin SDK (adminDb) is not initialized in updatePost. Operation aborted."); 
+    return null; 
+  }
   const postDocRef = adminDb.collection("posts").doc(postId);
   try {
     const updateData: Record<string, any> = { ...postData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
@@ -333,7 +349,10 @@ export async function updatePost(postId: string, postData: Partial<Omit<Post, 'i
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
-  if (!adminDb) { console.error("Firebase Admin SDK (adminDb) is not initialized in deletePost."); return false; }
+  if (!adminDb) { 
+    console.error("Firebase Admin SDK (adminDb) is not initialized in deletePost. Operation aborted."); 
+    return false; 
+  }
   const postDocRef = adminDb.collection("posts").doc(postId);
   try {
     await postDocRef.delete();
@@ -416,3 +435,5 @@ export async function getAnalyticsData(): Promise<AnalyticsDataTypeFromTypes> { 
     return defaultAnalyticsData; // Return the correctly typed default data
   }
 }
+
+    

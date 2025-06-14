@@ -36,7 +36,7 @@ if (!admin.apps.length) {
       console.log("Firebase Admin SDK: Attempting initialization with GOOGLE_APPLICATION_CREDENTIALS.");
       adminApp = admin.initializeApp({
         credential: admin.credential.applicationDefault(),
-        projectId: projectId,
+        projectId: projectId, // projectId can be sourced from GOOGLE_APPLICATION_CREDENTIALS as well
       });
     } else if (projectId && clientEmail && privateKeyInput) {
       console.log("Firebase Admin SDK: Attempting initialization with individual environment variables.");
@@ -52,7 +52,7 @@ if (!admin.apps.length) {
       console.warn(
         "Firebase Admin SDK: Credentials not fully provided for new initialization. Missing GOOGLE_APPLICATION_CREDENTIALS or individual credential env vars (FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID)."
       );
-      // adminApp remains undefined here
+      adminApp = undefined; 
     }
   } catch (e) {
     console.error("CRITICAL: Firebase Admin SDK initialization failed during admin.initializeApp():", e);
@@ -63,21 +63,19 @@ if (!admin.apps.length) {
     initializeAdminServices(adminApp);
     console.log("Firebase Admin SDK: New app initialized successfully and services configured.");
   } else {
-    console.warn("Firebase Admin SDK: 'adminApp' could not be initialized during new initialization. Services (adminDb, adminAuth) will remain undefined.");
+    console.warn("Firebase Admin SDK: 'adminApp' could not be initialized. Services (adminDb, adminAuth) will be undefined.");
     adminDb = undefined; 
     adminAuth = undefined;
   }
 } else {
   console.log("Firebase Admin SDK: App already initialized. Getting existing app instance.");
   try {
-    adminApp = admin.app(); // Get the default app if already initialized
+    adminApp = admin.app(); 
     if (adminApp) {
       initializeAdminServices(adminApp);
       console.log("Firebase Admin SDK: Using existing app instance and services configured.");
     } else {
-      // This case implies admin.apps.length > 0 but admin.app() somehow returned falsy.
-      // This is highly unlikely if admin.apps.length > 0.
-      console.warn("Firebase Admin SDK: admin.app() returned an invalid instance despite admin.apps.length > 0. Services (adminDb, adminAuth) will remain undefined.");
+      console.warn("Firebase Admin SDK: admin.app() returned an invalid instance despite admin.apps.length > 0. Services will be undefined.");
       adminDb = undefined;
       adminAuth = undefined;
     }
@@ -90,3 +88,4 @@ if (!admin.apps.length) {
 }
 
 export { adminApp, adminDb, adminAuth };
+    

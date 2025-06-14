@@ -1,4 +1,3 @@
-
 // This Server Action file for user registration has been emptied.
 // User registration with Server Actions is not compatible with `output: 'export'`
 // in Next.js. For a static export, user registration needs to be handled

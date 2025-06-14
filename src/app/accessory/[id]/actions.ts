@@ -1,4 +1,3 @@
-
 // This file is now empty as its Server Actions (for AI summary and comments)
 // were removed due to incompatibility with static export (`output: 'export'`).
 // If client-side data fetching or mutations related to accessory details are needed,
