@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, TicketPercent } from 'lucide-react';
 import type { Metadata } from 'next';
 import CouponForm from '../../components/CouponForm';
-// updateCouponAction removed
 import { Timestamp } from 'firebase/firestore';
 
 export async function generateStaticParams() {
@@ -48,8 +47,6 @@ export default async function EditCouponPage({ params }: { params: { id: string 
     );
   }
 
-  // boundUpdateCouponAction removed
-
   const initialDataForForm = {
     ...coupon,
     expiryDate: coupon.expiryDate instanceof Timestamp
@@ -85,7 +82,6 @@ export default async function EditCouponPage({ params }: { params: { id: string 
         </CardHeader>
         <CardContent>
             <CouponForm
-              // formAction prop removed
               initialData={initialDataForForm}
               submitButtonText="Salvar Alterações"
               isStaticExport={true}

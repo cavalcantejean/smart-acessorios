@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useActionState, startTransition } from 'react';
+import { useState, useEffect, startTransition } from 'react'; // useActionState removed
 import type { Accessory } from '@/lib/types';
-import { deleteAccessoryAction, type AccessoryActionResult } from '../actions';
+// deleteAccessoryAction and AccessoryActionResult removed
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -30,90 +30,71 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Timestamp } from 'firebase/firestore';
-import { useAuth } from '@/hooks/useAuth'; // Import useAuth
+import { useAuth } from '@/hooks/useAuth';
 
 interface AccessoriesTableProps {
   initialAccessories: Accessory[];
+  isStaticExport?: boolean; // Added for static export handling
 }
 
-const initialActionState: AccessoryActionResult = { success: false };
+// initialActionState removed
 
-// Helper to convert Firestore Timestamp (or its plain object representation) to displayable date string
 const formatDate = (timestampInput: any): string => {
   if (!timestampInput) return 'N/A';
-
   let date: Date;
-
-  if (timestampInput instanceof Date) {
-    date = timestampInput;
-  } else if (timestampInput instanceof Timestamp) { // Client SDK Timestamp
-    date = timestampInput.toDate();
-  } else if (typeof timestampInput === 'string') {
-    date = new Date(timestampInput); // Handles ISO strings
-  } else if (typeof timestampInput === 'object' && timestampInput !== null &&
-             typeof timestampInput.seconds === 'number' && typeof timestampInput.nanoseconds === 'number') {
-    // Handle plain object from RSC serialization
+  if (timestampInput instanceof Date) date = timestampInput;
+  else if (timestampInput instanceof Timestamp) date = timestampInput.toDate();
+  else if (typeof timestampInput === 'string') date = new Date(timestampInput);
+  else if (typeof timestampInput === 'object' && timestampInput !== null && typeof timestampInput.seconds === 'number' && typeof timestampInput.nanoseconds === 'number') {
     date = new Timestamp(timestampInput.seconds, timestampInput.nanoseconds).toDate();
   } else {
-    console.warn("formatDate received unrecognized timestampInput in AccessoriesTable:", timestampInput);
     return 'Data inválida';
   }
-
-  if (isNaN(date.getTime())) {
-    console.warn("formatDate resulted in an invalid date for input in AccessoriesTable:", timestampInput);
-    return 'Data inválida';
-  }
+  if (isNaN(date.getTime())) return 'Data inválida';
   return date.toLocaleDateString('pt-BR');
 };
 
-
-export default function AccessoriesTable({ initialAccessories }: AccessoriesTableProps) {
+export default function AccessoriesTable({ initialAccessories, isStaticExport = true }: AccessoriesTableProps) {
   const [accessories, setAccessories] = useState<Accessory[]>(initialAccessories);
-  const [deleteState, handleDeleteAction, isDeletePending] = useActionState(deleteAccessoryAction, initialActionState);
   const { toast } = useToast();
   const [accessoryToDelete, setAccessoryToDelete] = useState<Accessory | null>(null);
-  const { user: authUser } = useAuth(); // Get authenticated user for userId
+  const { user: authUser } = useAuth();
+  const [isDeletePending, setIsDeletePending] = useState(false);
 
   useEffect(() => {
     setAccessories(initialAccessories);
   }, [initialAccessories]);
 
-  useEffect(() => {
-    if (deleteState?.message) {
-      if (deleteState.success) {
-        toast({
-          title: "Sucesso!",
-          description: deleteState.message,
-        });
-         if (accessoryToDelete) {
-           setAccessories(prev => prev.filter(acc => acc.id !== accessoryToDelete.id));
-         }
-      } else if (!deleteState.success && deleteState.error) {
-        toast({
-          title: "Erro",
-          description: deleteState.error,
-          variant: "destructive",
-        });
-      }
-      setAccessoryToDelete(null);
-    }
-  }, [deleteState, toast, accessoryToDelete]);
-
   const handleDeleteConfirm = () => {
+    if (isStaticExport) {
+      toast({ title: "Funcionalidade Indisponível", description: "Exclusão não suportada na exportação estática.", variant: "destructive" });
+      setAccessoryToDelete(null);
+      return;
+    }
     if (accessoryToDelete && authUser && authUser.id) {
-      const formData = new FormData();
-      formData.append('accessoryId', accessoryToDelete.id);
-      formData.append('userId', authUser.id); // Add userId for admin check in action
-      startTransition(() => {
-        handleDeleteAction(formData);
-      });
+      setIsDeletePending(true);
+      // Client-side Firebase logic would go here
+      console.log(`Simulating delete for accessory ${accessoryToDelete.id} by user ${authUser.id}`);
+      setTimeout(() => {
+        setAccessories(prev => prev.filter(acc => acc.id !== accessoryToDelete.id));
+        toast({ title: "Sucesso (Simulado)!", description: `Acessório "${accessoryToDelete.name}" excluído.` });
+        setIsDeletePending(false);
+        setAccessoryToDelete(null);
+      }, 1000);
     } else if (!authUser?.id) {
-        toast({ title: "Erro de Autenticação", description: "ID do usuário não encontrado. Faça login novamente.", variant: "destructive"});
+      toast({ title: "Erro de Autenticação", description: "ID do usuário não encontrado.", variant: "destructive" });
+      setIsDeletePending(false);
+      setAccessoryToDelete(null);
     }
   };
 
   return (
     <AlertDialog open={!!accessoryToDelete} onOpenChange={(isOpen) => { if (!isOpen) setAccessoryToDelete(null); }}>
+      {isStaticExport && (
+        <div className="p-3 mb-4 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
+            <strong>Modo de Demonstração Estática:</strong> Ações de exclusão estão desativadas.
+        </div>
+      )}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -177,7 +158,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
                         variant="destructive"
                         size="icon"
                         onClick={() => setAccessoryToDelete(accessory)}
-                        disabled={isDeletePending && accessoryToDelete?.id === accessory.id}
+                        disabled={isDeletePending && accessoryToDelete?.id === accessory.id || isStaticExport}
                         title="Excluir Acessório"
                       >
                         {isDeletePending && accessoryToDelete?.id === accessory.id ? (
@@ -193,7 +174,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                  Nenhum acessório encontrado. Verifique as permissões de leitura no Firestore ou adicione novos acessórios.
+                  Nenhum acessório encontrado.
                 </TableCell>
               </TableRow>
             )}
@@ -214,7 +195,7 @@ export default function AccessoriesTable({ initialAccessories }: AccessoriesTabl
               <AlertDialogCancel disabled={isDeletePending}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
-                disabled={isDeletePending || !authUser?.id}
+                disabled={isDeletePending || !authUser?.id || isStaticExport}
                 className="bg-destructive hover:bg-destructive/90"
               >
                 {isDeletePending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

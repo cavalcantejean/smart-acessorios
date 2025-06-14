@@ -78,7 +78,6 @@ export interface Post {
   updatedAt?: Timestamp;
 }
 
-
 // Analytics Types
 export interface CategoryCount {
   category: string;

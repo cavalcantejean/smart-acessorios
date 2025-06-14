@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
 import type { Metadata } from 'next';
 import SettingsForm from './components/SettingsForm';
-// updateSettingsAction removed
 
 export const metadata: Metadata = {
   title: 'Configurações do Site | Admin SmartAcessorios',
@@ -28,7 +27,6 @@ export interface SettingsFormDataForClient {
   siteFaviconUrl?: string;
   socialLinks: SocialLinkFormData[];
 }
-
 
 export default async function SiteSettingsPage() {
   const currentSettings: SiteSettings = await getSiteSettings(); 
@@ -72,7 +70,6 @@ export default async function SiteSettingsPage() {
       </div>
       
       <SettingsForm 
-        // formAction prop removed
         initialData={initialDataForForm} 
         isStaticExport={true}
       />

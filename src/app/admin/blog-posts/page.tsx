@@ -1,5 +1,5 @@
 
-import { getAllPosts } from '@/lib/data'; // Now async
+import { getAllPosts } from '@/lib/data'; 
 import type { Post } from '@/lib/types';
 import PostsTable from './components/PostsTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,18 +14,17 @@ export const metadata: Metadata = {
   description: 'Adicione, edite ou remova posts do blog da plataforma.',
 };
 
-// Helper to prepare post for client (convert Timestamps to strings)
 const preparePostForClient = (post: Post): Post => {
   return {
     ...post,
     publishedAt: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : (post.publishedAt as any),
     createdAt: post.createdAt instanceof Timestamp ? post.createdAt.toDate().toISOString() : (post.createdAt as any),
     updatedAt: post.updatedAt instanceof Timestamp ? post.updatedAt.toDate().toISOString() : (post.updatedAt as any),
-  } as Post; // Cast to ensure type compatibility
+  } as Post; 
 };
 
 export default async function ManageBlogPostsPage() {
-  const rawPosts: Post[] = await getAllPosts(); // Await async call
+  const rawPosts: Post[] = await getAllPosts(); 
   const posts = rawPosts.map(preparePostForClient);
 
   return (
@@ -63,7 +62,7 @@ export default async function ManageBlogPostsPage() {
         </CardHeader>
         <CardContent>
           {posts.length > 0 ? (
-            <PostsTable initialPosts={posts} />
+            <PostsTable initialPosts={posts} isStaticExport={true} />
           ) : (
             <div className="text-center py-10">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />

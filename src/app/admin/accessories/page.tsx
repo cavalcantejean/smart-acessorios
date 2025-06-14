@@ -19,7 +19,6 @@ const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
     ...accessory,
     createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : (accessory.createdAt as any),
     updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : (accessory.updatedAt as any),
-    // comments mapping removed
   } as Accessory; 
 };
 
@@ -62,7 +61,7 @@ export default async function ManageAccessoriesPage() {
         </CardHeader>
         <CardContent>
           {accessories.length > 0 ? (
-            <AccessoriesTable initialAccessories={accessories} />
+            <AccessoriesTable initialAccessories={accessories} isStaticExport={true} />
           ) : (
             <div className="text-center py-10">
               <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground mb-4" />

@@ -1,27 +1,30 @@
 
-import { getAnalyticsData as getAnalyticsDataAdmin } from '@/lib/data-admin'; 
-import type { AnalyticsData } from '@/lib/types'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { ArrowLeft, BarChart3, AlertTriangle } from 'lucide-react';
 import type { Metadata } from 'next';
 import AnalyticsSummaryCards from './components/AnalyticsSummaryCards';
 import AccessoriesByCategoryChart from './components/AccessoriesByCategoryChart';
-// TopItemsList and RecentCommentsList removed
 import { Separator } from '@/components/ui/separator';
+import type { AnalyticsData } from '@/lib/types'; // Keep type for component props
 
 export const metadata: Metadata = {
   title: 'Analytics | Admin SmartAcessorios',
   description: 'Visualize estatísticas de uso e engajamento da plataforma.',
 };
 
-// prepareAnalyticsDataForClient removed as comments are no longer part of AnalyticsData
-// const prepareAnalyticsDataForClient = (data: AnalyticsData): AnalyticsData => { ... };
-
 export default async function AnalyticsPage() {
-  // AnalyticsData type from lib/types.ts no longer contains comment-related fields
-  const analyticsData: AnalyticsData = await getAnalyticsDataAdmin();
+  // For static export, we cannot reliably use firebase-admin during build.
+  // Data will be placeholder or fetched client-side in a dynamic deployment.
+  const analyticsData: AnalyticsData = {
+    totalUsers: 0,
+    totalAccessories: 0,
+    accessoriesPerCategory: [],
+    // Comment-related fields were already removed from AnalyticsData type
+  };
+
+  const isStaticBuild = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
   return (
     <div className="space-y-8">
@@ -41,15 +44,24 @@ export default async function AnalyticsPage() {
         </Button>
       </div>
 
+      {isStaticBuild && (
+        <div className="p-4 mb-4 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 mt-0.5 text-orange-700 shrink-0" />
+          <div>
+            <p className="font-semibold">Modo de Demonstração Estática</p>
+            <p>Os dados de analytics exibidos são de placeholder. Em uma implantação dinâmica, estes dados seriam carregados em tempo real.</p>
+          </div>
+        </div>
+      )}
+
       <AnalyticsSummaryCards
         totalUsers={analyticsData.totalUsers}
         totalAccessories={analyticsData.totalAccessories}
-        // totalComments prop removed
       />
 
       <Separator className="my-6" />
 
-      <div className="grid grid-cols-1 gap-6"> {/* Simplified grid */}
+      <div className="grid grid-cols-1 gap-6">
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Acessórios por Categoria</CardTitle>
@@ -59,15 +71,13 @@ export default async function AnalyticsPage() {
             {analyticsData.accessoriesPerCategory && analyticsData.accessoriesPerCategory.length > 0 ? (
               <AccessoriesByCategoryChart data={analyticsData.accessoriesPerCategory} />
             ) : (
-              <p className="text-muted-foreground text-center py-8">Nenhum dado de categoria disponível.</p>
+              <p className="text-muted-foreground text-center py-8">
+                {isStaticBuild ? "Dados de categoria não disponíveis em modo estático." : "Nenhum dado de categoria disponível."}
+              </p>
             )}
           </CardContent>
         </Card>
-
-        {/* RecentCommentsList card removed */}
       </div>
-
-      {/* TopItemsList section removed */}
     </div>
   );
 }

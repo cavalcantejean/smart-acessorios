@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
 import PostForm from '@/components/admin/PostForm'; 
-// createPostAction removed for static export
 
 export const metadata: Metadata = {
   title: 'Adicionar Novo Post | Admin SmartAcessorios',
@@ -37,7 +36,6 @@ export default function NewPostPage() {
         </CardHeader>
         <CardContent>
           <PostForm 
-            // formAction prop removed
             submitButtonText="Criar Post"
             isStaticExport={true}
           />

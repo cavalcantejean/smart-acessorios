@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowLeft, TicketPercent } from 'lucide-react';
 import type { Metadata } from 'next';
 import CouponForm from '../components/CouponForm';
-// createCouponAction removed
 
 export const metadata: Metadata = {
   title: 'Adicionar Novo Cupom | Admin SmartAcessorios',
@@ -40,7 +39,6 @@ export default function NewCouponPage() {
         </CardHeader>
         <CardContent>
           <CouponForm 
-            // formAction prop removed
             submitButtonText="Criar Cupom"
             isStaticExport={true}
           />

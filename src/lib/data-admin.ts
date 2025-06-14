@@ -1,7 +1,7 @@
 
 'use server';
 
-import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting } from './types';
+import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting, AnalyticsData as AnalyticsDataTypeFromTypes } from './types'; // Renamed imported AnalyticsData
 import admin from 'firebase-admin';
 import { adminDb, adminAuth } from './firebase-admin';
 import { defaultSiteSettings as importedDefaultSiteSettings } from './data';
@@ -59,7 +59,10 @@ export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
       };
     } else {
       console.log("Site settings document not found in Firestore (admin). Returning default settings and creating document.");
-      await settingsDocRef.set(importedDefaultSiteSettings);
+      // Avoid writing during build if not necessary for read-only operations.
+      // Consider if this write is essential or if defaults are sufficient for build.
+      // For static export, this write might fail if credentials aren't set for build env.
+      // await settingsDocRef.set(importedDefaultSiteSettings);
       return JSON.parse(JSON.stringify(importedDefaultSiteSettings));
     }
   } catch (error) {
@@ -142,7 +145,6 @@ export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' 
     aiSummary: accessoryData.aiSummary || null,
     embedHtml: accessoryData.embedHtml || null,
     isDeal: accessoryData.isDeal || false,
-    // comments field removed
   };
   try {
     const docRef = await adminDb.collection('acessorios').add(newAccessoryData);
@@ -169,7 +171,6 @@ export async function updateAccessory(accessoryId: string, accessoryData: Partia
     const updateData: any = { ...accessoryData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
     if (updateData.price) updateData.price = updateData.price.toString().replace(',', '.');
     
-    // comments field removed from update
     if (updateData.comments !== undefined) {
         console.warn("Attempted to update 'comments' field in updateAccessory (data-admin.ts), but comments system is removed.");
         delete updateData.comments;
@@ -200,10 +201,6 @@ export async function deleteAccessory(accessoryId: string): Promise<boolean> {
     return false;
   }
 }
-
-// --- Comment Moderation (Admin SDK) ---
-// getPendingComments and updateCommentStatus functions removed as comment system is removed.
-
 
 // --- Coupon Management (Admin SDK) ---
 export async function addCoupon(couponData: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt'>): Promise<Coupon> {
@@ -352,8 +349,9 @@ interface CategoryCountAnalytics {
   category: string;
   count: number;
 }
-// Analytics Data (Admin SDK) - Type definition for AnalyticsData
-export interface AnalyticsDataAdmin { 
+// Analytics Data (Admin SDK) - Type definition for AnalyticsData (local to this file)
+// Renamed to avoid conflict with AnalyticsData from lib/types
+interface AnalyticsDataAdminSDK { 
   totalUsers: number;
   totalAccessories: number;
   accessoriesPerCategory: CategoryCountAnalytics[];
@@ -383,14 +381,14 @@ const getAccessoriesPerCategory = async (): Promise<CategoryCountAnalytics[]> =>
     return [];
   }
   const accessoriesSnapshot = await adminDb.collection('acessorios').get();
-  const accessoriesList = accessoriesSnapshot.docs.map(d => d.data() as Accessory);
+  const accessoriesList = accessoriesSnapshot.docs.map(d => d.data() as Accessory); // Type cast to client Accessory type
   const counts: Record<string, number> = {};
   accessoriesList.forEach(acc => { const category = acc.category || 'Sem Categoria'; counts[category] = (counts[category] || 0) + 1; });
   return Object.entries(counts).map(([category, count]) => ({ category, count })).sort((a,b) => b.count - a.count);
 };
 
-export async function getAnalyticsData(): Promise<AnalyticsDataAdmin> {
-  const defaultAnalyticsData: AnalyticsDataAdmin = {
+export async function getAnalyticsData(): Promise<AnalyticsDataTypeFromTypes> { // Use the imported type
+  const defaultAnalyticsData: AnalyticsDataTypeFromTypes = {
     totalUsers: 0,
     totalAccessories: 0,
     accessoriesPerCategory: [],
@@ -412,10 +410,9 @@ export async function getAnalyticsData(): Promise<AnalyticsDataAdmin> {
       totalUsers,
       totalAccessories,
       accessoriesPerCategory,
-      // comment-related analytics removed
     };
   } catch (error) {
     console.error("Error fetching analytics data in getAnalyticsData (data-admin.ts):", error);
-    return defaultAnalyticsData;
+    return defaultAnalyticsData; // Return the correctly typed default data
   }
 }

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
 import AccessoryForm from '@/components/admin/AccessoryForm';
-// createAccessoryAction removed as Server Actions are not used for static export
 
 export const metadata: Metadata = {
   title: 'Adicionar Novo Acessório | Admin SmartAcessorios',
@@ -13,8 +12,6 @@ export const metadata: Metadata = {
 };
 
 export default function NewAccessoryPage() {
-  // Admin auth check should be here or in a layout
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -40,9 +37,8 @@ export default function NewAccessoryPage() {
         </CardHeader>
         <CardContent>
           <AccessoryForm 
-            // formAction prop is removed; client-side handling would be needed for dynamic deployment
             submitButtonText="Criar Acessório"
-            isStaticExport={true} // Explicitly pass flag for static export behavior
+            isStaticExport={true} 
           />
         </CardContent>
       </Card>

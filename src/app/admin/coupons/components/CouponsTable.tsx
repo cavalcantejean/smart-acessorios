@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useActionState, startTransition } from 'react';
+import { useState, useEffect, startTransition } from 'react'; // useActionState removed
 import type { Coupon } from '@/lib/types';
-import { deleteCouponAction, type CouponActionResult } from '../actions';
+// deleteCouponAction and CouponActionResult removed
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -34,91 +34,71 @@ import { Timestamp } from 'firebase/firestore';
 
 interface CouponsTableProps {
   initialCoupons: Coupon[];
+  isStaticExport?: boolean;
 }
 
-const initialActionState: CouponActionResult = { success: false };
+// initialActionState removed
 
-// Helper to convert Firestore Timestamp (or its plain object representation) to displayable date string
-const formatDateSafe = (dateInput?: any): string => { // Use 'any' for flexibility
+const formatDateSafe = (dateInput?: any): string => {
   if (!dateInput) return 'N/A';
-
   let date: Date;
   try {
-    if (dateInput instanceof Date) {
-      date = dateInput;
-    } else if (dateInput instanceof Timestamp) { // Client SDK Timestamp
-      date = dateInput.toDate();
-    } else if (typeof dateInput === 'string') {
-       // Try parsing as ISO string first, then fallback to direct Date constructor
+    if (dateInput instanceof Date) date = dateInput;
+    else if (dateInput instanceof Timestamp) date = dateInput.toDate();
+    else if (typeof dateInput === 'string') {
       if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|([+-]\d{2}:\d{2})))?$/.test(dateInput)) {
         date = parseISO(dateInput);
       } else {
         date = new Date(dateInput);
       }
-    } else if (typeof dateInput === 'object' && dateInput !== null &&
-               typeof dateInput.seconds === 'number' && typeof dateInput.nanoseconds === 'number') {
-      // Handle plain object from RSC serialization
+    } else if (typeof dateInput === 'object' && dateInput !== null && typeof dateInput.seconds === 'number' && typeof dateInput.nanoseconds === 'number') {
       date = new Timestamp(dateInput.seconds, dateInput.nanoseconds).toDate();
     } else {
-      console.warn("formatDateSafe received unrecognized dateInput in CouponsTable:", dateInput);
       return 'Data inválida';
     }
-
-    if (isNaN(date.getTime())) {
-      console.warn("formatDateSafe resulted in an invalid date for input in CouponsTable:", dateInput);
-      // Fallback for strings that might be pre-formatted if parseISO fails and new Date() also fails
-      return typeof dateInput === 'string' ? dateInput : 'Data inválida';
-    }
+    if (isNaN(date.getTime())) return typeof dateInput === 'string' ? dateInput : 'Data inválida';
     return format(date, "PPP", { locale: ptBR });
   } catch (error) {
-    console.error("Error in formatDateSafe (CouponsTable):", error, "Input:", dateInput);
     return typeof dateInput === 'string' ? dateInput : 'Data inválida';
   }
 };
 
-export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
+export default function CouponsTable({ initialCoupons, isStaticExport = true }: CouponsTableProps) {
   const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
-  const [deleteState, handleDeleteAction, isDeletePending] = useActionState(deleteCouponAction, initialActionState);
   const { toast } = useToast();
   const [couponToDelete, setCouponToDelete] = useState<Coupon | null>(null);
+  const [isDeletePending, setIsDeletePending] = useState(false);
 
   useEffect(() => {
     setCoupons(initialCoupons);
   }, [initialCoupons]);
 
-  useEffect(() => {
-    if (deleteState?.message) {
-      if (deleteState.success) {
-        toast({
-          title: "Sucesso!",
-          description: deleteState.message,
-        });
-        if (couponToDelete) {
-            setCoupons(prev => prev.filter(c => c.id !== couponToDelete.id));
-        }
-      } else if (!deleteState.success && deleteState.error) {
-        toast({
-          title: "Erro",
-          description: deleteState.error,
-          variant: "destructive",
-        });
-      }
-      setCouponToDelete(null);
-    }
-  }, [deleteState, toast, couponToDelete]);
-
   const handleDeleteConfirm = () => {
+     if (isStaticExport) {
+      toast({ title: "Funcionalidade Indisponível", description: "Exclusão não suportada na exportação estática.", variant: "destructive" });
+      setCouponToDelete(null);
+      return;
+    }
     if (couponToDelete) {
-      const formData = new FormData();
-      formData.append('couponId', couponToDelete.id);
-      startTransition(() => {
-        handleDeleteAction(formData);
-      });
+      setIsDeletePending(true);
+      // Client-side Firebase logic would go here
+      console.log(`Simulating delete for coupon ${couponToDelete.id}`);
+      setTimeout(() => {
+        setCoupons(prev => prev.filter(c => c.id !== couponToDelete.id));
+        toast({ title: "Sucesso (Simulado)!", description: `Cupom "${couponToDelete.code}" excluído.` });
+        setIsDeletePending(false);
+        setCouponToDelete(null);
+      }, 1000);
     }
   };
 
   return (
     <AlertDialog open={!!couponToDelete} onOpenChange={(isOpen) => { if (!isOpen) setCouponToDelete(null); }}>
+      {isStaticExport && (
+        <div className="p-3 mb-4 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
+            <strong>Modo de Demonstração Estática:</strong> Ações de exclusão estão desativadas.
+        </div>
+      )}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -170,7 +150,7 @@ export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
                       variant="destructive"
                       size="icon"
                       onClick={() => setCouponToDelete(coupon)}
-                      disabled={isDeletePending && couponToDelete?.id === coupon.id}
+                      disabled={isDeletePending && couponToDelete?.id === coupon.id || isStaticExport}
                       title="Excluir Cupom"
                     >
                       {isDeletePending && couponToDelete?.id === coupon.id ? (
@@ -200,7 +180,7 @@ export default function CouponsTable({ initialCoupons }: CouponsTableProps) {
               <AlertDialogCancel disabled={isDeletePending}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
-                disabled={isDeletePending}
+                disabled={isDeletePending || isStaticExport}
                 className="bg-destructive hover:bg-destructive/90"
               >
                 {isDeletePending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

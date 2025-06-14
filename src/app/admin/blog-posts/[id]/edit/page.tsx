@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 import PostForm from '@/components/admin/PostForm';
-// updatePostAction removed for static export
 import type { Post } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 
@@ -48,8 +47,6 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     );
   }
 
-  // boundUpdatePostAction removed
-
   let publishedAtString = "";
   if (post.publishedAt) {
     if (post.publishedAt instanceof Timestamp) {
@@ -61,13 +58,11 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     }
   }
 
-
   const initialDataForForm = {
     ...post,
     tags: Array.isArray(post.tags) ? post.tags.join(", ") : "",
     publishedAt: publishedAtString,
   };
-
 
   return (
     <div className="space-y-6">
@@ -96,7 +91,6 @@ export default async function EditPostPage({ params }: { params: { id: string } 
         </CardHeader>
         <CardContent>
             <PostForm
-              // formAction prop removed
               initialData={initialDataForForm}
               submitButtonText="Salvar Alterações"
               isStaticExport={true}

@@ -18,10 +18,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useActionState, startTransition } from "react";
-import { useFormStatus } from "react-dom";
-import type { AuthUser } from "@/lib/types"; // AuthUser for potential immediate feedback
-import { useRouter } from "next/navigation"; // For potential redirection
+import { useEffect, useState } from "react"; // Removed useActionState, startTransition
+import { useRouter } from "next/navigation";
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const registerFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -35,93 +36,73 @@ const registerFormSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
-export interface RegisterFormState {
-  message: string;
-  success: boolean;
-  issues?: Record<string, string[] | undefined>;
-  fields?: {
-    name?: string;
-    email?: string;
-  };
-  user?: AuthUser | null; // For immediate feedback, actual auth state via useAuth
-}
-
-const initialState: RegisterFormState = {
-  message: "",
-  success: false,
-  user: null,
-};
-
 interface RegisterFormProps {
-  formAction: (prevState: RegisterFormState, formData: FormData) => Promise<RegisterFormState>;
+  // formAction prop removed
   title: string;
   description: string;
   submitButtonText: string;
   linkToLogin?: { href: string; text: string; label: string; };
 }
 
-function SubmitButton({ text }: { text: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <UserPlus className="mr-2 h-4 w-4" />
-      )}
-      {text}
-    </Button>
-  );
-}
-
-export default function RegisterForm({ formAction, title, description, submitButtonText, linkToLogin }: RegisterFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState);
+export default function RegisterForm({ title, description, submitButtonText, linkToLogin }: RegisterFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
-      name: state?.fields?.name || "",
-      email: state?.fields?.email || "",
+      name: "",
+      email: "",
       password: "",
       confirmPassword: "",
     },
   });
 
-  useEffect(() => {
-    if (state.message) {
-      if (state.success) {
-        toast({
-          title: "Sucesso!",
-          description: state.message,
-        });
-        form.reset();
-        // Optional: Redirect to login or dashboard.
-        // Firebase Auth onAuthStateChanged should handle global state update.
-        router.push('/login?message=Cadastro%20realizado!%20Faça%20login.'); 
-      } else {
-        toast({
-          title: "Erro de Cadastro",
-          description: state.message || "Verifique os dados e tente novamente.",
-          variant: "destructive",
-        });
-         if (state.issues) {
-          for (const [fieldName, errors] of Object.entries(state.issues)) {
-            if (errors && errors.length > 0) {
-              form.setError(fieldName as keyof RegisterFormValues, { type: 'server', message: errors.join(', ') });
-            }
-          }
-        }
-        form.reset({
-          name: state.fields?.name || form.getValues('name'),
-          email: state.fields?.email || form.getValues('email'),
-          password: '',
-          confirmPassword: '',
-        });
+  const handleClientSideRegister = async (values: RegisterFormValues) => {
+    setIsLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const firebaseUser = userCredential.user;
+
+      await updateProfile(firebaseUser, { displayName: values.name });
+
+      const userDocRef = doc(db, "usuarios", firebaseUser.uid);
+      await setDoc(userDocRef, {
+        id: firebaseUser.uid,
+        name: values.name,
+        email: values.email,
+        isAdmin: false, // Default to not admin
+        avatarUrl: `https://placehold.co/150x150.png?text=${values.name.charAt(0).toUpperCase()}`, // Simple placeholder
+        avatarHint: "user initial",
+        bio: "",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Cadastro Realizado com Sucesso!",
+        description: "Você será redirecionado para a página de login.",
+      });
+      form.reset();
+      router.push('/login?message=Cadastro%20realizado!%20Faça%20login.');
+    } catch (error: any) {
+      console.error("Erro no registro (client-side):", error);
+      let errorMessage = "Ocorreu um erro ao tentar se cadastrar.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "Este e-mail já está cadastrado.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "A senha é muito fraca. Tente uma senha mais forte.";
       }
+      toast({
+        title: "Erro de Cadastro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [state, toast, form, router]);
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-xl">
@@ -132,19 +113,8 @@ export default function RegisterForm({ formAction, title, description, submitBut
       <CardContent>
         <Form {...form}>
           <form
-            action={dispatch}
+            onSubmit={form.handleSubmit(handleClientSideRegister)}
             className="space-y-6"
-            onSubmit={form.handleSubmit(() => {
-                const formData = new FormData();
-                const values = form.getValues();
-                formData.append('name', values.name);
-                formData.append('email', values.email);
-                formData.append('password', values.password);
-                formData.append('confirmPassword', values.confirmPassword);
-                startTransition(() => {
-                  dispatch(formData);
-                });
-            })}
           >
             <FormField
               control={form.control}
@@ -198,10 +168,14 @@ export default function RegisterForm({ formAction, title, description, submitBut
                 </FormItem>
               )}
             />
-            <SubmitButton text={submitButtonText} />
-            {state && !state.success && state.message && Object.keys(form.formState.errors).length === 0 && (
-                 <p className="text-sm font-medium text-destructive text-center">{state.message}</p>
-            )}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <UserPlus className="mr-2 h-4 w-4" />
+              )}
+              {submitButtonText}
+            </Button>
           </form>
         </Form>
         {linkToLogin && (

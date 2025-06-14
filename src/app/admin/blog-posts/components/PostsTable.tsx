@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useActionState, startTransition } from 'react';
+import { useState, useEffect, startTransition } from 'react'; // useActionState removed
 import type { Post } from '@/lib/types';
-import { deletePostAction, type PostActionResult } from '../actions';
+// deletePostAction and PostActionResult removed
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import Image from 'next/image';
 import Link from 'next/link';
-import { Edit, Trash2, Loader2, ExternalLink, CalendarDays, UserCircleIcon } from 'lucide-react';
+import { Edit, Trash2, Loader2, ExternalLink, CalendarDays } from 'lucide-react'; // UserCircleIcon removed as authorAvatarUrl isn't used in table directly
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -33,83 +33,62 @@ import { Timestamp } from 'firebase/firestore';
 
 interface PostsTableProps {
   initialPosts: Post[];
+  isStaticExport?: boolean;
 }
 
-const initialActionState: PostActionResult = { success: false };
+// initialActionState removed
 
-// Helper to convert Firestore Timestamp (or its plain object representation) to displayable date string
-const formatDate = (dateInput: any): string => { // Use 'any' for flexibility
+const formatDate = (dateInput: any): string => {
   if (!dateInput) return 'N/A';
-
   let date: Date;
-
-  if (dateInput instanceof Date) {
-    date = dateInput;
-  } else if (dateInput instanceof Timestamp) { // Client SDK Timestamp
-    date = dateInput.toDate();
-  } else if (typeof dateInput === 'string') {
-    date = new Date(dateInput); // Handles ISO strings
-  } else if (typeof dateInput === 'object' && dateInput !== null &&
-             typeof dateInput.seconds === 'number' && typeof dateInput.nanoseconds === 'number') {
-    // Handle plain object from RSC serialization
+  if (dateInput instanceof Date) date = dateInput;
+  else if (dateInput instanceof Timestamp) date = dateInput.toDate();
+  else if (typeof dateInput === 'string') date = new Date(dateInput);
+  else if (typeof dateInput === 'object' && dateInput !== null && typeof dateInput.seconds === 'number' && typeof dateInput.nanoseconds === 'number') {
     date = new Timestamp(dateInput.seconds, dateInput.nanoseconds).toDate();
   } else {
-    console.warn("formatDate received unrecognized dateInput in PostsTable:", dateInput);
     return 'Data inválida';
   }
-
-  if (isNaN(date.getTime())) {
-    console.warn("formatDate resulted in an invalid date for input in PostsTable:", dateInput);
-    return 'Data inválida';
-  }
-  return date.toLocaleDateString('pt-BR', {
-    year: 'numeric', month: 'short', day: 'numeric',
-  });
+  if (isNaN(date.getTime())) return 'Data inválida';
+  return date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-export default function PostsTable({ initialPosts }: PostsTableProps) {
+export default function PostsTable({ initialPosts, isStaticExport = true }: PostsTableProps) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
-  const [deleteState, handleDeleteAction, isDeletePending] = useActionState(deletePostAction, initialActionState);
   const { toast } = useToast();
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
+  const [isDeletePending, setIsDeletePending] = useState(false);
 
   useEffect(() => {
     setPosts(initialPosts);
   }, [initialPosts]);
 
-  useEffect(() => {
-    if (deleteState?.message) {
-      if (deleteState.success) {
-        toast({
-          title: "Sucesso!",
-          description: deleteState.message,
-        });
-        if (postToDelete) {
-          setPosts(prevPosts => prevPosts.filter(p => p.id !== postToDelete.id));
-        }
-      } else if (!deleteState.success && deleteState.error) {
-        toast({
-          title: "Erro",
-          description: deleteState.error,
-          variant: "destructive",
-        });
-      }
-      setPostToDelete(null);
-    }
-  }, [deleteState, toast, postToDelete]);
-
   const handleDeleteConfirm = () => {
+    if (isStaticExport) {
+      toast({ title: "Funcionalidade Indisponível", description: "Exclusão não suportada na exportação estática.", variant: "destructive" });
+      setPostToDelete(null);
+      return;
+    }
     if (postToDelete) {
-      const formData = new FormData();
-      formData.append('postId', postToDelete.id);
-      startTransition(() => {
-        handleDeleteAction(formData);
-      });
+      setIsDeletePending(true);
+      // Client-side Firebase logic would go here
+      console.log(`Simulating delete for post ${postToDelete.id}`);
+      setTimeout(() => {
+        setPosts(prevPosts => prevPosts.filter(p => p.id !== postToDelete.id));
+        toast({ title: "Sucesso (Simulado)!", description: `Post "${postToDelete.title}" excluído.` });
+        setIsDeletePending(false);
+        setPostToDelete(null);
+      }, 1000);
     }
   };
 
   return (
     <AlertDialog open={!!postToDelete} onOpenChange={(isOpen) => { if (!isOpen) setPostToDelete(null); }}>
+      {isStaticExport && (
+        <div className="p-3 mb-4 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
+            <strong>Modo de Demonstração Estática:</strong> Ações de exclusão estão desativadas.
+        </div>
+      )}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -163,7 +142,7 @@ export default function PostsTable({ initialPosts }: PostsTableProps) {
                       variant="destructive"
                       size="icon"
                       onClick={() => setPostToDelete(post)}
-                      disabled={isDeletePending && postToDelete?.id === post.id}
+                      disabled={isDeletePending && postToDelete?.id === post.id || isStaticExport}
                       title="Excluir Post"
                     >
                       {isDeletePending && postToDelete?.id === post.id ? (
@@ -193,7 +172,7 @@ export default function PostsTable({ initialPosts }: PostsTableProps) {
               <AlertDialogCancel disabled={isDeletePending}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
-                disabled={isDeletePending}
+                disabled={isDeletePending || isStaticExport}
                 className="bg-destructive hover:bg-destructive/90"
               >
                 {isDeletePending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

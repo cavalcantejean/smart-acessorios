@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { ArrowLeft, Construction, AlertTriangle } from 'lucide-react';
 import type { Metadata } from 'next';
 import AccessoryForm from '@/components/admin/AccessoryForm';
-// updateAccessoryAction removed as Server Actions are not used for static export
 import { Timestamp } from 'firebase/firestore';
 
 export async function generateStaticParams() {
@@ -48,15 +47,10 @@ export default async function EditAccessoryPage({ params }: { params: { id: stri
     );
   }
 
-  // const boundUpdateAccessoryAction = updateAccessoryAction.bind(null, accessory.id); // Removed
-
   const initialDataForForm = {
     ...accessory,
-    price: accessory.price || "", // Ensure price is a string
-    // Convert Timestamps if necessary for any fields not directly in AccessoryFormValues schema
-    // but handled by Accessory type. Here, AccessoryFormValues expects strings/booleans.
+    price: accessory.price || "", 
   };
-
 
   return (
     <div className="space-y-6">
@@ -82,10 +76,9 @@ export default async function EditAccessoryPage({ params }: { params: { id: stri
         </CardHeader>
         <CardContent>
            <AccessoryForm
-              // formAction prop removed
               initialData={initialDataForForm as any} 
               submitButtonText="Salvar Alterações"
-              isStaticExport={true} // Explicitly pass flag
+              isStaticExport={true} 
             />
         </CardContent>
       </Card>
