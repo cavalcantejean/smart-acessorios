@@ -38,7 +38,7 @@ export default function NewAccessoryPage() {
         <CardContent>
           <AccessoryForm 
             submitButtonText="Criar Acessório"
-            isStaticExport={true} 
+            isStaticExport={false}
           />
         </CardContent>
       </Card>
