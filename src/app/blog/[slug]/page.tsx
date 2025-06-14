@@ -1,29 +1,15 @@
 
-"use client";
-
-import { getPostBySlug, getAllPosts } from '@/lib/data'; // Added getAllPosts
+import { getPostBySlug, getAllPosts } from '@/lib/data';
 import type { Post } from '@/lib/types';
-import Image from 'next/image';
-import Link from 'next/link';
-import { ArrowLeft, CalendarDays, UserCircle, BookOpenText } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { useEffect, useState } from 'react';
-import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
+import { ArrowLeft, BookOpenText } from 'lucide-react';
 import { Timestamp } from 'firebase/firestore';
-import type { Metadata } from 'next'; // Added Metadata type
+import type { Metadata } from 'next';
+import BlogPostClientView from './components/BlogPostClientView'; // New client component
 
 interface PostPageProps {
   params: { slug: string };
-}
-
-// Client-side post type where dates are strings
-interface ClientPost extends Omit<Post, 'publishedAt' | 'createdAt' | 'updatedAt'> {
-  publishedAt: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 // generateStaticParams is required for static export of dynamic routes
@@ -63,65 +49,21 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   };
 }
 
-
-export default function PostPage({ params }: PostPageProps) {
-  const [post, setPost] = useState<ClientPost | null | undefined>(undefined);
-  const [formattedDate, setFormattedDate] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPost = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedPost = await getPostBySlug(params.slug);
-        if (fetchedPost) {
-          // Convert Timestamps to ISO strings for client-side state
-          const clientReadyPost: ClientPost = {
-            ...fetchedPost,
-            publishedAt: (fetchedPost.publishedAt as Timestamp).toDate().toISOString(),
-            createdAt: fetchedPost.createdAt ? (fetchedPost.createdAt as Timestamp).toDate().toISOString() : undefined,
-            updatedAt: fetchedPost.updatedAt ? (fetchedPost.updatedAt as Timestamp).toDate().toISOString() : undefined,
-          };
-          setPost(clientReadyPost);
-          // Document title is now set by generateMetadata for static pages
-          setFormattedDate(new Date(clientReadyPost.publishedAt).toLocaleDateString('pt-BR', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            timeZone: 'UTC'
-          }));
-        } else {
-          setPost(null); // Not found
-          // Document title is now set by generateMetadata for static pages
-        }
-      } catch (error) {
-        console.error("Error fetching post by slug:", error);
-        setPost(null); // Error state
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPost();
-  }, [params.slug]);
+// Helper to prepare post data for client components (convert Timestamps to strings)
+const preparePostForClient = (post: Post): any => {
+  return {
+    ...post,
+    publishedAt: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : (post.publishedAt as any),
+    createdAt: post.createdAt instanceof Timestamp ? post.createdAt.toDate().toISOString() : (post.createdAt as any),
+    updatedAt: post.updatedAt instanceof Timestamp ? post.updatedAt.toDate().toISOString() : (post.updatedAt as any),
+  };
+};
 
 
-  if (isLoading || post === undefined) {
-    return (
-        <div className="flex justify-center items-center min-h-[60vh]">
-            <div role="status" className="flex flex-col items-center">
-                <svg aria-hidden="true" className="w-10 h-10 text-muted-foreground animate-spin fill-primary" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
-                    <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0492C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
-                </svg>
-                <span className="sr-only">Carregando artigo...</span>
-                <p className="mt-4 text-muted-foreground">Carregando artigo...</p>
-            </div>
-        </div>
-    );
-  }
+export default async function PostPage({ params }: PostPageProps) {
+  const postData = await getPostBySlug(params.slug);
 
-  if (!post) { // Not found or error state
+  if (!postData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
         <BookOpenText className="h-20 w-20 text-muted-foreground mb-6" />
@@ -138,84 +80,7 @@ export default function PostPage({ params }: PostPageProps) {
     );
   }
 
-  return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <Button variant="outline" size="sm" asChild className="mb-8 group">
-        <Link href="/blog">
-          <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-          Voltar para o Blog
-        </Link>
-      </Button>
+  const clientReadyPost = preparePostForClient(postData);
 
-      <article className="space-y-8">
-        <header className="space-y-4">
-          {post.category && (
-            <Badge variant="default" className="text-sm">{post.category}</Badge>
-          )}
-          <h1 className="text-4xl lg:text-5xl font-bold font-headline !leading-tight tracking-tight">
-            {post.title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                 {post.authorAvatarUrl ? (
-                    <AvatarImage src={post.authorAvatarUrl} alt={post.authorName} data-ai-hint={post.authorAvatarHint || "author avatar"} />
-                  ) : null}
-                <AvatarFallback>
-                  <UserCircle className="h-6 w-6" />
-                </AvatarFallback>
-              </Avatar>
-              <span>{post.authorName}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CalendarDays className="h-4 w-4" />
-              <time dateTime={post.publishedAt}>{formattedDate || 'Carregando data...'}</time>
-            </div>
-          </div>
-        </header>
-
-        {post.imageUrl && (
-          <div className="relative aspect-video w-full overflow-hidden rounded-lg shadow-lg">
-            <Image
-              src={post.imageUrl}
-              alt={post.title}
-              fill={true}
-              style={{ objectFit: 'cover' }}
-              priority={true}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 1000px"
-              data-ai-hint={post.imageHint || "blog hero"}
-            />
-          </div>
-        )}
-
-        {post.embedHtml && (
-          <div className="my-8">
-            <Separator />
-            <div
-              className="aspect-video mt-8 w-full max-w-full overflow-hidden rounded-lg shadow-lg [&_iframe]:w-full [&_iframe]:h-full [&_iframe]:rounded-lg"
-              dangerouslySetInnerHTML={{ __html: post.embedHtml }}
-            />
-            <Separator className="mt-8"/>
-          </div>
-        )}
-
-        <Card>
-          <CardContent className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none pt-6 text-foreground/90">
-            <div dangerouslySetInnerHTML={{ __html: post.content }} />
-          </CardContent>
-        </Card>
-
-        {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <span className="font-semibold text-sm">Tags:</span>
-            {post.tags.map(tag => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </article>
-    </div>
-  );
+  return <BlogPostClientView post={clientReadyPost} />;
 }

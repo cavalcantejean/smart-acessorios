@@ -15,8 +15,22 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export async function generateMetadata(): Promise<Metadata> {
   const currentSiteSettings = await getSiteSettings();
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
-  const metadataBase = new URL(baseUrl);
+  
+  let metadataBase: URL;
+  const providedBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+  const defaultBaseUrl = 'http://localhost:9002';
+
+  try {
+    if (providedBaseUrl && providedBaseUrl.trim() !== '') {
+      metadataBase = new URL(providedBaseUrl);
+    } else {
+      console.warn(`NEXT_PUBLIC_BASE_URL is not set or is empty. Falling back to '${defaultBaseUrl}' for metadataBase.`);
+      metadataBase = new URL(defaultBaseUrl);
+    }
+  } catch (e) {
+    console.error(`Failed to construct URL from NEXT_PUBLIC_BASE_URL ('${providedBaseUrl}'). Falling back to '${defaultBaseUrl}'. Error:`, e);
+    metadataBase = new URL(defaultBaseUrl);
+  }
 
   return {
     metadataBase,
