@@ -1,7 +1,7 @@
 
 "use client";
 
-import { getPostBySlug } from '@/lib/data'; // Now async
+import { getPostBySlug, getAllPosts } from '@/lib/data'; // Added getAllPosts
 import type { Post } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -10,10 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-// import { notFound } from 'next/navigation'; // Removed, client-side notFound is different
 import { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { Timestamp } from 'firebase/firestore';
+import type { Metadata } from 'next'; // Added Metadata type
 
 interface PostPageProps {
   params: { slug: string };
@@ -24,6 +24,43 @@ interface ClientPost extends Omit<Post, 'publishedAt' | 'createdAt' | 'updatedAt
   publishedAt: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+// generateStaticParams is required for static export of dynamic routes
+export async function generateStaticParams() {
+  const posts = await getAllPosts();
+  return posts.map((post) => ({
+    slug: post.slug,
+  }));
+}
+
+// generateMetadata for dynamic metadata
+export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
+  const post = await getPostBySlug(params.slug);
+  if (!post) {
+    return {
+      title: 'Artigo Não Encontrado',
+      description: 'O artigo que você está procurando não foi encontrado.',
+    };
+  }
+  return {
+    title: `${post.title} | Blog SmartAcessorios`,
+    description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      type: 'article',
+      publishedTime: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : post.publishedAt,
+      authors: [post.authorName],
+      images: post.imageUrl ? [{ url: post.imageUrl }] : [],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: post.title,
+        description: post.excerpt,
+        images: post.imageUrl ? [post.imageUrl] : [],
+    }
+  };
 }
 
 
@@ -46,7 +83,7 @@ export default function PostPage({ params }: PostPageProps) {
             updatedAt: fetchedPost.updatedAt ? (fetchedPost.updatedAt as Timestamp).toDate().toISOString() : undefined,
           };
           setPost(clientReadyPost);
-          document.title = `${clientReadyPost.title} | SmartAcessorios Blog`;
+          // Document title is now set by generateMetadata for static pages
           setFormattedDate(new Date(clientReadyPost.publishedAt).toLocaleDateString('pt-BR', {
             year: 'numeric',
             month: 'long',
@@ -55,7 +92,7 @@ export default function PostPage({ params }: PostPageProps) {
           }));
         } else {
           setPost(null); // Not found
-          document.title = "Artigo Não Encontrado | SmartAcessorios Blog";
+          // Document title is now set by generateMetadata for static pages
         }
       } catch (error) {
         console.error("Error fetching post by slug:", error);

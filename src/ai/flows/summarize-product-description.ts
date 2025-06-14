@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI agent that summarizes product descriptions from affiliate links.
@@ -48,7 +49,14 @@ const summarizeProductDescriptionFlow = ai.defineFlow(
     outputSchema: SummarizeProductDescriptionOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const response = await prompt(input);
+    const output = response.output;
+
+    if (!output || typeof output.summary !== 'string' || output.summary.trim() === "") {
+      console.error("Summarize flow: AI failed to produce a valid summary object or summary string was empty.", output);
+      throw new Error("AI failed to generate a valid summary.");
+    }
+    return output;
   }
 );
+

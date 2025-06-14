@@ -67,21 +67,24 @@ const generateProductDescriptionFlow = ai.defineFlow(
     console.log("[GENKIT_FLOW_SERVER] generateProductDescriptionFlow INICIADO com input:", input);
     try {
       console.log("[GENKIT_FLOW_SERVER] Chamando o prompt Genkit...");
-      const {output} = await prompt(input);
+      const response = await prompt(input);
+      const output = response.output;
       console.log("[GENKIT_FLOW_SERVER] Resposta do prompt Genkit:", output);
 
-      if (!output?.generatedDescription) {
-          console.error("[GENKIT_FLOW_SERVER] Falha da IA: descrição gerada é nula ou vazia.");
-          throw new Error("AI failed to generate a description. Output was null or description empty.");
+      if (!output || typeof output.generatedDescription !== 'string' || output.generatedDescription.trim() === "") {
+          console.error("[GENKIT_FLOW_SERVER] Falha da IA: descrição gerada é nula, vazia, não é string ou está em branco.");
+          throw new Error("AI failed to generate a valid description or the description was empty.");
       }
       console.log("[GENKIT_FLOW_SERVER] Descrição gerada com sucesso pelo Genkit.");
       return output;
     } catch (error) {
       console.error("[GENKIT_FLOW_SERVER] Erro dentro do fluxo Genkit:", error);
-      throw error; // Re-throw para ser capturado pela Server Action
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(String(error));
     }
   }
 );
-
 
     
