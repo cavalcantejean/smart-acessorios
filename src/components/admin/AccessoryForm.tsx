@@ -18,15 +18,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload, Sparkles } from "lucide-react";
+import { Loader2, Save, Upload } from "lucide-react"; // Sparkles removed
 import { useActionState, useEffect, startTransition, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import type { Accessory } from "@/lib/types";
+// import type { Accessory } from "@/lib/types"; // Accessory type not directly used here
 import type { AccessoryActionResult } from "@/app/admin/accessories/actions";
-import { generateDescriptionWithAIAction } from "@/app/admin/accessories/actions";
+// import { generateDescriptionWithAIAction } from "@/app/admin/accessories/actions"; // AI Action Removed
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useAuth } from "@/hooks/useAuth"; // Import useAuth
+import { useAuth } from "@/hooks/useAuth";
 
 interface AccessoryFormProps {
   formAction: (prevState: AccessoryActionResult | null, formData: FormData) => Promise<AccessoryActionResult>;
@@ -121,9 +121,10 @@ export default function AccessoryForm({
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
-  const { user: authUser, isAuthenticated } = useAuth(); // Get authenticated user
+  // AI Prompt state and related logic removed
+  // const [aiPrompt, setAiPrompt] = useState("");
+  // const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const { user: authUser, isAuthenticated } = useAuth();
 
 
   const form = useForm<AccessoryFormValues>({
@@ -161,7 +162,7 @@ export default function AccessoryForm({
           router.push('/admin/accessories'); 
            form.reset(); 
            setImagePreview(null); 
-           setAiPrompt(""); 
+           // setAiPrompt(""); // AI Prompt state removed
            if(fileInputRef.current) fileInputRef.current.value = ""; 
         } else if (state.accessory && initialData) { 
             // Update
@@ -202,28 +203,8 @@ export default function AccessoryForm({
     }
   };
 
-  const handleGenerateAIDescription = async () => {
-    if (!aiPrompt.trim()) {
-      toast({ title: "Entrada Inválida", description: "Por favor, forneça palavras-chave ou uma ideia para a IA.", variant: "destructive" });
-      return;
-    }
-    setIsGeneratingDescription(true);
-    try {
-      const result = await generateDescriptionWithAIAction(aiPrompt);
-      console.log("AI Description Result from Server Action:", result); // LOG ADICIONADO
-      if (result.success && result.description) {
-        form.setValue("fullDescription", result.description, { shouldValidate: true });
-        toast({ title: "Descrição Gerada!", description: "A descrição completa foi preenchida com o texto da IA." });
-      } else {
-        toast({ title: "Falha na Geração", description: result.error || "Não foi possível gerar a descrição com IA.", variant: "destructive" });
-      }
-    } catch (error) {
-      console.error("Error calling generateDescriptionWithAIAction:", error); // LOG ADICIONADO
-      toast({ title: "Erro de IA", description: "Ocorreu um erro ao se comunicar com a IA.", variant: "destructive" });
-    } finally {
-      setIsGeneratingDescription(false);
-    }
-  };
+  // AI Description generation function removed
+  // const handleGenerateAIDescription = async () => { ... };
 
   const processForm = (data: AccessoryFormValues) => {
     if (!isAuthenticated || !authUser?.id) {
@@ -240,7 +221,7 @@ export default function AccessoryForm({
         }
       }
     });
-    formData.append('userId', authUser.id); // Adiciona o ID do usuário logado
+    formData.append('userId', authUser.id);
     
     startTransition(() => {
       dispatch(formData);
@@ -253,7 +234,7 @@ export default function AccessoryForm({
     <Form {...form}>
       <form
         ref={formRef}
-        action={dispatch} // A ação já está vinculada, onSumbit apenas prepara e chama dispatch
+        action={dispatch}
         onSubmit={form.handleSubmit(processForm)}
         className="space-y-8"
       >
@@ -285,31 +266,7 @@ export default function AccessoryForm({
           )}
         />
 
-        <div className="space-y-2">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
-                <FormLabel htmlFor="aiPromptForDescription" className="mb-0 sm:mb-2">Ideia para Descrição Completa (IA)</FormLabel>
-                <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleGenerateAIDescription} 
-                    disabled={isGeneratingDescription || !aiPrompt.trim()}
-                    className="w-full sm:w-auto"
-                >
-                {isGeneratingDescription ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                Gerar com IA
-                </Button>
-            </div>
-            <Input 
-                id="aiPromptForDescription"
-                placeholder="Ex: fone bluetooth cancelamento ruído, bateria longa, confortável" 
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-            />
-            <FormDescription>
-                Digite palavras-chave ou uma ideia básica e clique em "Gerar com IA" para preencher a Descrição Completa.
-            </FormDescription>
-        </div>
+        {/* AI Description Generation Section Removed */}
 
         <FormField
           control={form.control}
@@ -512,7 +469,7 @@ export default function AccessoryForm({
           )}
         />
         
-        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending || isProcessingImage || isGeneratingDescription} />
+        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending || isProcessingImage /*|| isGeneratingDescription - removed */} />
 
          {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
            <p className="text-sm font-medium text-destructive">{state.error}</p>

@@ -1,32 +1,15 @@
 
-"use server";
-import { summarizeProductDescription, type SummarizeProductDescriptionInput, type SummarizeProductDescriptionOutput } from '@/ai/flows/summarize-product-description';
-import { z } from 'zod';
-// Removed: addCommentToAccessoryData, toggleLikeOnAccessoryData, getAccessoryById, checkAndAwardBadges
-// Removed: Comment type, Timestamp
+// "use server"; // Removed as Server Actions are not supported with static export
+// import { summarizeProductDescription, type SummarizeProductDescriptionInput, type SummarizeProductDescriptionOutput } from '@/ai/flows/summarize-product-description'; // AI Action Removed
+// import { z } from 'zod'; // Zod not needed if no actions
 
-// --- Summarize Action ---
-const SummarizeInputSchema = z.object({
-  productDescription: z.string().min(1, "Product description cannot be empty."),
-});
+// --- Summarize Action --- REMOVED FOR STATIC EXPORT COMPATIBILITY
+// const SummarizeInputSchema = z.object({
+//   productDescription: z.string().min(1, "Product description cannot be empty."),
+// });
+// export async function summarizeAccessoryDescriptionAction(input: SummarizeProductDescriptionInput): Promise<SummarizeProductDescriptionOutput> { ... }
 
-export async function summarizeAccessoryDescriptionAction(input: SummarizeProductDescriptionInput): Promise<SummarizeProductDescriptionOutput> {
-  const validationResult = SummarizeInputSchema.safeParse(input);
-  if (!validationResult.success) {
-    throw new Error(`Invalid input for summary: ${validationResult.error.errors.map(e => e.message).join(', ')}`);
-  }
-
-  try {
-    const summaryOutput = await summarizeProductDescription(validationResult.data);
-    return summaryOutput;
-  } catch (error) {
-    console.error("Error in summarizeAccessoryDescriptionAction:", error);
-    throw new Error("Failed to generate summary. Please try again later.");
-  }
-}
-
-// --- Like Action --- REMOVED
-// toggleLikeAccessoryAction REMOVED
-
-// --- Comment Action --- REMOVED
-// addCommentAccessoryAction REMOVED
+// This file is now empty as its Server Action was removed due to incompatibility with static export.
+// If client-side data fetching or mutations related to accessory details are needed,
+// they should be implemented directly in the client components using the Firebase Client SDK
+// or by calling external APIs (e.g., Firebase Cloud Functions).

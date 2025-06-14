@@ -6,9 +6,8 @@ import { AccessoryFormSchema } from '@/lib/schemas/accessory-schema';
 import { addAccessoryWithAdmin, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data-admin';
 import type { Accessory } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow';
+// import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow'; // AI Action Removed
 import { adminDb } from '@/lib/firebase-admin';
-// AdminTimestamp type is not explicitly needed here if we use duck-typing for .toDate()
 
 interface ClientSafeAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'price' | 'comments'> {
   id: string;
@@ -35,7 +34,6 @@ export interface AccessoryActionResult {
   accessory?: ClientSafeAccessory;
 }
 
-// Changed accessoryData type to `any` to handle raw data from adminDb
 function serializeAccessoryForClient(accessoryData: any): ClientSafeAccessory | undefined {
   if (!accessoryData) return undefined;
 
@@ -50,7 +48,7 @@ function serializeAccessoryForClient(accessoryData: any): ClientSafeAccessory | 
     imageUrl: accessoryData.imageUrl,
     imageHint: accessoryData.imageHint,
     affiliateLink: accessoryData.affiliateLink,
-    price: accessoryData.price, // Assuming price is already a string or correctly formatted
+    price: accessoryData.price, 
     category: accessoryData.category,
     isDeal: accessoryData.isDeal,
     aiSummary: accessoryData.aiSummary,
@@ -121,20 +119,15 @@ export async function createAccessoryAction(
   console.log("[Action:createAccessory] Validated data for Firestore (via Admin SDK):", JSON.stringify(validatedFields.data, null, 2));
 
   try {
-    // addAccessoryWithAdmin adds the document and returns it (with AdminTimestamps)
-    // The returned type from addAccessoryWithAdmin is `Accessory`, which is a client type, this is a bit of a mismatch
-    // but what matters is the actual data structure returned. Let's assume it has AdminTimestamps.
     const tempAccessoryDataFromAdd = await addAccessoryWithAdmin(validatedFields.data as Omit<Accessory, 'id' | 'createdAt' | 'updatedAt' | 'comments'>);
 
-    // Re-fetch to ensure we have the final data structure from DB
     const docRef = adminDb.collection('acessorios').doc(tempAccessoryDataFromAdd.id);
     const newDocSnap = await docRef.get();
     const createdAccessoryDbData = newDocSnap.data();
 
     if (createdAccessoryDbData) {
       const accessoryToSerialize = { id: newDocSnap.id, ...createdAccessoryDbData };
-      // accessoryToSerialize.createdAt and .updatedAt are AdminTimestamps here
-
+      
       revalidatePath('/admin/accessories');
       revalidatePath('/products');
       revalidatePath('/');
@@ -210,10 +203,8 @@ export async function updateAccessoryAction(
   }
 
   try {
-    // updateAccessory in data-admin should return data with AdminTimestamps if it fetches from DB
     const updatedAccessoryFromDb = await updateAccessory(accessoryId, validatedFields.data as Partial<Omit<Accessory, 'id'>>);
     if (updatedAccessoryFromDb) {
-      // updatedAccessoryFromDb here will have AdminTimestamps if fetched directly from DB in updateAccessory
       revalidatePath('/admin/accessories');
       revalidatePath(`/admin/accessories/${accessoryId}/edit`);
       revalidatePath(`/accessory/${accessoryId}`);
@@ -223,7 +214,7 @@ export async function updateAccessoryAction(
       return {
         success: true,
         message: `Acessório "${updatedAccessoryFromDb.name}" atualizado com sucesso!`,
-        accessory: serializeAccessoryForClient(updatedAccessoryFromDb) // Pass raw data from admin function
+        accessory: serializeAccessoryForClient(updatedAccessoryFromDb)
       };
     } else {
       return { success: false, error: `Falha ao atualizar o acessório. ID ${accessoryId} não encontrado.` };
@@ -280,50 +271,16 @@ export async function deleteAccessoryAction(
   }
 }
 
-const GenerateDescriptionAISchema = z.object({
-  productInfo: z.string().min(5, "Product information must be at least 5 characters."),
-});
-
-interface GenerateDescriptionAIResult {
-  success: boolean;
-  description?: string;
-  error?: string;
-}
-
-export async function generateDescriptionWithAIAction(
-  productInfo: string
-): Promise<GenerateDescriptionAIResult> {
-  console.log("[AI_ACTION_SERVER] generateDescriptionWithAIAction chamada com productInfo:", productInfo);
-  const validationResult = GenerateDescriptionAISchema.safeParse({ productInfo });
-  if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => e.message).join(', ');
-    console.error("[AI_ACTION_SERVER] Validação falhou:", errorMessages);
-    return { success: false, error: errorMessages };
-  }
-
-  try {
-    console.log("[AI_ACTION_SERVER] Chamando generateProductDescription (Genkit flow)...");
-    const result: GenerateDescriptionOutput = await generateProductDescription({ productInfo: validationResult.data.productInfo });
-    console.log("[AI_ACTION_SERVER] Resultado do Genkit flow:", result);
-
-    if (result.generatedDescription) {
-      console.log("[AI_ACTION_SERVER] Descrição gerada com sucesso.");
-      return { success: true, description: result.generatedDescription };
-    } else {
-      console.error("[AI_ACTION_SERVER] AI não conseguiu gerar uma descrição, mas não lançou erro.");
-      return { success: false, error: "AI não conseguiu gerar uma descrição." };
-    }
-  } catch (error: any) {
-    console.error("[AI_ACTION_SERVER] Erro em generateDescriptionWithAIAction:", error);
-    let errorMessage = "Falha ao gerar descrição com IA. Tente novamente.";
-    if (error.message) {
-        errorMessage = `Falha na IA: ${error.message}`;
-    }
-    if (error.cause) {
-        errorMessage += ` Causa: ${JSON.stringify(error.cause)}`;
-    }
-    return { success: false, error: errorMessage };
-  }
-}
-
+// AI Action and Schema Removed for static export compatibility
+// const GenerateDescriptionAISchema = z.object({
+//   productInfo: z.string().min(5, "Product information must be at least 5 characters."),
+// });
+// interface GenerateDescriptionAIResult {
+//   success: boolean;
+//   description?: string;
+//   error?: string;
+// }
+// export async function generateDescriptionWithAIAction(
+//   productInfo: string
+// ): Promise<GenerateDescriptionAIResult> { ... }
     

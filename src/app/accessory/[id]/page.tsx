@@ -34,8 +34,8 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
   const id = params.id; 
   console.log('[generateMetadata] Extracted id:', id);
 
-  if (!id) {
-    console.error('[generateMetadata] Error: id is falsy. Value:', id);
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    console.error('[generateMetadata] Error: id is falsy or not a valid string. Value:', id);
     return { title: 'Acessório Inválido (Metadata)' };
   }
   const accessory = await getAccessoryById(id);
@@ -58,8 +58,8 @@ export default async function AccessoryDetailPage({ params }: AccessoryPageProps
   const id = params.id; 
   console.log('[AccessoryDetailPage] Extracted id:', id);
 
-  if (!id) {
-    console.error('[AccessoryDetailPage] Error: id is falsy. Value:', id);
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    console.error('[AccessoryDetailPage] Error: id is falsy or not a valid string. Value:', id);
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Card className="w-full max-w-md p-8 text-center">

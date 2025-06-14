@@ -2,26 +2,20 @@
 "use client";
 
 import { useState, useEffect, useActionState, useRef, startTransition } from 'react';
-import type { Accessory } from '@/lib/types'; // Comment type removed
+import type { Accessory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft } from 'lucide-react'; // ThumbsUp removed
-import { summarizeAccessoryDescriptionAction } from '../actions'; // toggleLikeAccessoryAction, addCommentAccessoryAction removed
+import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft } from 'lucide-react';
+// import { summarizeAccessoryDescriptionAction } from '../actions'; // AI Action Removed
 import FavoriteButton from '@/components/FavoriteButton';
-// LikeButton removed
-// CommentsSection removed
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
-// Timestamp removed
 
-// Type for Accessory props coming into this client component
-// Dates from Firestore Timestamps should be strings (ISO) or numbers (milliseconds)
 interface ClientAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'expiryDate'> {
-  // comments: Array<Omit<Comment, 'createdAt'> & { createdAt: string }>; // REMOVED
-  createdAt?: string; // ISO string or undefined
-  updatedAt?: string; // ISO string or undefined
+  createdAt?: string; 
+  updatedAt?: string; 
 }
 
 interface AccessoryDetailsClientProps {
@@ -30,32 +24,20 @@ interface AccessoryDetailsClientProps {
   onToggleFavorite: (id: string) => void;
 }
 
-// LikeActionResult and initialLikeActionState removed
-
 export default function AccessoryDetailsClient({ accessory: initialAccessory, isFavoriteInitial, onToggleFavorite }: AccessoryDetailsClientProps) {
   const [accessory, setAccessory] = useState<ClientAccessory>(initialAccessory);
   const [currentSummary, setCurrentSummary] = useState<string | undefined>(initialAccessory.aiSummary || initialAccessory.shortDescription);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  // const [isLoadingSummary, setIsLoadingSummary] = useState(false); // AI Summary logic removed
   const [isFavorite, setIsFavorite] = useState(isFavoriteInitial);
 
   const { toast } = useToast();
   const { user, isAuthenticated, isAdmin, isLoading: isLoadingAuth } = useAuth();
 
-  // useActionState for likeState removed
-  // isLikedByCurrentUser and currentLikesCount state removed
-  // currentComments state removed
-
   useEffect(() => {
     setAccessory(initialAccessory);
     setCurrentSummary(initialAccessory.aiSummary || initialAccessory.shortDescription);
     setIsFavorite(isFavoriteInitial);
-    // setCurrentLikesCount(initialAccessory.likedBy?.length || 0); // REMOVED
-    // setIsLikedByCurrentUser(isAuthenticated && user ? initialAccessory.likedBy?.includes(user.id) : false); // REMOVED
-    // setCurrentComments(initialAccessory.comments?.filter(c => c.status === 'approved') || []); // REMOVED
   }, [initialAccessory, isFavoriteInitial, isAuthenticated, user]);
-
-
-  // useEffect for likeState removed
 
   const handleToggleFavoriteClient = () => {
     if (!isAuthenticated) {
@@ -74,37 +56,8 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     });
   };
 
-  // handleInternalLikeAction removed
-  // handleCommentAdded removed
-
-  const handleGenerateSummary = async () => {
-    if (!accessory.fullDescription) {
-      toast({
-        title: "Descrição completa não disponível",
-        description: "Não é possível gerar o resumo.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsLoadingSummary(true);
-    try {
-      const result = await summarizeAccessoryDescriptionAction({ productDescription: accessory.fullDescription });
-      setCurrentSummary(result.summary);
-      toast({
-        title: "Resumo Gerado!",
-        description: "O resumo gerado por IA agora está visível.",
-      });
-    } catch (error) {
-      console.error("Erro ao gerar resumo:", error);
-      setCurrentSummary("Não foi possível gerar o resumo no momento. Por favor, tente novamente.");
-      toast({
-        title: "Erro ao Gerar Resumo",
-        description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido.",
-        variant: "destructive",
-      });
-    }
-    setIsLoadingSummary(false);
-  };
+  // AI Summary generation logic removed
+  // const handleGenerateSummary = async () => { ... };
 
   return (
     <Card className="overflow-hidden shadow-xl">
@@ -137,7 +90,6 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
       <CardContent className="p-6 space-y-4">
         <div className="flex justify-between items-start">
             <CardTitle className="text-3xl font-headline">{accessory.name}</CardTitle>
-            {/* LikeButton removed from here */}
         </div>
 
         {accessory.category && (
@@ -152,16 +104,8 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
           <p className="text-muted-foreground text-sm leading-relaxed">{currentSummary}</p>
         </div>
 
-        {!isLoadingAuth && isAuthenticated && isAdmin && accessory.fullDescription && accessory.fullDescription !== currentSummary && (
-          <Button onClick={handleGenerateSummary} disabled={isLoadingSummary} variant="outline" className="w-full sm:w-auto">
-            {isLoadingSummary ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <MessageSquareText className="mr-2 h-4 w-4" />
-            )}
-            {isLoadingSummary ? 'Gerando...' : (currentSummary === accessory.aiSummary || currentSummary === accessory.shortDescription ? 'Gerar Resumo com IA' : 'Gerar Novo Resumo com IA')}
-          </Button>
-        )}
+        {/* AI Summary generation button and logic removed for static export compatibility */}
+        {/* {!isLoadingAuth && isAuthenticated && isAdmin && accessory.fullDescription && accessory.fullDescription !== currentSummary && ( ... )} */}
 
         {accessory.fullDescription && (
            <details className="mt-4">
@@ -175,8 +119,6 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
             <div className="[&_iframe]:w-full [&_iframe]:h-full [&_iframe]:rounded-lg" dangerouslySetInnerHTML={{ __html: accessory.embedHtml }} />
           </div>
         )}
-
-        {/* CommentsSection removed */}
       </CardContent>
       <CardFooter className="p-6 bg-secondary/30">
         <Button asChild className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
