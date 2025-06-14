@@ -45,16 +45,23 @@ const nextConfig = {
       // and problematic server-side only libraries.
       config.resolve.fallback = {
         ...(config.resolve.fallback || {}),
+        "assert": false,
         "child_process": false,
+        "crypto": false,
         "fs": false,
+        "http": false,
+        "https": false, // Corrected from "httpss"
+        "net": false,
         "os": false,
         "path": false,
-        "net": false,
-        "tls": false,
         "stream": false,
-        "crypto": false,
+        "tls": false,
+        "url": false,
+        "util": false,
+        "zlib": false,
+        // Specific libraries that are server-side only
         "firebase-admin": false, 
-        "@google-cloud/firestore": false, // Explicitly false for this problematic one too
+        "@google-cloud/firestore": false,
       };
     }
 
