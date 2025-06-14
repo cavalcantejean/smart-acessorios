@@ -1,5 +1,5 @@
 
-import { getUserById } from '@/lib/data'; // Now async
+import { getUserById, getAllUsers } from '@/lib/data'; // Now async, added getAllUsers
 import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,14 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import UserProfileClientView from './components/UserProfileClientView';
 import { Timestamp } from 'firebase/firestore';
+import type { Metadata } from 'next';
+
+export async function generateStaticParams() {
+  const users = await getAllUsers();
+  return users.map((user) => ({
+    id: user.id,
+  }));
+}
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const user = await getUserById(params.id); // Await async call
