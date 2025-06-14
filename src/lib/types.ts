@@ -17,22 +17,6 @@ export interface Accessory {
   embedHtml?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
-  comments?: Comment[]; // Updated to use the new Comment type
-}
-
-export interface Comment {
-  id: string;
-  userId: string;
-  userName: string;
-  text: string;
-  status: 'pending_review' | 'approved' | 'rejected';
-  createdAt: Timestamp; // Firestore Timestamp initially
-}
-
-export interface PendingCommentDisplay {
-  comment: Comment;
-  accessoryId: string;
-  accessoryName: string;
 }
 
 export interface Coupon {
@@ -115,8 +99,6 @@ export interface AnalyticsData {
 }
 
 // Site Settings Types
-
-// Base SocialLinkSetting type (includes IconComponent for client-side use definition)
 export interface SocialLinkSetting {
   platform: string;
   label: string;
@@ -126,16 +108,14 @@ export interface SocialLinkSetting {
   IconComponent?: ComponentType<{ className?: string }>;
 }
 
-// Type for SiteSettings stored in Firestore (omits IconComponent)
 export interface SiteSettings {
   siteTitle: string;
   siteDescription: string;
-  socialLinks: Array<Omit<SocialLinkSetting, 'IconComponent' | 'placeholderUrl'>>; // Only store essential data
+  socialLinks: Array<Omit<SocialLinkSetting, 'IconComponent' | 'placeholderUrl'>>; 
   siteLogoUrl?: string;
   siteFaviconUrl?: string;
 }
 
-// Type for SiteSettings when used on the client (includes IconComponent)
 export interface SiteSettingsForClient extends Omit<SiteSettings, 'socialLinks'> {
-  socialLinks: SocialLinkSetting[]; // This will be the fully merged structure with Icons and placeholders
+  socialLinks: SocialLinkSetting[]; 
 }

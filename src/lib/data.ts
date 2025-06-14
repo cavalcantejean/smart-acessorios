@@ -39,10 +39,6 @@ const convertTimestampToStringForDisplay = (timestamp: Timestamp | undefined): s
 };
 
 // --- Default Site Settings Structure (for storage) ---
-// This structure should ONLY contain data to be stored/used by admin.
-// IconComponent and placeholderUrl are client-side/UI concerns.
-// Label is kept as it's part of the default identity of the link.
-// URL is the default initial URL.
 const defaultSocialLinksDataForStorage: Array<Omit<SocialLinkSetting, 'IconComponent' | 'placeholderUrl'>> = [
     { platform: "Facebook", label: "Facebook", url: "https://www.facebook.com/profile.php?id=61575978087535", customImageUrl: "" },
     { platform: "Instagram", label: "Instagram", url: "https://www.instagram.com/smart.acessorios", customImageUrl: "" },
@@ -353,7 +349,4 @@ export async function getLatestPosts(count: number): Promise<Post[]> {
   }
 }
 
-export async function checkAndAwardBadges(userId: string): Promise<void> {
-  // Badge system removed. This function is now a no-op.
-  return;
-}
+// checkAndAwardBadges function removed as badge system is removed.

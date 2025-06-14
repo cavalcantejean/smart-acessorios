@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
-import PostForm from '@/components/admin/PostForm'; // Corrected import path
-import { createPostAction } from '../actions';
+import PostForm from '@/components/admin/PostForm'; 
+// createPostAction removed for static export
 
 export const metadata: Metadata = {
   title: 'Adicionar Novo Post | Admin SmartAcessorios',
@@ -13,8 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default function NewPostPage() {
-  // Admin auth check should be here or in a layout
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -34,13 +32,14 @@ export default function NewPostPage() {
         <CardHeader>
           <CardTitle>Formulário de Novo Post</CardTitle>
           <CardDescription>
-            Preencha todos os campos obrigatórios para cadastrar um novo post.
+            Preencha todos os campos obrigatórios para cadastrar um novo post. (Salvamento desativado para exportação estática).
           </CardDescription>
         </CardHeader>
         <CardContent>
           <PostForm 
-            formAction={createPostAction} 
+            // formAction prop removed
             submitButtonText="Criar Post"
+            isStaticExport={true}
           />
         </CardContent>
       </Card>

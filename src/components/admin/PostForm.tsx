@@ -18,32 +18,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
-import { useActionState, useEffect, startTransition, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useEffect, useState, useRef } from "react";
+// PostActionResult type and useActionState/useFormStatus removed for static export
 import type { Post } from "@/lib/types";
-import type { PostActionResult } from "@/app/admin/blog-posts/actions";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 interface PostFormProps {
-  formAction: (prevState: PostActionResult | null, formData: FormData) => Promise<PostActionResult>;
-  initialData?: Partial<PostFormValues & { id?: string; tags?: string[] }>; // Adjusted for tags array
+  // formAction prop removed
+  initialData?: Partial<PostFormValues & { id?: string; tags?: string[] }>; 
   submitButtonText?: string;
-}
-
-const initialState: PostActionResult = { success: false };
-
-function SubmitButton({ text, pending }: { text: string; pending: boolean }) {
-  return (
-    <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-      {pending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <Save className="mr-2 h-4 w-4" />
-      )}
-      {text}
-    </Button>
-  );
+  isStaticExport?: boolean;
 }
 
 const processImageFile = (file: File, maxWidth: number = 1200, maxHeight: number = 675, quality: number = 0.75): Promise<string> => {
@@ -81,18 +66,16 @@ const processImageFile = (file: File, maxWidth: number = 1200, maxHeight: number
 };
 
 export default function PostForm({
-  formAction,
   initialData,
   submitButtonText = "Salvar Post",
+  isStaticExport = true,
 }: PostFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
-  const { pending } = useFormStatus();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const defaultPublishedAt = initialData?.publishedAt 
     ? new Date(initialData.publishedAt).toISOString().split('T')[0] 
@@ -121,33 +104,6 @@ export default function PostForm({
     if (initialData?.imageUrl) setImagePreview(initialData.imageUrl);
   }, [initialData?.imageUrl]);
 
-  useEffect(() => {
-    if (state?.message) {
-      if (state.success) {
-        toast({ title: "Sucesso!", description: state.message });
-        if (state.post && !initialData) { 
-          console.log("PostForm: Create success, attempting redirect to /admin/blog-posts");
-          router.push('/admin/blog-posts');
-          form.reset({ 
-            title: "", slug: "", excerpt: "", content: "", imageUrl: "", imageHint: "",
-            authorName: "Equipe SmartAcessorios", authorAvatarUrl: "", authorAvatarHint: "",
-            category: "", tags: "", publishedAt: new Date().toISOString().split('T')[0],
-            embedHtml: ""
-          });
-          setImagePreview(null);
-          if(fileInputRef.current) fileInputRef.current.value = "";
-        } else if (state.post && initialData) {
-           // Update, no redirect
-        }
-      } else {
-        toast({ title: "Erro", description: state.error || state.message || "Falha ao salvar post.", variant: "destructive" });
-        state.errors?.forEach(issue => {
-          form.setError(issue.path[0] as keyof PostFormValues, { type: "server", message: issue.message });
-        });
-      }
-    }
-  }, [state, toast, form, router, initialData]);
-
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -168,21 +124,32 @@ export default function PostForm({
     }
   };
   
-  const processForm = (data: PostFormValues) => {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-            formData.append(key, String(value));
-        }
-    });
-    startTransition(() => {
-      dispatch(formData);
-    });
+  const handleSubmit = async (data: PostFormValues) => {
+    if (isStaticExport) {
+      toast({
+        title: "Funcionalidade Indisponível",
+        description: "O salvamento de posts não é suportado na exportação estática.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsSubmitting(true);
+    console.log("Post data submitted (client-side):", data);
+    toast({ title: "Simulação de Envio", description: "Dados do post registrados no console." });
+    setTimeout(() => {
+      setIsSubmitting(false);
+      // router.push('/admin/blog-posts');
+    }, 1000);
   };
 
   return (
     <Form {...form}>
-      <form ref={formRef} action={dispatch} onSubmit={form.handleSubmit(processForm)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+        {isStaticExport && (
+           <div className="p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
+             <strong>Modo de Demonstração Estática:</strong> As modificações de dados estão desativadas.
+           </div>
+        )}
         <FormField control={form.control} name="title" render={({ field }) => (
             <FormItem>
               <FormLabel>Título do Post</FormLabel>
@@ -341,13 +308,15 @@ export default function PostForm({
             </FormItem>
         )} />
 
-        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending || isProcessingImage} />
-        {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
-           <p className="text-sm font-medium text-destructive">{state.error}</p>
-        )}
+        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isProcessingImage || isStaticExport}>
+          {isSubmitting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {submitButtonText}
+        </Button>
       </form>
     </Form>
   );
 }
-
-    

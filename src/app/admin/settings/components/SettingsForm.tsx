@@ -18,20 +18,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Upload, Image as ImageIcon, Settings2 } from "lucide-react";
-import { useActionState, useEffect, startTransition, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
-import type { SettingsActionResult } from "../actions";
+import { useEffect, useState, useRef } from "react";
+// SettingsActionResult and related hooks removed for static export
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBaseSocialLinkSettings } from "@/lib/data"; 
-import type { SettingsFormDataForClient } from "../page"; // Use updated type from page
+import type { SettingsFormDataForClient } from "../page"; 
 import Image from "next/image"; 
 
 interface SettingsFormProps {
-  formAction: (prevState: SettingsActionResult | null, formData: FormData) => Promise<SettingsActionResult>;
+  // formAction prop removed
   initialData: SettingsFormDataForClient;
+  isStaticExport?: boolean;
 }
-
-const initialState: SettingsActionResult = { success: false };
 
 const processImageFile = (file: File, maxWidth: number = 64, maxHeight: number = 64, quality: number = 0.8, type: 'image/png' | 'image/jpeg' = 'image/png'): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -68,22 +66,9 @@ const processImageFile = (file: File, maxWidth: number = 64, maxHeight: number =
   });
 };
 
-
-function SubmitButton({ text, pending }: { text: string; pending: boolean }) {
-  return (
-    <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-      {text}
-    </Button>
-  );
-}
-
-export default function SettingsForm({ formAction, initialData }: SettingsFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState);
+export default function SettingsForm({ initialData, isStaticExport = true }: SettingsFormProps) {
   const { toast } = useToast();
-  const formRef = useRef<HTMLFormElement>(null);
-  const { pending } = useFormStatus();
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [siteLogoPreview, setSiteLogoPreview] = useState<string | null>(initialData.siteLogoUrl || null);
   const [siteFaviconPreview, setSiteFaviconPreview] = useState<string | null>(initialData.siteFaviconUrl || null);
   const [isProcessingLogo, setIsProcessingLogo] = useState(false);
@@ -119,49 +104,18 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
     control: form.control,
     name: "socialLinks",
   });
-
+  
   useEffect(() => {
-    if (state?.message) {
-      if (state.success) {
-        toast({ title: "Sucesso!", description: state.message });
-        if (state.updatedSettings) {
-          const newSocialPreviews: Record<string, string | null> = {};
-          const formSocialLinks = state.updatedSettings.socialLinks.map(sl => {
-            newSocialPreviews[sl.platform] = sl.customImageUrl || null;
-            return {
-              platform: sl.platform,
-              label: sl.label,
-              url: sl.url || '',
-              customImageUrl: sl.customImageUrl || '',
-            };
-          });
-          form.reset({
-            siteTitle: state.updatedSettings.siteTitle,
-            siteDescription: state.updatedSettings.siteDescription,
-            siteLogoUrl: state.updatedSettings.siteLogoUrl || '',
-            siteFaviconUrl: state.updatedSettings.siteFaviconUrl || '',
-            socialLinks: formSocialLinks,
-          });
-          setImagePreviews(newSocialPreviews);
-          setSiteLogoPreview(state.updatedSettings.siteLogoUrl || null);
-          setSiteFaviconPreview(state.updatedSettings.siteFaviconUrl || null);
-        }
-      } else {
-        toast({
-          title: "Erro",
-          description: state.error || state.message || "Falha ao salvar configurações.",
-          variant: "destructive",
-        });
-        state.errors?.forEach(issue => {
-          const path = issue.path.join('.') as keyof SettingsFormValues | `socialLinks.${number}.url` | `socialLinks.${number}.customImageUrl` | 'siteLogoUrl' | 'siteFaviconUrl';
-          form.setError(path as any, {
-            type: "server",
-            message: issue.message,
-          });
-        });
-      }
-    }
-  }, [state, toast, form]);
+    // Reset previews if initialData changes (e.g., after a simulated save for demo)
+    setSiteLogoPreview(initialData.siteLogoUrl || null);
+    setSiteFaviconPreview(initialData.siteFaviconUrl || null);
+    const newSocialPreviews: Record<string, string | null> = {};
+    initialData.socialLinks.forEach(sl => {
+        newSocialPreviews[sl.platform] = sl.customImageUrl || null;
+    });
+    setImagePreviews(newSocialPreviews);
+  }, [initialData]);
+
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -183,7 +137,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
       } catch (error) {
         console.error("Error processing image:", error);
         toast({ title: "Erro de Imagem", description: `Falha ao processar ${formFieldName === 'siteLogoUrl' ? 'Logo' : 'Favicon'}.`, variant: "destructive" });
-        setImagePreviewState(initialData[formFieldName] || null);
+        setImagePreviewState(form.getValues(formFieldName) || null); // Revert to form value on error
       } finally {
         setProcessingState(false);
       }
@@ -211,32 +165,46 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
     }
   };
 
-  const onSubmit = (data: SettingsFormValues) => {
-    const formData = new FormData();
-    formData.append('siteTitle', data.siteTitle);
-    formData.append('siteDescription', data.siteDescription);
-    formData.append('siteLogoUrl', data.siteLogoUrl || '');
-    formData.append('siteFaviconUrl', data.siteFaviconUrl || '');
+  const handleSubmit = async (data: SettingsFormValues) => {
+    if (isStaticExport) {
+      toast({
+        title: "Funcionalidade Indisponível",
+        description: "A atualização de configurações não é suportada na exportação estática.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsSubmitting(true);
+    console.log("Settings data submitted (client-side):", data);
+    toast({ title: "Simulação de Envio", description: "Dados de configurações registrados no console." });
+    setTimeout(() => {
+      setIsSubmitting(false);
+      // Simulate data being "saved" and re-populating the form (for UI feedback)
+      // In a real scenario with client-side Firebase, you'd fetch fresh data or merge
+      form.reset(data); 
+      setSiteLogoPreview(data.siteLogoUrl || null);
+      setSiteFaviconPreview(data.siteFaviconUrl || null);
+      const newSocialPreviews: Record<string, string | null> = {};
+        data.socialLinks.forEach(sl => {
+            newSocialPreviews[sl.platform] = sl.customImageUrl || null;
+        });
+      setImagePreviews(newSocialPreviews);
+      toast({ title: "Configurações 'Salvas'", description: "As alterações foram refletidas no formulário (simulação)." });
 
-    data.socialLinks.forEach((link, index) => {
-      formData.append(`socialLinks[${index}].platform`, link.platform);
-      formData.append(`socialLinks[${index}].label`, link.label);
-      formData.append(`socialLinks[${index}].url`, link.url || '');
-      formData.append(`socialLinks[${index}].customImageUrl`, link.customImageUrl || '');
-    });
-    startTransition(() => {
-      dispatch(formData);
-    });
+    }, 1000);
   };
 
   return (
     <Form {...form}>
       <form
-        ref={formRef}
-        action={dispatch}
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(handleSubmit)}
         className="space-y-8"
       >
+        {isStaticExport && (
+           <div className="p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
+             <strong>Modo de Demonstração Estática:</strong> As modificações de dados estão desativadas.
+           </div>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Settings2 className="h-5 w-5"/>Configurações Gerais do Site</CardTitle>
@@ -285,7 +253,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
                         accept="image/png, image/jpeg, image/svg+xml" 
                         className="cursor-pointer"
                         onChange={(e) => handleImageUpload(e, setSiteLogoPreview, setIsProcessingLogo, "siteLogoUrl", 240, 60, 'image/png')}
-                        disabled={isProcessingLogo}
+                        disabled={isProcessingLogo || isStaticExport}
                        />
                     </FormControl>
                      <input type="hidden" {...form.register("siteLogoUrl")} />
@@ -312,7 +280,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
                         accept="image/png, image/x-icon, image/vnd.microsoft.icon" 
                         className="cursor-pointer"
                         onChange={(e) => handleImageUpload(e, setSiteFaviconPreview, setIsProcessingFavicon, "siteFaviconUrl", 64, 64, 'image/png')}
-                        disabled={isProcessingFavicon}
+                        disabled={isProcessingFavicon || isStaticExport}
                         />
                     </FormControl>
                     <input type="hidden" {...form.register("siteFaviconUrl")} />
@@ -328,8 +296,6 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
                 )}
               />
             </div>
-
-
           </CardContent>
         </Card>
 
@@ -387,7 +353,7 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
                             accept="image/png, image/jpeg, image/svg+xml, image/gif"
                             className="cursor-pointer"
                             onChange={(e) => handleSocialImageUpload(e, index, formField.platform)}
-                            disabled={isProcessingSocialImage[formField.platform]}
+                            disabled={isProcessingSocialImage[formField.platform] || isStaticExport}
                           />
                         </FormControl>
                         {isProcessingSocialImage[formField.platform] && <p className="text-xs text-muted-foreground flex items-center"><Loader2 className="mr-1 h-3 w-3 animate-spin"/> Processando...</p>}
@@ -405,10 +371,10 @@ export default function SettingsForm({ formAction, initialData }: SettingsFormPr
           </CardContent>
         </Card>
 
-        <SubmitButton text="Salvar Configurações" pending={form.formState.isSubmitting || pending || isProcessingLogo || isProcessingFavicon || Object.values(isProcessingSocialImage).some(v => v)} />
-         {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
-           <p className="text-sm font-medium text-destructive">{state.error}</p>
-        )}
+        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isProcessingLogo || isProcessingFavicon || Object.values(isProcessingSocialImage).some(v => v) || isStaticExport}>
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Salvar Configurações
+        </Button>
       </form>
     </Form>
   );

@@ -1,10 +1,9 @@
 
 "use client";
 
-import { useActionState, useEffect, useState, startTransition } from 'react'; // Added startTransition
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { UserPlus, UserMinus, Loader2 } from 'lucide-react';
-import type { toggleFollowAction } from '@/app/profile/actions'; // Type only import
 import { useToast } from '@/hooks/use-toast';
 
 interface FollowButtonProps {
@@ -12,72 +11,68 @@ interface FollowButtonProps {
   targetUserId: string;
   initialIsFollowing: boolean;
   initialFollowersCount: number;
-  formAction: typeof toggleFollowAction; // Pass the server action
+  // formAction prop removed
   className?: string;
+  isStaticExport?: boolean;
 }
-
-interface ActionState {
-  success: boolean;
-  isFollowing?: boolean;
-  followersCount?: number;
-  message?: string;
-  error?: string;
-}
-
-const initialActionState: ActionState = { success: false };
 
 export default function FollowButton({
   currentUserId,
   targetUserId,
   initialIsFollowing,
   initialFollowersCount,
-  formAction,
   className,
+  isStaticExport = true, // Default to true, disabling functionality
 }: FollowButtonProps) {
-  const [state, handleFormAction, isPending] = useActionState(formAction, initialActionState);
   const { toast } = useToast();
-
-  // Local state to manage UI optimistically and based on server response
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
+  const [isPending, setIsPending] = useState(false);
 
   useEffect(() => {
-    // Sync with initial props
     setIsFollowing(initialIsFollowing);
     setFollowersCount(initialFollowersCount);
   }, [initialIsFollowing, initialFollowersCount]);
 
-  useEffect(() => {
-    if (state?.message) {
-      if (state.success) {
-        // Update local state based on successful server response
-        if (typeof state.isFollowing === 'boolean') setIsFollowing(state.isFollowing);
-        if (typeof state.followersCount === 'number') setFollowersCount(state.followersCount);
-        toast({ title: state.message });
-      } else {
-        toast({ title: "Erro", description: state.error || "Ação falhou", variant: "destructive" });
-        // Revert optimistic updates if server action failed (if any were made)
-        // For this setup, we primarily rely on server state.
-      }
+  const handleClick = () => {
+    if (isStaticExport) {
+      toast({
+        title: "Funcionalidade Indisponível",
+        description: "Seguir usuários não é suportado na exportação estática.",
+        variant: "destructive",
+      });
+      return;
     }
-  }, [state, toast]);
 
-  const handleSubmit = () => {
-    const formData = new FormData();
-    formData.append('currentUserId', currentUserId);
-    formData.append('targetUserId', targetUserId);
-    startTransition(() => {
-      handleFormAction(formData);
-    });
+    if (currentUserId === targetUserId) {
+      toast({ title: "Ação Inválida", description: "Você não pode seguir a si mesmo.", variant: "destructive" });
+      return;
+    }
+
+    setIsPending(true);
+    // Client-side Firebase logic would go here for dynamic deployment
+    console.log(`Attempting to ${isFollowing ? 'unfollow' : 'follow'} user ${targetUserId} (client-side simulation)`);
+    
+    setTimeout(() => {
+      setIsFollowing(!isFollowing);
+      setFollowersCount(prev => isFollowing ? prev - 1 : prev + 1);
+      toast({ title: `Sucesso (Simulado)!`, description: isFollowing ? `Deixou de seguir.` : `Agora seguindo!` });
+      setIsPending(false);
+    }, 1000);
   };
+
+  if (!currentUserId) { // Don't show button if not logged in (currentUserId is a proxy for auth status here)
+    return null;
+  }
 
   return (
     <Button
-      onClick={handleSubmit}
-      disabled={isPending || currentUserId === targetUserId}
+      onClick={handleClick}
+      disabled={isPending || currentUserId === targetUserId || isStaticExport}
       variant={isFollowing ? "outline" : "default"}
       size="sm"
       className={className}
+      title={isStaticExport ? "Seguir usuários desativado em modo estático" : (isFollowing ? "Deixar de seguir" : "Seguir")}
     >
       {isPending ? (
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

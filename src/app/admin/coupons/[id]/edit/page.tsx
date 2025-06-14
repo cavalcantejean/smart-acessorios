@@ -1,5 +1,5 @@
 
-import { getCouponById, getCoupons } from '@/lib/data'; // Now async, added getCoupons
+import { getCouponById, getCoupons } from '@/lib/data'; 
 import type { Coupon } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, TicketPercent } from 'lucide-react';
 import type { Metadata } from 'next';
 import CouponForm from '../../components/CouponForm';
-import { updateCouponAction } from '../../actions';
+// updateCouponAction removed
 import { Timestamp } from 'firebase/firestore';
 
 export async function generateStaticParams() {
@@ -18,7 +18,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const coupon = await getCouponById(params.id); // Await async call
+  const coupon = await getCouponById(params.id); 
   if (!coupon) {
     return { title: 'Cupom Não Encontrado | Admin' };
   }
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditCouponPage({ params }: { params: { id: string } }) {
-  const coupon = await getCouponById(params.id); // Await async call
+  const coupon = await getCouponById(params.id); 
 
   if (!coupon) {
     return (
@@ -48,9 +48,8 @@ export default async function EditCouponPage({ params }: { params: { id: string 
     );
   }
 
-  const boundUpdateCouponAction = updateCouponAction.bind(null, coupon.id);
+  // boundUpdateCouponAction removed
 
-  // Prepare initialData for the form. expiryDate needs to be in 'yyyy-MM-dd' format if present.
   const initialDataForForm = {
     ...coupon,
     expiryDate: coupon.expiryDate instanceof Timestamp
@@ -81,18 +80,18 @@ export default async function EditCouponPage({ params }: { params: { id: string 
         <CardHeader>
           <CardTitle>Formulário de Edição de Cupom</CardTitle>
           <CardDescription>
-            Altere os campos abaixo para atualizar o cupom.
+            Altere os campos abaixo para atualizar o cupom. (Salvamento desativado para exportação estática).
           </CardDescription>
         </CardHeader>
         <CardContent>
             <CouponForm
-              formAction={boundUpdateCouponAction}
+              // formAction prop removed
               initialData={initialDataForForm}
               submitButtonText="Salvar Alterações"
+              isStaticExport={true}
             />
         </CardContent>
       </Card>
     </div>
   );
 }
-

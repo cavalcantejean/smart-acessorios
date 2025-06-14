@@ -1,5 +1,5 @@
 
-import { getAccessoryById, getAllAccessories } from '@/lib/data'; // Now async
+import { getAccessoryById, getAllAccessories } from '@/lib/data'; 
 import type { Accessory } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, Construction, AlertTriangle } from 'lucide-react';
 import type { Metadata } from 'next';
 import AccessoryForm from '@/components/admin/AccessoryForm';
-import { updateAccessoryAction } from '../../actions';
+// updateAccessoryAction removed as Server Actions are not used for static export
 import { Timestamp } from 'firebase/firestore';
 
 export async function generateStaticParams() {
@@ -18,7 +18,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const accessory = await getAccessoryById(params.id); // Await async call
+  const accessory = await getAccessoryById(params.id); 
   if (!accessory) {
     return { title: 'Acessório Não Encontrado | Admin' };
   }
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditAccessoryPage({ params }: { params: { id: string } }) {
-  const accessory = await getAccessoryById(params.id); // Await async call
+  const accessory = await getAccessoryById(params.id); 
 
   if (!accessory) {
     return (
@@ -48,15 +48,13 @@ export default async function EditAccessoryPage({ params }: { params: { id: stri
     );
   }
 
-  const boundUpdateAccessoryAction = updateAccessoryAction.bind(null, accessory.id);
+  // const boundUpdateAccessoryAction = updateAccessoryAction.bind(null, accessory.id); // Removed
 
-  // Prepare initialData for the form, converting Timestamps if necessary
   const initialDataForForm = {
     ...accessory,
-    // Ensure date fields that might be Timestamps are converted for form if needed
-    // For AccessoryForm, it expects strings or booleans as per AccessoryFormValues
-    // Price is already string in schema, isDeal is boolean
-    // Timestamps (createdAt, updatedAt) are not directly on the form schema
+    price: accessory.price || "", // Ensure price is a string
+    // Convert Timestamps if necessary for any fields not directly in AccessoryFormValues schema
+    // but handled by Accessory type. Here, AccessoryFormValues expects strings/booleans.
   };
 
 
@@ -79,14 +77,15 @@ export default async function EditAccessoryPage({ params }: { params: { id: stri
         <CardHeader>
           <CardTitle>Formulário de Edição de Acessório</CardTitle>
           <CardDescription>
-            Modifique os campos abaixo para atualizar o acessório.
+            Modifique os campos abaixo para atualizar o acessório. (Salvamento desativado para exportação estática).
           </CardDescription>
         </CardHeader>
         <CardContent>
            <AccessoryForm
-              formAction={boundUpdateAccessoryAction}
-              initialData={initialDataForForm} // Pass the prepared data
+              // formAction prop removed
+              initialData={initialDataForForm as any} 
               submitButtonText="Salvar Alterações"
+              isStaticExport={true} // Explicitly pass flag
             />
         </CardContent>
       </Card>

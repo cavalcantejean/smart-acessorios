@@ -18,35 +18,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload } from "lucide-react"; // Sparkles removed
-import { useActionState, useEffect, startTransition, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { Loader2, Save, Upload } from "lucide-react"; 
+import { useEffect, useState, useRef } from "react";
 // import type { Accessory } from "@/lib/types"; // Accessory type not directly used here
-import type { AccessoryActionResult } from "@/app/admin/accessories/actions";
-// import { generateDescriptionWithAIAction } from "@/app/admin/accessories/actions"; // AI Action Removed
+// AccessoryActionResult type and useActionState/useFormStatus removed as server actions are disabled for static export
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 
 interface AccessoryFormProps {
-  formAction: (prevState: AccessoryActionResult | null, formData: FormData) => Promise<AccessoryActionResult>;
+  // formAction prop removed as Server Actions are not used for static export
   initialData?: Partial<AccessoryFormValues>;
   submitButtonText?: string;
-}
-
-const initialState: AccessoryActionResult = { success: false };
-
-function SubmitButton({ text, pending }: { text: string; pending: boolean }) {
-  return (
-    <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-      {pending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <Save className="mr-2 h-4 w-4" />
-      )}
-      {text}
-    </Button>
-  );
+  isStaticExport?: boolean; // Flag to indicate static export mode
 }
 
 const processImageFile = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.7): Promise<string> => {
@@ -108,22 +92,17 @@ const isLikelyDataURL = (string: string | null | undefined): boolean => {
 
 
 export default function AccessoryForm({
-  formAction,
   initialData,
   submitButtonText = "Salvar Acessório",
+  isStaticExport = true, // Default to true, disabling form submissions
 }: AccessoryFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
-  const { pending } = useFormStatus();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Local submitting state
   
-  // AI Prompt state and related logic removed
-  // const [aiPrompt, setAiPrompt] = useState("");
-  // const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const { user: authUser, isAuthenticated } = useAuth();
 
 
@@ -151,38 +130,6 @@ export default function AccessoryForm({
   }, [initialData?.imageUrl]);
 
 
-  useEffect(() => {
-    if (state?.message) {
-      if (state.success) {
-        toast({
-          title: "Sucesso!",
-          description: state.message,
-        });
-        if (state.accessory && !initialData) { 
-          router.push('/admin/accessories'); 
-           form.reset(); 
-           setImagePreview(null); 
-           // setAiPrompt(""); // AI Prompt state removed
-           if(fileInputRef.current) fileInputRef.current.value = ""; 
-        } else if (state.accessory && initialData) { 
-            // Update
-        }
-      } else {
-        toast({
-          title: "Erro",
-          description: state.error || state.message || "Falha ao salvar acessório.",
-          variant: "destructive",
-        });
-        state.errors?.forEach(issue => {
-          form.setError(issue.path[0] as keyof AccessoryFormValues, {
-            type: "server",
-            message: issue.message,
-          });
-        });
-      }
-    }
-  }, [state, toast, form, router, initialData]);
-
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -203,29 +150,33 @@ export default function AccessoryForm({
     }
   };
 
-  // AI Description generation function removed
-  // const handleGenerateAIDescription = async () => { ... };
-
-  const processForm = (data: AccessoryFormValues) => {
-    if (!isAuthenticated || !authUser?.id) {
-      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador para realizar esta ação.", variant: "destructive" });
+  const handleSubmit = async (data: AccessoryFormValues) => {
+    if (isStaticExport) {
+      toast({
+        title: "Funcionalidade Indisponível",
+        description: "O salvamento de dados não é suportado na exportação estática. Esta ação é apenas demonstrativa.",
+        variant: "destructive",
+      });
       return;
     }
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        if (typeof value === 'boolean') {
-          formData.append(key, value ? 'on' : '');
-        } else {
-          formData.append(key, String(value));
-        }
-      }
-    });
-    formData.append('userId', authUser.id);
+
+    if (!isAuthenticated || !authUser?.id) {
+      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador.", variant: "destructive" });
+      return;
+    }
     
-    startTransition(() => {
-      dispatch(formData);
-    });
+    setIsSubmitting(true);
+    // Here you would implement client-side Firebase SDK calls if not using static export
+    // For static export, this logic is effectively disabled by the isStaticExport check.
+    console.log("Form data submitted (client-side):", data);
+    toast({ title: "Simulação de Envio", description: "Dados do formulário registrados no console (cliente)." });
+    
+    // Simulate a delay and success/failure for UI feedback
+    setTimeout(() => {
+      setIsSubmitting(false);
+      // Example: router.push('/admin/accessories');
+      // form.reset();
+    }, 1000);
   };
   
   const displayableImagePreview = imagePreview && (isValidHttpUrl(imagePreview) || isLikelyDataURL(imagePreview)) ? imagePreview : null;
@@ -233,11 +184,14 @@ export default function AccessoryForm({
   return (
     <Form {...form}>
       <form
-        ref={formRef}
-        action={dispatch}
-        onSubmit={form.handleSubmit(processForm)}
+        onSubmit={form.handleSubmit(handleSubmit)} // Changed to local handleSubmit
         className="space-y-8"
       >
+        {isStaticExport && (
+           <div className="p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
+             <strong>Modo de Demonstração Estática:</strong> As modificações de dados estão desativadas.
+           </div>
+        )}
         <FormField
           control={form.control}
           name="name"
@@ -265,8 +219,6 @@ export default function AccessoryForm({
             </FormItem>
           )}
         />
-
-        {/* AI Description Generation Section Removed */}
 
         <FormField
           control={form.control}
@@ -469,11 +421,14 @@ export default function AccessoryForm({
           )}
         />
         
-        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending || isProcessingImage /*|| isGeneratingDescription - removed */} />
-
-         {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
-           <p className="text-sm font-medium text-destructive">{state.error}</p>
-        )}
+        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isProcessingImage || isStaticExport}>
+          {isSubmitting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {submitButtonText}
+        </Button>
       </form>
     </Form>
   );

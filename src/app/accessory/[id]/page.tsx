@@ -1,6 +1,6 @@
 
 import { getAccessoryById, getAllAccessories } from '@/lib/data'; 
-import type { Accessory } from '@/lib/types'; // Comment type removed
+import type { Accessory } from '@/lib/types'; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';

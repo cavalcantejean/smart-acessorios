@@ -6,20 +6,19 @@ import Link from 'next/link';
 import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react';
 import type { Metadata } from 'next';
 import SettingsForm from './components/SettingsForm';
-import { updateSettingsAction } from './actions';
+// updateSettingsAction removed
 
 export const metadata: Metadata = {
   title: 'Configurações do Site | Admin SmartAcessorios',
   description: 'Gerencie as configurações gerais do site.',
 };
 
-// This interface is for the data passed to the Client Component (SettingsForm)
 export interface SocialLinkFormData {
   platform: string;
   label: string;
-  url: string; // User-editable URL
-  placeholderUrl: string; // Default placeholder
-  customImageUrl?: string; // User-editable custom image
+  url: string; 
+  placeholderUrl: string; 
+  customImageUrl?: string; 
 }
 
 export interface SettingsFormDataForClient {
@@ -32,18 +31,17 @@ export interface SettingsFormDataForClient {
 
 
 export default async function SiteSettingsPage() {
-  const currentSettings: SiteSettings = await getSiteSettings(); // Now async
-  const baseSocialLinks = getBaseSocialLinkSettings(); // Sync, gets default structure
+  const currentSettings: SiteSettings = await getSiteSettings(); 
+  const baseSocialLinks = getBaseSocialLinkSettings(); 
   
-  // Merge current settings with base social link structure
   const mergedSocialLinks: SocialLinkFormData[] = baseSocialLinks.map(baseLink => {
     const currentLinkData = currentSettings.socialLinks.find(cs => cs.platform === baseLink.platform);
     return {
       platform: baseLink.platform,
-      label: baseLink.label, // Use label from base structure
-      placeholderUrl: baseLink.placeholderUrl, // Use placeholder from base structure
-      url: currentLinkData?.url || "", // Use stored URL or empty
-      customImageUrl: currentLinkData?.customImageUrl || "", // Use stored custom image or empty
+      label: baseLink.label, 
+      placeholderUrl: baseLink.placeholderUrl, 
+      url: currentLinkData?.url || "", 
+      customImageUrl: currentLinkData?.customImageUrl || "", 
     };
   });
   
@@ -63,7 +61,7 @@ export default async function SiteSettingsPage() {
             <SettingsIcon className="h-8 w-8 text-primary" />
             Configurações do Site
           </h1>
-          <p className="text-muted-foreground">Gerencie as configurações gerais da plataforma.</p>
+          <p className="text-muted-foreground">Gerencie as configurações gerais da plataforma. (Salvamento desativado para exportação estática).</p>
         </div>
         <Button variant="outline" asChild size="sm">
           <Link href="/admin/dashboard">
@@ -74,8 +72,9 @@ export default async function SiteSettingsPage() {
       </div>
       
       <SettingsForm 
-        formAction={updateSettingsAction} 
+        // formAction prop removed
         initialData={initialDataForForm} 
+        isStaticExport={true}
       />
     </div>
   );

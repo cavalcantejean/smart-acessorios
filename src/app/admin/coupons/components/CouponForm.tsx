@@ -18,10 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Calendar as CalendarIcon, Link as LinkIcon } from "lucide-react";
-import { useActionState, useEffect, startTransition, useRef } from "react";
-import { useFormStatus } from "react-dom";
+import { useEffect, useState, useRef } from "react";
+// CouponActionResult type and useActionState/useFormStatus removed for static export
 import type { Coupon } from "@/lib/types";
-import type { CouponActionResult } from "../actions";
 import { useRouter } from "next/navigation";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -31,36 +30,20 @@ import { cn } from "@/lib/utils";
 
 
 interface CouponFormProps {
-  formAction: (prevState: CouponActionResult | null, formData: FormData) => Promise<CouponActionResult>;
+  // formAction prop removed
   initialData?: Partial<CouponFormValues & { id?: string }>;
   submitButtonText?: string;
-}
-
-const initialState: CouponActionResult = { success: false };
-
-function SubmitButton({ text, pending }: { text: string; pending: boolean }) {
-  return (
-    <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-      {pending ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <Save className="mr-2 h-4 w-4" />
-      )}
-      {text}
-    </Button>
-  );
+  isStaticExport?: boolean;
 }
 
 export default function CouponForm({
-  formAction,
   initialData,
   submitButtonText = "Salvar Cupom",
+  isStaticExport = true,
 }: CouponFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState);
   const { toast } = useToast();
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
-  const { pending } = useFormStatus();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const defaultExpiryDate = initialData?.expiryDate 
     ? (initialData.expiryDate.includes("T") ? initialData.expiryDate.split("T")[0] : initialData.expiryDate) 
@@ -79,46 +62,32 @@ export default function CouponForm({
     },
   });
 
-  useEffect(() => {
-    if (state?.message) {
-      if (state.success) {
-        toast({ title: "Sucesso!", description: state.message });
-        if (state.coupon && !initialData) { 
-          console.log("CouponForm: Create success, attempting redirect to /admin/coupons");
-          router.push('/admin/coupons');
-          form.reset({ code: "", description: "", discount: "", expiryDate: "", store: "", applyUrl: "" });
-        } else if (state.coupon && initialData) {
-          // Update, no redirect
-        }
-      } else {
-        toast({
-          title: "Erro",
-          description: state.error || state.message || "Falha ao salvar cupom.",
-          variant: "destructive",
-        });
-        state.errors?.forEach(issue => {
-          const path = issue.path.join('.') as keyof CouponFormValues;
-          form.setError(path as any, { type: "server", message: issue.message });
-        });
-      }
+  const handleSubmit = async (data: CouponFormValues) => {
+    if (isStaticExport) {
+      toast({
+        title: "Funcionalidade Indisponível",
+        description: "O salvamento de cupons não é suportado na exportação estática.",
+        variant: "destructive",
+      });
+      return;
     }
-  }, [state, toast, form, router, initialData]);
-
-  const processForm = (data: CouponFormValues) => {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        formData.append(key, String(value));
-      }
-    });
-    startTransition(() => {
-      dispatch(formData);
-    });
+    setIsSubmitting(true);
+    console.log("Coupon data submitted (client-side):", data);
+    toast({ title: "Simulação de Envio", description: "Dados do cupom registrados no console." });
+    setTimeout(() => {
+      setIsSubmitting(false);
+      // router.push('/admin/coupons');
+    }, 1000);
   };
 
   return (
     <Form {...form}>
-      <form ref={formRef} action={dispatch} onSubmit={form.handleSubmit(processForm)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+        {isStaticExport && (
+           <div className="p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
+             <strong>Modo de Demonstração Estática:</strong> As modificações de dados estão desativadas.
+           </div>
+        )}
         <FormField
           control={form.control}
           name="code"
@@ -228,13 +197,15 @@ export default function CouponForm({
               </FormItem>
             )}
           />
-        <SubmitButton text={submitButtonText} pending={form.formState.isSubmitting || pending} />
-        {state && !state.success && state.error && Object.keys(form.formState.errors).length === 0 && (
-           <p className="text-sm font-medium text-destructive">{state.error}</p>
-        )}
+        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isStaticExport}>
+          {isSubmitting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          {submitButtonText}
+        </Button>
       </form>
     </Form>
   );
 }
-
-    

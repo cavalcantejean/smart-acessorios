@@ -1,7 +1,7 @@
 
 "use client";
 import { useFavorites } from '@/hooks/useFavorites';
-import type { Accessory } from '@/lib/types'; // Comment type removed
+import type { Accessory } from '@/lib/types';
 import AccessoryDetailsClient from './AccessoryDetailsClient';
 
 // Type for Accessory prop as it comes from the server to this wrapper

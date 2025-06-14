@@ -1,6 +1,6 @@
 
-import { getAllUsers } from '@/lib/data'; // Now async
-import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
+import { getAllUsers } from '@/lib/data'; 
+import type { UserFirestoreData as User } from '@/lib/types'; 
 import UsersTable from './components/UsersTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,6 @@ export const metadata: Metadata = {
   description: 'Visualize e gerencie todos os usuários da plataforma.',
 };
 
-// Helper to prepare user data for client (convert Timestamps)
 const prepareUserForClient = (user: User): User => {
   return {
     ...user,
@@ -26,7 +25,7 @@ const prepareUserForClient = (user: User): User => {
 
 
 export default async function ManageUsersPage() {
-  const rawUsers: User[] = await getAllUsers(); // Await async call
+  const rawUsers: User[] = await getAllUsers(); 
   const users = rawUsers.map(prepareUserForClient);
 
 
@@ -57,7 +56,7 @@ export default async function ManageUsersPage() {
         </CardHeader>
         <CardContent>
           {users.length > 0 ? (
-            <UsersTable initialUsers={users} />
+            <UsersTable initialUsers={users} isStaticExport={true} />
           ) : (
             <p className="text-muted-foreground text-center py-8">Nenhum usuário encontrado.</p>
           )}

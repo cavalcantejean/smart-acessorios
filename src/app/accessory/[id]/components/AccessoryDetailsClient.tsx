@@ -1,17 +1,17 @@
 
 "use client";
 
-import { useState, useEffect, useActionState, useRef, startTransition } from 'react';
+import { useState, useEffect, useRef, startTransition } from 'react';
 import type { Accessory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ExternalLink, Heart, Loader2, MessageSquareText, ArrowLeft } from 'lucide-react';
-// import { summarizeAccessoryDescriptionAction } from '../actions'; // AI Action Removed
 import FavoriteButton from '@/components/FavoriteButton';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
+// CommentsSection and related imports removed
 
 interface ClientAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'expiryDate'> {
   createdAt?: string; 
@@ -27,7 +27,6 @@ interface AccessoryDetailsClientProps {
 export default function AccessoryDetailsClient({ accessory: initialAccessory, isFavoriteInitial, onToggleFavorite }: AccessoryDetailsClientProps) {
   const [accessory, setAccessory] = useState<ClientAccessory>(initialAccessory);
   const [currentSummary, setCurrentSummary] = useState<string | undefined>(initialAccessory.aiSummary || initialAccessory.shortDescription);
-  // const [isLoadingSummary, setIsLoadingSummary] = useState(false); // AI Summary logic removed
   const [isFavorite, setIsFavorite] = useState(isFavoriteInitial);
 
   const { toast } = useToast();
@@ -56,8 +55,12 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
     });
   };
 
-  // AI Summary generation logic removed
-  // const handleGenerateSummary = async () => { ... };
+  // Comment related logic removed
+  // const [clientComments, setClientComments] = useState<ClientComment[]>(initialAccessory.comments || []);
+  // const handleNewComment = (newComment: ClientComment) => {
+  //   setClientComments(prevComments => [newComment, ...prevComments]);
+  // };
+
 
   return (
     <Card className="overflow-hidden shadow-xl">
@@ -104,9 +107,6 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
           <p className="text-muted-foreground text-sm leading-relaxed">{currentSummary}</p>
         </div>
 
-        {/* AI Summary generation button and logic removed for static export compatibility */}
-        {/* {!isLoadingAuth && isAuthenticated && isAdmin && accessory.fullDescription && accessory.fullDescription !== currentSummary && ( ... )} */}
-
         {accessory.fullDescription && (
            <details className="mt-4">
             <summary className="cursor-pointer text-sm text-primary hover:underline">Ver Descrição Completa</summary>
@@ -127,6 +127,16 @@ export default function AccessoryDetailsClient({ accessory: initialAccessory, is
           </Link>
         </Button>
       </CardFooter>
+
+      {/* CommentsSection removed for static export compatibility */}
+      {/* <div className="p-6">
+        <CommentsSection
+          accessoryId={accessory.id}
+          comments={clientComments}
+          onCommentAdded={handleNewComment}
+          serverAddCommentAction={addCommentAccessoryAction}
+        />
+      </div> */}
     </Card>
   );
 }

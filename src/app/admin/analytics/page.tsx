@@ -1,6 +1,6 @@
 
 import { getAnalyticsData as getAnalyticsDataAdmin } from '@/lib/data-admin'; 
-import type { AnalyticsData } from '@/lib/types'; // RecentCommentInfo removed from here
+import type { AnalyticsData } from '@/lib/types'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -16,16 +16,12 @@ export const metadata: Metadata = {
   description: 'Visualize estatísticas de uso e engajamento da plataforma.',
 };
 
-const prepareAnalyticsDataForClient = (data: AnalyticsData): AnalyticsData => {
-  return {
-    ...data,
-    // recentComments mapping removed
-  };
-};
+// prepareAnalyticsDataForClient removed as comments are no longer part of AnalyticsData
+// const prepareAnalyticsDataForClient = (data: AnalyticsData): AnalyticsData => { ... };
 
 export default async function AnalyticsPage() {
-  const rawAnalyticsData: AnalyticsData = await getAnalyticsDataAdmin();
-  const analyticsData = prepareAnalyticsDataForClient(rawAnalyticsData);
+  // AnalyticsData type from lib/types.ts no longer contains comment-related fields
+  const analyticsData: AnalyticsData = await getAnalyticsDataAdmin();
 
   return (
     <div className="space-y-8">

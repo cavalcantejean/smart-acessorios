@@ -1,12 +1,12 @@
 
-import { getPostById, getAllPosts } from '@/lib/data'; // Now async, added getAllPosts
+import { getPostById, getAllPosts } from '@/lib/data'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 import PostForm from '@/components/admin/PostForm';
-import { updatePostAction } from '../../actions';
+// updatePostAction removed for static export
 import type { Post } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 
@@ -18,7 +18,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const post = await getPostById(params.id); // Await async call
+  const post = await getPostById(params.id); 
   if (!post) {
     return { title: 'Post Não Encontrado | Admin' };
   }
@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditPostPage({ params }: { params: { id: string } }) {
-  const post = await getPostById(params.id); // Await async call
+  const post = await getPostById(params.id); 
 
   if (!post) {
     return (
@@ -48,18 +48,15 @@ export default async function EditPostPage({ params }: { params: { id: string } 
     );
   }
 
-  const boundUpdatePostAction = updatePostAction.bind(null, post.id);
+  // boundUpdatePostAction removed
 
-  // Prepare initialData for the form. Tags should be a string.
-  // Convert publishedAt Timestamp to 'yyyy-MM-dd' string for date input
   let publishedAtString = "";
   if (post.publishedAt) {
     if (post.publishedAt instanceof Timestamp) {
       publishedAtString = post.publishedAt.toDate().toISOString().split('T')[0];
-    } else if (typeof post.publishedAt === 'string') { // If already string (e.g. from direct JSON)
+    } else if (typeof post.publishedAt === 'string') { 
       publishedAtString = new Date(post.publishedAt).toISOString().split('T')[0];
     } else if (typeof post.publishedAt === 'object' && 'seconds' in post.publishedAt && 'nanoseconds' in post.publishedAt) {
-      // Handle cases where it might be a plain object resembling a Timestamp
       publishedAtString = new Timestamp((post.publishedAt as any).seconds, (post.publishedAt as any).nanoseconds).toDate().toISOString().split('T')[0];
     }
   }
@@ -94,14 +91,15 @@ export default async function EditPostPage({ params }: { params: { id: string } 
         <CardHeader>
           <CardTitle>Formulário de Edição de Post</CardTitle>
           <CardDescription>
-            Altere os campos abaixo para atualizar o post.
+            Altere os campos abaixo para atualizar o post. (Salvamento desativado para exportação estática).
           </CardDescription>
         </CardHeader>
         <CardContent>
             <PostForm
-              formAction={boundUpdatePostAction}
+              // formAction prop removed
               initialData={initialDataForForm}
               submitButtonText="Salvar Alterações"
+              isStaticExport={true}
             />
         </CardContent>
       </Card>

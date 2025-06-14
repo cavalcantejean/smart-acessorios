@@ -116,7 +116,23 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Moderation Card Removed */}
+        {/* Moderation Card Removed - as comments are removed */}
+        {/* 
+        <Card className="shadow-lg hover:shadow-xl transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <MessageSquareWarning className="h-6 w-6 text-orange-500" /> 
+              Moderar Conteúdo
+            </CardTitle>
+            <CardDescription>Revise e aprove comentários pendentes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/admin/moderation">Moderar Comentários</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        */}
 
         <Card className="shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader>

@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useActionState, startTransition } from 'react';
-import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
-import { toggleAdminStatusAction } from '../actions';
+import { useState, useEffect } from 'react'; // useActionState, startTransition removed
+import type { UserFirestoreData as User } from '@/lib/types'; 
+// toggleAdminStatusAction removed
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -17,63 +17,69 @@ import { CheckCircle, XCircle, Eye, UserCog, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/useAuth'; // Import useAuth to get current admin ID
+import { useAuth } from '@/hooks/useAuth'; 
 
 interface UsersTableProps {
   initialUsers: User[];
+  isStaticExport?: boolean;
 }
 
-interface ToggleAdminResult {
-  success: boolean;
-  user?: User | null;
-  message?: string;
-  error?: string;
-}
+// ToggleAdminResult and initialActionState removed
 
-const initialActionState: ToggleAdminResult = { success: false };
-
-export default function UsersTable({ initialUsers }: UsersTableProps) {
+export default function UsersTable({ initialUsers, isStaticExport = true }: UsersTableProps) {
   const [users, setUsers] = useState<User[]>(initialUsers);
-  const [adminActionState, handleToggleAdmin, isAdminTogglePending] = useActionState(toggleAdminStatusAction, initialActionState);
+  // adminActionState, handleToggleAdmin, isAdminTogglePending removed
+  const [isTogglingAdmin, setIsTogglingAdmin] = useState<string | null>(null); // Local state for UI feedback
   const { toast } = useToast();
-  const { user: currentAdminUser, isLoading: isAuthLoading } = useAuth(); // Get current authenticated admin
+  const { user: currentAdminUser, isLoading: isAuthLoading } = useAuth(); 
 
   useEffect(() => {
     setUsers(initialUsers);
   }, [initialUsers]);
 
-  useEffect(() => {
-    if (adminActionState?.message) {
-      if (adminActionState.success && adminActionState.user) {
-        toast({
-          title: "Sucesso!",
-          description: adminActionState.message,
-        });
-        setUsers(prevUsers =>
-          prevUsers.map(u => u.id === adminActionState.user!.id ? adminActionState.user! : u)
-        );
-      } else if (!adminActionState.success && adminActionState.error) {
-        toast({
-          title: "Erro",
-          description: adminActionState.error,
-          variant: "destructive",
-        });
-      }
-    }
-  }, [adminActionState, toast]);
-
   const onToggleAdmin = (userId: string) => {
-    const formData = new FormData();
-    formData.append('userId', userId);
-    startTransition(() => {
-        handleToggleAdmin(formData);
-    });
+    if (isStaticExport) {
+      toast({
+        title: "Funcionalidade Indisponível",
+        description: "A alteração de status de administrador não é suportada na exportação estática.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTogglingAdmin(userId);
+    // Client-side Firebase logic would go here for dynamic deployment
+    console.log(`Attempting to toggle admin for user ${userId} (client-side simulation)`);
+    toast({ title: "Simulação", description: `Tentativa de alterar admin para ${userId}.` });
+    
+    // Simulate API call and update UI
+    setTimeout(() => {
+      // This would be replaced by actual Firebase update and re-fetch or state update based on response
+      const targetUser = users.find(u => u.id === userId);
+      if (targetUser) {
+        // Simulate check if this user is the only admin
+        if (targetUser.isAdmin && users.filter(u => u.isAdmin).length === 1 && targetUser.id === currentAdminUser?.id) {
+            toast({ title: "Erro", description: "Não é possível remover o status de administrador do único administrador.", variant: "destructive" });
+        } else {
+            setUsers(prevUsers =>
+                prevUsers.map(u => u.id === userId ? { ...u, isAdmin: !u.isAdmin } : u)
+            );
+            toast({ title: "Sucesso (Simulado)", description: `Status de admin para ${targetUser.name} alterado.` });
+        }
+      }
+      setIsTogglingAdmin(null);
+    }, 1000);
   };
 
   const currentAdminId = currentAdminUser?.id;
 
   return (
     <div className="overflow-x-auto">
+      {isStaticExport && (
+        <div className="p-3 mb-4 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
+            <strong>Modo de Demonstração Estática:</strong> Ações de gerenciamento de usuários estão desativadas.
+        </div>
+      )}
       <Table>
         <TableHeader>
           <TableRow>
@@ -86,10 +92,11 @@ export default function UsersTable({ initialUsers }: UsersTableProps) {
         </TableHeader>
         <TableBody>
           {users.map((user) => {
-            // Check if this user is the current admin and the only admin
             const isThisUserTheOnlyAdmin = user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.id === currentAdminId;
-            const disableToggle = isAdminTogglePending || (isThisUserTheOnlyAdmin && user.id === currentAdminId) || isAuthLoading;
-            const toggleTitle = (isThisUserTheOnlyAdmin && user.id === currentAdminId)
+            const disableToggle = !!isTogglingAdmin || (isThisUserTheOnlyAdmin && user.id === currentAdminId) || isAuthLoading || isStaticExport;
+            const toggleTitle = isStaticExport 
+                                ? "Gerenciamento de admin desativado em modo estático"
+                                : (isThisUserTheOnlyAdmin && user.id === currentAdminId)
                                 ? "Não é possível remover o status de administrador do único administrador."
                                 : (user.isAdmin ? "Remover Admin" : "Tornar Admin");
 
@@ -123,7 +130,7 @@ export default function UsersTable({ initialUsers }: UsersTableProps) {
                     disabled={disableToggle}
                     title={toggleTitle}
                   >
-                    {isAdminTogglePending && adminActionState?.user?.id === user.id ? (
+                    {isTogglingAdmin === user.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                        <UserCog className="h-4 w-4" />
