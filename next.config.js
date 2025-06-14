@@ -50,7 +50,7 @@ const nextConfig = {
         "crypto": false,
         "fs": false,
         "http": false,
-        "https": false, // Corrected from "httpss"
+        "https": false,
         "net": false,
         "os": false,
         "path": false,
@@ -60,8 +60,10 @@ const nextConfig = {
         "util": false,
         "zlib": false,
         // Specific libraries that are server-side only
-        "firebase-admin": false, 
+        "firebase-admin": false,
         "@google-cloud/firestore": false,
+        "genkit": false, // Added fallback for genkit
+        "@genkit-ai/googleai": false, // Added fallback for genkit googleai plugin
       };
     }
 
