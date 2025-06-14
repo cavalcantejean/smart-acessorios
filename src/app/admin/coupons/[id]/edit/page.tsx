@@ -1,5 +1,5 @@
 
-import { getCouponById } from '@/lib/data'; // Now async
+import { getCouponById, getCoupons } from '@/lib/data'; // Now async, added getCoupons
 import type { Coupon } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,13 @@ import type { Metadata } from 'next';
 import CouponForm from '../../components/CouponForm';
 import { updateCouponAction } from '../../actions';
 import { Timestamp } from 'firebase/firestore';
+
+export async function generateStaticParams() {
+  const coupons = await getCoupons();
+  return coupons.map((coupon) => ({
+    id: coupon.id,
+  }));
+}
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const coupon = await getCouponById(params.id); // Await async call
@@ -88,3 +95,4 @@ export default async function EditCouponPage({ params }: { params: { id: string 
     </div>
   );
 }
+

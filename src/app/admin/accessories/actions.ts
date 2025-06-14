@@ -4,30 +4,27 @@
 import { z } from 'zod';
 import { AccessoryFormSchema } from '@/lib/schemas/accessory-schema';
 import { addAccessoryWithAdmin, updateAccessory, deleteAccessory as deleteAccessoryData } from '@/lib/data-admin';
-import type { Accessory } from '@/lib/types'; // Comment type removed
+import type { Accessory } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { generateProductDescription, type GenerateDescriptionInput, type GenerateDescriptionOutput } from '@/ai/flows/generate-product-description-flow';
 import { adminDb } from '@/lib/firebase-admin';
-import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+// AdminTimestamp type is not explicitly needed here if we use duck-typing for .toDate()
 
-// ClientSafeComment removed
-interface ClientSafeAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'price'> { // likedBy, comments removed
-  id: string; 
+interface ClientSafeAccessory extends Omit<Accessory, 'createdAt' | 'updatedAt' | 'price' | 'comments'> {
+  id: string;
   name: string;
   shortDescription: string;
   fullDescription: string;
   imageUrl: string;
   imageHint?: string;
   affiliateLink: string;
-  price?: string; 
+  price?: string;
   category?: string;
   isDeal?: boolean;
   aiSummary?: string;
   embedHtml?: string;
-  // likedBy: string[]; // REMOVED
-  createdAt?: string;
-  updatedAt?: string;
-  // comments: ClientSafeComment[]; // REMOVED
+  createdAt?: string; // ISO string
+  updatedAt?: string; // ISO string
 }
 
 export interface AccessoryActionResult {
@@ -35,43 +32,31 @@ export interface AccessoryActionResult {
   message?: string;
   error?: string;
   errors?: z.ZodIssue[];
-  accessory?: ClientSafeAccessory; 
+  accessory?: ClientSafeAccessory;
 }
 
-function serializeAccessoryForClient(accessory: Accessory | null | undefined): ClientSafeAccessory | undefined {
-  if (!accessory) return undefined;
+// Changed accessoryData type to `any` to handle raw data from adminDb
+function serializeAccessoryForClient(accessoryData: any): ClientSafeAccessory | undefined {
+  if (!accessoryData) return undefined;
 
-  const adminCreatedAt = accessory.createdAt as unknown as AdminTimestamp | undefined;
-  const adminUpdatedAt = accessory.updatedAt as unknown as AdminTimestamp | undefined;
+  const createdAtTimestamp = accessoryData.createdAt;
+  const updatedAtTimestamp = accessoryData.updatedAt;
 
   return {
-    id: accessory.id,
-    name: accessory.name,
-    shortDescription: accessory.shortDescription,
-    fullDescription: accessory.fullDescription,
-    imageUrl: accessory.imageUrl,
-    imageHint: accessory.imageHint,
-    affiliateLink: accessory.affiliateLink,
-    price: accessory.price,
-    category: accessory.category,
-    isDeal: accessory.isDeal,
-    aiSummary: accessory.aiSummary,
-    embedHtml: accessory.embedHtml,
-    // likedBy: accessory.likedBy || [], // REMOVED
-    createdAt: adminCreatedAt?.toDate?.().toISOString(),
-    updatedAt: adminUpdatedAt?.toDate?.().toISOString(),
-    // comments: (accessory.comments || []).map(comment => { // REMOVED
-    //   const adminCommentCreatedAt = comment.createdAt as unknown as AdminTimestamp | undefined;
-    //   return {
-    //     ...comment,
-    //     id: comment.id, 
-    //     userId: comment.userId,
-    //     userName: comment.userName,
-    //     text: comment.text,
-    //     status: comment.status,
-    //     createdAt: adminCommentCreatedAt?.toDate?.().toISOString(),
-    //   };
-    // }),
+    id: accessoryData.id,
+    name: accessoryData.name,
+    shortDescription: accessoryData.shortDescription,
+    fullDescription: accessoryData.fullDescription,
+    imageUrl: accessoryData.imageUrl,
+    imageHint: accessoryData.imageHint,
+    affiliateLink: accessoryData.affiliateLink,
+    price: accessoryData.price, // Assuming price is already a string or correctly formatted
+    category: accessoryData.category,
+    isDeal: accessoryData.isDeal,
+    aiSummary: accessoryData.aiSummary,
+    embedHtml: accessoryData.embedHtml,
+    createdAt: createdAtTimestamp?.toDate?.().toISOString(),
+    updatedAt: updatedAtTimestamp?.toDate?.().toISOString(),
   };
 }
 
@@ -136,14 +121,19 @@ export async function createAccessoryAction(
   console.log("[Action:createAccessory] Validated data for Firestore (via Admin SDK):", JSON.stringify(validatedFields.data, null, 2));
 
   try {
-    const tempAccessoryData = await addAccessoryWithAdmin(validatedFields.data as Omit<Accessory, 'id' | 'createdAt' | 'updatedAt'>);
+    // addAccessoryWithAdmin adds the document and returns it (with AdminTimestamps)
+    // The returned type from addAccessoryWithAdmin is `Accessory`, which is a client type, this is a bit of a mismatch
+    // but what matters is the actual data structure returned. Let's assume it has AdminTimestamps.
+    const tempAccessoryDataFromAdd = await addAccessoryWithAdmin(validatedFields.data as Omit<Accessory, 'id' | 'createdAt' | 'updatedAt' | 'comments'>);
 
-    const docRef = adminDb.collection('acessorios').doc(tempAccessoryData.id);
+    // Re-fetch to ensure we have the final data structure from DB
+    const docRef = adminDb.collection('acessorios').doc(tempAccessoryDataFromAdd.id);
     const newDocSnap = await docRef.get();
-    const createdAccessoryDb = newDocSnap.data();
+    const createdAccessoryDbData = newDocSnap.data();
 
-    if (createdAccessoryDb) {
-      const createdAccessory = { id: newDocSnap.id, ...createdAccessoryDb } as Accessory; 
+    if (createdAccessoryDbData) {
+      const accessoryToSerialize = { id: newDocSnap.id, ...createdAccessoryDbData };
+      // accessoryToSerialize.createdAt and .updatedAt are AdminTimestamps here
 
       revalidatePath('/admin/accessories');
       revalidatePath('/products');
@@ -151,8 +141,8 @@ export async function createAccessoryAction(
       revalidatePath('/deals');
       return {
         success: true,
-        message: `Acessório "${createdAccessory.name}" criado com sucesso!`,
-        accessory: serializeAccessoryForClient(createdAccessory),
+        message: `Acessório "${accessoryToSerialize.name}" criado com sucesso!`,
+        accessory: serializeAccessoryForClient(accessoryToSerialize),
       };
     } else {
       console.error("[Action:createAccessory] Failed to fetch newly created accessory document.");
@@ -220,8 +210,10 @@ export async function updateAccessoryAction(
   }
 
   try {
+    // updateAccessory in data-admin should return data with AdminTimestamps if it fetches from DB
     const updatedAccessoryFromDb = await updateAccessory(accessoryId, validatedFields.data as Partial<Omit<Accessory, 'id'>>);
     if (updatedAccessoryFromDb) {
+      // updatedAccessoryFromDb here will have AdminTimestamps if fetched directly from DB in updateAccessory
       revalidatePath('/admin/accessories');
       revalidatePath(`/admin/accessories/${accessoryId}/edit`);
       revalidatePath(`/accessory/${accessoryId}`);
@@ -231,7 +223,7 @@ export async function updateAccessoryAction(
       return {
         success: true,
         message: `Acessório "${updatedAccessoryFromDb.name}" atualizado com sucesso!`,
-        accessory: serializeAccessoryForClient(updatedAccessoryFromDb)
+        accessory: serializeAccessoryForClient(updatedAccessoryFromDb) // Pass raw data from admin function
       };
     } else {
       return { success: false, error: `Falha ao atualizar o acessório. ID ${accessoryId} não encontrado.` };
@@ -333,3 +325,5 @@ export async function generateDescriptionWithAIAction(
     return { success: false, error: errorMessage };
   }
 }
+
+    

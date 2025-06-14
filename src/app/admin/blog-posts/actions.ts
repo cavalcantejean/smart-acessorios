@@ -7,10 +7,9 @@ import { addPost, updatePost, deletePost as deletePostData } from '@/lib/data-ad
 import { getPostById } from '@/lib/data';
 import type { Post } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { adminDb } from '@/lib/firebase-admin'; // Import adminDb
-import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+// AdminTimestamp type is not explicitly needed here if we use duck-typing for .toDate()
 
-// Helper type for client-safe post, mirroring Post type but with string dates
 interface ClientSafePost extends Omit<Post, 'createdAt' | 'updatedAt' | 'publishedAt' | 'tags'> {
   id: string;
   title: string;
@@ -30,13 +29,12 @@ interface ClientSafePost extends Omit<Post, 'createdAt' | 'updatedAt' | 'publish
   updatedAt?: string; // ISO string
 }
 
-
 export interface PostActionResult {
   success: boolean;
   message?: string;
   error?: string;
   errors?: z.ZodIssue[];
-  post?: ClientSafePost; // Use client-safe type
+  post?: ClientSafePost;
 }
 
 const parseTags = (tagsString?: string): string[] => {
@@ -44,31 +42,31 @@ const parseTags = (tagsString?: string): string[] => {
   return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
 };
 
-// Helper function to serialize a post for client
-function serializePostForClient(post: Post | null | undefined): ClientSafePost | undefined {
-  if (!post) return undefined;
+// Changed postData type to `any` to handle raw data from adminDb
+function serializePostForClient(postData: any): ClientSafePost | undefined {
+  if (!postData) return undefined;
 
-  const adminCreatedAt = post.createdAt as unknown as AdminTimestamp | undefined;
-  const adminUpdatedAt = post.updatedAt as unknown as AdminTimestamp | undefined;
-  const adminPublishedAt = post.publishedAt as unknown as AdminTimestamp | undefined;
+  const createdAtTimestamp = postData.createdAt;
+  const updatedAtTimestamp = postData.updatedAt;
+  const publishedAtTimestamp = postData.publishedAt;
 
   return {
-    id: post.id,
-    title: post.title,
-    slug: post.slug,
-    excerpt: post.excerpt,
-    content: post.content,
-    imageUrl: post.imageUrl,
-    imageHint: post.imageHint,
-    authorName: post.authorName,
-    authorAvatarUrl: post.authorAvatarUrl,
-    authorAvatarHint: post.authorAvatarHint,
-    category: post.category,
-    tags: Array.isArray(post.tags) ? post.tags : [],
-    publishedAt: adminPublishedAt?.toDate?.().toISOString(),
-    embedHtml: post.embedHtml,
-    createdAt: adminCreatedAt?.toDate?.().toISOString(),
-    updatedAt: adminUpdatedAt?.toDate?.().toISOString(),
+    id: postData.id,
+    title: postData.title,
+    slug: postData.slug,
+    excerpt: postData.excerpt,
+    content: postData.content,
+    imageUrl: postData.imageUrl,
+    imageHint: postData.imageHint,
+    authorName: postData.authorName,
+    authorAvatarUrl: postData.authorAvatarUrl,
+    authorAvatarHint: postData.authorAvatarHint,
+    category: postData.category,
+    tags: Array.isArray(postData.tags) ? postData.tags : [],
+    publishedAt: publishedAtTimestamp?.toDate?.().toISOString(),
+    embedHtml: postData.embedHtml,
+    createdAt: createdAtTimestamp?.toDate?.().toISOString(),
+    updatedAt: updatedAtTimestamp?.toDate?.().toISOString(),
   };
 }
 
@@ -85,12 +83,12 @@ export async function createPostAction(
   const rawFormData = Object.fromEntries(formData.entries());
   const dataToValidate = {
     ...rawFormData,
-    tags: rawFormData.tags as string | undefined, // Keep as string for schema validation
+    tags: rawFormData.tags as string | undefined,
     authorAvatarUrl: rawFormData.authorAvatarUrl || undefined,
     authorAvatarHint: rawFormData.authorAvatarHint || undefined,
     category: rawFormData.category || undefined,
     imageHint: rawFormData.imageHint || undefined,
-    publishedAt: rawFormData.publishedAt || new Date().toISOString().split('T')[0], // Default to today if empty
+    publishedAt: rawFormData.publishedAt || new Date().toISOString().split('T')[0],
     embedHtml: rawFormData.embedHtml || undefined,
   };
   console.log("[Action:createPost] Data for Zod validation:", dataToValidate);
@@ -109,23 +107,25 @@ export async function createPostAction(
   console.log("[Action:createPost] Zod validation successful. Data for DB:", validatedFields.data);
 
   try {
-    const postDataForDb = {
+    const postDataForDbCreation = {
       ...validatedFields.data,
-      tags: parseTags(validatedFields.data.tags), // Convert tags string to array
+      tags: parseTags(validatedFields.data.tags),
     };
-    console.log("[Action:createPost] Calling addPost with data:", postDataForDb);
-    const newPostFromDb = await addPost(postDataForDb as Omit<Post, 'id' | 'createdAt' | 'updatedAt'>); // Uses addPost from data-admin.ts
+    console.log("[Action:createPost] Calling addPost with data:", postDataForDbCreation);
+    // addPost from data-admin.ts returns data with AdminTimestamps
+    const newPostFromDbAdmin = await addPost(postDataForDbCreation as Omit<Post, 'id' | 'createdAt' | 'updatedAt'>);
     
-    if (newPostFromDb) {
-      console.log("[Action:createPost] Post created successfully in DB:", newPostFromDb);
+    if (newPostFromDbAdmin) {
+      console.log("[Action:createPost] Post created successfully in DB:", newPostFromDbAdmin);
+      // newPostFromDbAdmin has AdminTimestamps
       revalidatePath('/admin/blog-posts');
       revalidatePath('/blog');
-      revalidatePath(`/blog/${newPostFromDb.slug}`);
+      revalidatePath(`/blog/${newPostFromDbAdmin.slug}`);
       revalidatePath('/');
       return {
         success: true,
-        message: `Post "${newPostFromDb.title}" criado com sucesso!`,
-        post: serializePostForClient(newPostFromDb) // Serialize before sending to client
+        message: `Post "${newPostFromDbAdmin.title}" criado com sucesso!`,
+        post: serializePostForClient(newPostFromDbAdmin) // Pass raw data with AdminTimestamps
       };
     } else {
       console.error("[Action:createPost] addPost returned null or undefined.");
@@ -177,21 +177,23 @@ export async function updatePostAction(
   }
 
   try {
-    const postDataForDb = {
+    const postDataForDbUpdate = {
       ...validatedFields.data,
       tags: parseTags(validatedFields.data.tags),
     };
-    const updatedPostFromDb = await updatePost(postId, postDataForDb as Partial<Omit<Post, 'id'>>); 
-    if (updatedPostFromDb) {
+    // updatePost from data-admin.ts returns data with AdminTimestamps
+    const updatedPostFromDbAdmin = await updatePost(postId, postDataForDbUpdate as Partial<Omit<Post, 'id'>>);
+    if (updatedPostFromDbAdmin) {
+      // updatedPostFromDbAdmin has AdminTimestamps
       revalidatePath('/admin/blog-posts');
       revalidatePath(`/admin/blog-posts/${postId}/edit`);
       revalidatePath('/blog');
-      revalidatePath(`/blog/${updatedPostFromDb.slug}`);
+      revalidatePath(`/blog/${updatedPostFromDbAdmin.slug}`);
       revalidatePath('/');
       return {
         success: true,
-        message: `Post "${updatedPostFromDb.title}" atualizado com sucesso!`,
-        post: serializePostForClient(updatedPostFromDb) // Serialize before sending to client
+        message: `Post "${updatedPostFromDbAdmin.title}" atualizado com sucesso!`,
+        post: serializePostForClient(updatedPostFromDbAdmin) // Pass raw data with AdminTimestamps
       };
     } else {
       return { success: false, error: `Falha ao atualizar o post. ID ${postId} não encontrado.` };
@@ -242,4 +244,5 @@ export async function deletePostAction(
     return { success: false, error: "Erro no servidor ao excluir post." };
   }
 }
+    
     

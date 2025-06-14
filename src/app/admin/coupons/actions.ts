@@ -3,15 +3,14 @@
 
 import { z } from 'zod';
 import { CouponFormSchema } from '@/lib/schemas/coupon-schema';
-import { addCoupon, updateCoupon, deleteCoupon as deleteCouponData } from '@/lib/data-admin'; // Importar de data-admin.ts
+import { addCoupon, updateCoupon, deleteCoupon as deleteCouponData } from '@/lib/data-admin';
 import type { Coupon } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { adminDb } from '@/lib/firebase-admin'; // Import adminDb
-import type { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+// AdminTimestamp type is not explicitly needed here if we use duck-typing for .toDate()
 
-// Helper type for client-safe coupon, mirroring Coupon type but with string dates
 interface ClientSafeCoupon extends Omit<Coupon, 'createdAt' | 'updatedAt' | 'expiryDate'> {
-  id: string; // Ensure id is present
+  id: string;
   code: string;
   description: string;
   discount: string;
@@ -22,33 +21,32 @@ interface ClientSafeCoupon extends Omit<Coupon, 'createdAt' | 'updatedAt' | 'exp
   updatedAt?: string; // ISO string
 }
 
-// Update CouponActionResult to use this type
 export interface CouponActionResult {
   success: boolean;
   message?: string;
   error?: string;
   errors?: z.ZodIssue[];
-  coupon?: ClientSafeCoupon; // Use the client-safe type
+  coupon?: ClientSafeCoupon;
 }
 
-// Helper function to serialize a coupon for client
-function serializeCouponForClient(coupon: Coupon | null | undefined): ClientSafeCoupon | undefined {
-  if (!coupon) return undefined;
+// Changed couponData type to `any` to handle raw data from adminDb
+function serializeCouponForClient(couponData: any): ClientSafeCoupon | undefined {
+  if (!couponData) return undefined;
 
-  const adminCreatedAt = coupon.createdAt as unknown as AdminTimestamp | undefined;
-  const adminUpdatedAt = coupon.updatedAt as unknown as AdminTimestamp | undefined;
-  const adminExpiryDate = coupon.expiryDate as unknown as AdminTimestamp | undefined;
+  const createdAtTimestamp = couponData.createdAt;
+  const updatedAtTimestamp = couponData.updatedAt;
+  const expiryDateTimestamp = couponData.expiryDate;
 
   return {
-    id: coupon.id,
-    code: coupon.code,
-    description: coupon.description,
-    discount: coupon.discount,
-    expiryDate: adminExpiryDate?.toDate?.().toISOString().split('T')[0], // Format as YYYY-MM-DD
-    store: coupon.store || "",
-    applyUrl: coupon.applyUrl || "",
-    createdAt: adminCreatedAt?.toDate?.().toISOString(),
-    updatedAt: adminUpdatedAt?.toDate?.().toISOString(),
+    id: couponData.id,
+    code: couponData.code,
+    description: couponData.description,
+    discount: couponData.discount,
+    expiryDate: expiryDateTimestamp?.toDate?.().toISOString().split('T')[0], // Format as YYYY-MM-DD
+    store: couponData.store || "",
+    applyUrl: couponData.applyUrl || "",
+    createdAt: createdAtTimestamp?.toDate?.().toISOString(),
+    updatedAt: updatedAtTimestamp?.toDate?.().toISOString(),
   };
 }
 
@@ -84,24 +82,25 @@ export async function createCouponAction(
     const couponInputData = {
       ...validatedFields.data,
     };
-    // addCoupon returns data with FieldValue for timestamps initially
-    const tempCouponData = await addCoupon(couponInputData as any); // Usa addCoupon de data-admin.ts
+    // addCoupon in data-admin.ts returns data with AdminTimestamps
+    const tempCouponDataFromAdd = await addCoupon(couponInputData as any);
 
-    // Fetch the actual document to get resolved Timestamps
-    const docRef = adminDb.collection('cupons').doc(tempCouponData.id);
+    // Re-fetch to ensure we have the final data structure from DB with AdminTimestamps
+    const docRef = adminDb.collection('cupons').doc(tempCouponDataFromAdd.id);
     const newDocSnap = await docRef.get();
-    const createdCouponDb = newDocSnap.data();
+    const createdCouponDbData = newDocSnap.data();
 
-    if (createdCouponDb) {
-        const createdCoupon = { id: newDocSnap.id, ...createdCouponDb } as Coupon; // Cast to base type
+    if (createdCouponDbData) {
+        const couponToSerialize = { id: newDocSnap.id, ...createdCouponDbData };
+        // couponToSerialize has AdminTimestamps here
 
         revalidatePath('/admin/coupons');
         revalidatePath('/coupons');
         revalidatePath('/');
         return {
             success: true,
-            message: `Cupom "${createdCoupon.code}" criado com sucesso!`,
-            coupon: serializeCouponForClient(createdCoupon)
+            message: `Cupom "${couponToSerialize.code}" criado com sucesso!`,
+            coupon: serializeCouponForClient(couponToSerialize)
         };
     } else {
         console.error("[Action:createCoupon] Failed to fetch newly created coupon document.");
@@ -146,16 +145,18 @@ export async function updateCouponAction(
     const couponInputData = {
         ...validatedFields.data,
     };
-    const updatedCouponFromDb = await updateCoupon(couponId, couponInputData as any); // Usa updateCoupon de data-admin.ts
-    if (updatedCouponFromDb) {
+    // updateCoupon in data-admin.ts should return data with AdminTimestamps
+    const updatedCouponFromDbAdmin = await updateCoupon(couponId, couponInputData as any);
+    if (updatedCouponFromDbAdmin) {
+      // updatedCouponFromDbAdmin has AdminTimestamps
       revalidatePath('/admin/coupons');
       revalidatePath(`/admin/coupons/${couponId}/edit`);
       revalidatePath('/coupons');
       revalidatePath('/');
       return {
         success: true,
-        message: `Cupom "${updatedCouponFromDb.code}" atualizado com sucesso!`,
-        coupon: serializeCouponForClient(updatedCouponFromDb)
+        message: `Cupom "${updatedCouponFromDbAdmin.code}" atualizado com sucesso!`,
+        coupon: serializeCouponForClient(updatedCouponFromDbAdmin)
       };
     } else {
       return { success: false, error: `Falha ao atualizar o cupom. ID ${couponId} não encontrado.` };
@@ -181,7 +182,7 @@ export async function deleteCouponAction(
   }
 
   try {
-    const deleted = await deleteCouponData(couponId); // Usa deleteCouponData de data-admin.ts
+    const deleted = await deleteCouponData(couponId);
     if (deleted) {
       revalidatePath('/admin/coupons');
       revalidatePath('/coupons');
@@ -195,4 +196,5 @@ export async function deleteCouponAction(
     return { success: false, error: "Erro no servidor ao excluir cupom." };
   }
 }
+    
     
