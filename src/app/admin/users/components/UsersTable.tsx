@@ -166,7 +166,6 @@ export default function UsersTable({ initialUsers, isStaticExport = false }: Use
           {users.map((user) => {
             const isThisUserTheOnlyAdmin = user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.id === currentAdminId;
             const isCurrentUserBeingToggled = isTogglingAdmin === user.id;
-            const isThisUserTheOnlyAdmin = user.isAdmin && users.filter(u => u.isAdmin).length === 1 && user.id === currentAdminId;
 
             const disableAdminToggle = isApiTransitionPending || isCurrentUserBeingToggled || (isThisUserTheOnlyAdmin && user.id === currentAdminId) || isAuthLoading;
             const adminToggleTitle = (isThisUserTheOnlyAdmin && user.id === currentAdminId)
