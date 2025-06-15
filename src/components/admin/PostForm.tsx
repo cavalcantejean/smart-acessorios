@@ -19,16 +19,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-// PostActionResult type and useActionState/useFormStatus removed for static export
-import type { Post } from "@/lib/types";
+// import type { Post } from "@/lib/types"; // Not directly used if actions return typed results
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+// import { useAuth } from "@/hooks/useAuth"; // Auth check will be server-side primarily
+// Firebase client imports removed
+// import { db } from "@/lib/firebase";
+// import { doc, updateDoc, collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { useFormState, useFormStatus } from "react-dom"; // Added
+import { addPostAction, updatePostAction, type PostActionResult } from "@/app/admin/blog-posts/actions"; // Added
 
 interface PostFormProps {
-  // formAction prop removed
-  initialData?: Partial<PostFormValues & { id?: string; tags?: string[] }>; 
+  initialData?: Partial<PostFormValues & { id?: string; tags?: string[] | string }>; // Allow tags to be string from initialData
   submitButtonText?: string;
-  isStaticExport?: boolean;
+  // isStaticExport prop removed
 }
 
 const processImageFile = (file: File, maxWidth: number = 1200, maxHeight: number = 675, quality: number = 0.75): Promise<string> => {
@@ -68,18 +72,30 @@ const processImageFile = (file: File, maxWidth: number = 1200, maxHeight: number
 export default function PostForm({
   initialData,
   submitButtonText = "Salvar Post",
-  isStaticExport = true,
 }: PostFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const { user: authUser, isAuthenticated } = useAuth(); // Server actions handle auth
 
-  const defaultPublishedAt = initialData?.publishedAt 
-    ? new Date(initialData.publishedAt).toISOString().split('T')[0] 
-    : new Date().toISOString().split('T')[0];
+  const [formState, formAction] = useFormState(
+    initialData?.id ? updatePostAction.bind(null, initialData.id) : addPostAction,
+    undefined // Initial state for formState
+  );
+
+  const defaultPublishedAtDate = initialData?.publishedAt
+                                ? new Date(initialData.publishedAt)
+                                : new Date();
+  const formattedDefaultPublishedAt = defaultPublishedAtDate.toISOString().split('T')[0];
+
+  // Ensure tags are a string for the form input
+  const initialTagsString = Array.isArray(initialData?.tags)
+    ? initialData.tags.join(", ")
+    : typeof initialData?.tags === 'string'
+    ? initialData.tags
+    : "";
 
   const form = useForm<PostFormValues>({
     resolver: zodResolver(PostFormSchema),
@@ -90,19 +106,61 @@ export default function PostForm({
       content: initialData?.content || "",
       imageUrl: initialData?.imageUrl || "",
       imageHint: initialData?.imageHint || "",
-      authorName: initialData?.authorName || "Equipe SmartAcessorios",
+      authorName: initialData?.authorName || "Equipe SmartAcessorios", // Default author name
       authorAvatarUrl: initialData?.authorAvatarUrl || "",
       authorAvatarHint: initialData?.authorAvatarHint || "",
       category: initialData?.category || "",
-      tags: Array.isArray(initialData?.tags) ? initialData.tags.join(", ") : (initialData?.tags || ""),
-      publishedAt: defaultPublishedAt,
+      tags: initialTagsString,
+      publishedAt: formattedDefaultPublishedAt,
       embedHtml: initialData?.embedHtml || "", 
     },
   });
 
   useEffect(() => {
-    if (initialData?.imageUrl) setImagePreview(initialData.imageUrl);
+    if (initialData?.imageUrl) {
+      setImagePreview(initialData.imageUrl);
+    }
   }, [initialData?.imageUrl]);
+
+  // Effect to handle toast messages and form reset/redirect based on formState
+  useEffect(() => {
+    if (!formState) return;
+
+    if (formState.success) {
+      toast({ title: "Sucesso!", description: formState.message });
+      if (formState.post && !initialData?.id) { // Successfully added new
+        form.reset({
+            title: "", slug: "", excerpt: "", content: "", imageUrl: "", imageHint: "",
+            authorName: "Equipe SmartAcessorios", authorAvatarUrl: "", authorAvatarHint: "",
+            category: "", tags: "", publishedAt: new Date().toISOString().split('T')[0], embedHtml: ""
+        });
+        setImagePreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        // Optional: router.push(`/admin/blog-posts/${formState.post.id}/edit`);
+      } else if (initialData?.id) { // Successfully updated
+        router.push("/admin/blog-posts");
+      }
+    } else if (formState.error) {
+      let errorMessage = "Ocorreu um erro.";
+      if (typeof formState.error === 'string') {
+        errorMessage = formState.error;
+      } else if (typeof formState.error === 'object') {
+        const fieldErrors = Object.values(formState.error).flat();
+        errorMessage = fieldErrors[0] || "Verifique os campos do formulário.";
+      }
+      toast({ title: "Erro ao Salvar", description: errorMessage, variant: "destructive" });
+      if (typeof formState.error === 'object') {
+        for (const [fieldName, errors] of Object.entries(formState.error)) {
+          if (errors && errors.length > 0) {
+            form.setError(fieldName as keyof PostFormValues, { type: 'server', message: errors[0] });
+          }
+        }
+      }
+    }
+  }, [formState, form, router, toast, initialData?.id]);
+
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -117,38 +175,61 @@ export default function PostForm({
         console.error("Error processing image:", error);
         toast({ title: "Erro de Imagem", description: "Falha ao processar imagem.", variant: "destructive" });
         setImagePreview(initialData?.imageUrl || null);
-        form.setValue("imageUrl", initialData?.imageUrl || "", { shouldValidate: true });
+        form.setValue("imageUrl", initialData?.imageUrl || form.getValues("imageUrl") || "", { shouldValidate: true });
       } finally {
         setIsProcessingImage(false);
       }
     }
   };
   
-  const handleSubmit = async (data: PostFormValues) => {
-    if (isStaticExport) {
-      toast({
-        title: "Funcionalidade Indisponível",
-        description: "O salvamento de posts não é suportado na exportação estática.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsSubmitting(true);
-    console.log("Post data submitted (client-side):", data);
-    toast({ title: "Simulação de Envio", description: "Dados do post registrados no console." });
-    setTimeout(() => {
-      setIsSubmitting(false);
-      // router.push('/admin/blog-posts');
-    }, 1000);
-  };
+function SubmitButton({ buttonText }: { buttonText: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full sm:w-auto" disabled={pending || isProcessingImage}>
+      {pending ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Save className="mr-2 h-4 w-4" />
+      )}
+      {buttonText}
+    </Button>
+  );
+}
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-        {isStaticExport && (
-           <div className="p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
-             <strong>Modo de Demonstração Estática:</strong> As modificações de dados estão desativadas.
-           </div>
+      <form
+        action={formAction}
+        onSubmit={form.handleSubmit(async (data) => {
+          const formData = new FormData();
+          for (const key in data) {
+            const value = (data as any)[key];
+            if (value !== undefined && value !== null) {
+              if (key === 'tags' && Array.isArray(value)) { // RHF might give array if parsed by schema
+                formData.append(key, value.join(','));
+              } else {
+                formData.append(key, String(value));
+              }
+            }
+          }
+           // Ensure imageUrl from RHF (which might be updated by handleImageUpload) is on FormData
+          const currentImageUrl = form.getValues("imageUrl");
+          if (currentImageUrl) {
+            formData.set("imageUrl", currentImageUrl);
+          } else if (imagePreview) { // Fallback if RHF state not updated but preview exists
+             formData.set("imageUrl", imagePreview);
+          }
+
+          // @ts-ignore
+          await formAction(formData);
+        })}
+        className="space-y-8"
+      >
+        {/* isStaticExport message div removed */}
+        {formState?.error && typeof formState.error === 'string' && (
+          <div className="p-3 text-sm text-destructive bg-red-100 border border-destructive rounded-md">
+            {formState.error}
+          </div>
         )}
         <FormField control={form.control} name="title" render={({ field }) => (
             <FormItem>

@@ -30,14 +30,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore'; // doc, deleteDoc, db removed
+import { useAuth } from '@/hooks/useAuth';
+// import { db } from '@/lib/firebase'; // Removed db
+import { deleteCouponAction, type CouponActionResult } from '@/app/admin/coupons/actions'; // Added Server Action
 
 interface CouponsTableProps {
   initialCoupons: Coupon[];
-  isStaticExport?: boolean;
+  // isStaticExport prop removed
 }
-
-// initialActionState removed
 
 const formatDateSafe = (dateInput?: any): string => {
   if (!dateInput) return 'N/A';
@@ -63,42 +64,53 @@ const formatDateSafe = (dateInput?: any): string => {
   }
 };
 
-export default function CouponsTable({ initialCoupons, isStaticExport = true }: CouponsTableProps) {
-  const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
+export default function CouponsTable({ initialCoupons }: CouponsTableProps) { // isStaticExport removed
+  const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons); // Will be updated by revalidation
   const { toast } = useToast();
   const [couponToDelete, setCouponToDelete] = useState<Coupon | null>(null);
-  const [isDeletePending, setIsDeletePending] = useState(false);
+  const [isDeletePending, setIsDeletePending] = useState(false); // For local button loading state
+  const { user: authUser, isAuthenticated } = useAuth();
+  const [isTransitioning, startApiTransition] = (React as any).useTransition(); // Renamed startTransition
 
   useEffect(() => {
     setCoupons(initialCoupons);
   }, [initialCoupons]);
 
-  const handleDeleteConfirm = () => {
-     if (isStaticExport) {
-      toast({ title: "Funcionalidade Indisponível", description: "Exclusão não suportada na exportação estática.", variant: "destructive" });
+  const handleDeleteConfirm = async () => {
+    // isStaticExport check removed
+    if (!isAuthenticated || !authUser?.id) {
+      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador para excluir.", variant: "destructive" });
       setCouponToDelete(null);
       return;
     }
-    if (couponToDelete) {
-      setIsDeletePending(true);
-      // Client-side Firebase logic would go here
-      console.log(`Simulating delete for coupon ${couponToDelete.id}`);
-      setTimeout(() => {
-        setCoupons(prev => prev.filter(c => c.id !== couponToDelete.id));
-        toast({ title: "Sucesso (Simulado)!", description: `Cupom "${couponToDelete.code}" excluído.` });
-        setIsDeletePending(false);
-        setCouponToDelete(null);
-      }, 1000);
+
+    if (!couponToDelete) {
+      toast({ title: "Erro Interno", description: "Nenhum cupom selecionado para exclusão.", variant: "destructive" });
+      return;
     }
+
+    setIsDeletePending(true);
+    startApiTransition(async () => {
+      const result: Omit<CouponActionResult, 'coupon'> = await deleteCouponAction(couponToDelete.id);
+      if (result.success) {
+        toast({ title: "Sucesso!", description: result.message });
+        // Data revalidation is handled by revalidatePath in the server action.
+        // No local state update `setCoupons` needed here for removal.
+      } else {
+        toast({
+          title: "Erro ao Excluir",
+          description: result.message || "Ocorreu um erro desconhecido.",
+          variant: "destructive",
+        });
+      }
+      setIsDeletePending(false);
+      setCouponToDelete(null);
+    });
   };
 
   return (
     <AlertDialog open={!!couponToDelete} onOpenChange={(isOpen) => { if (!isOpen) setCouponToDelete(null); }}>
-      {isStaticExport && (
-        <div className="p-3 mb-4 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
-            <strong>Modo de Demonstração Estática:</strong> Ações de exclusão estão desativadas.
-        </div>
-      )}
+      {/* isStaticExport message div removed */}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -150,10 +162,10 @@ export default function CouponsTable({ initialCoupons, isStaticExport = true }: 
                       variant="destructive"
                       size="icon"
                       onClick={() => setCouponToDelete(coupon)}
-                      disabled={isDeletePending && couponToDelete?.id === coupon.id || isStaticExport}
+                      disabled={isDeletePending || isTransitioning}
                       title="Excluir Cupom"
                     >
-                      {isDeletePending && couponToDelete?.id === coupon.id ? (
+                      {(isDeletePending && couponToDelete?.id === coupon.id) || (isTransitioning && couponToDelete?.id === coupon.id) ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
@@ -180,10 +192,10 @@ export default function CouponsTable({ initialCoupons, isStaticExport = true }: 
               <AlertDialogCancel disabled={isDeletePending}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
-                disabled={isDeletePending || isStaticExport}
+                disabled={isDeletePending || isTransitioning || !isAuthenticated}
                 className="bg-destructive hover:bg-destructive/90"
               >
-                {isDeletePending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isDeletePending || isTransitioning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Excluir
               </AlertDialogAction>
             </AlertDialogFooter>
