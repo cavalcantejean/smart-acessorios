@@ -175,7 +175,7 @@ export default function UsersTable({ initialUsers }: UsersTableProps) { // isSta
             const disableDelete = isApiTransitionPending || isCurrentUserBeingToggled || isAuthLoading || currentAdminUser?.id === user.id;
             const deleteTitle = currentAdminUser?.id === user.id
                                 ? "Não é possível excluir a própria conta"
-                                : "Excluir Usuário (Simulação)";
+                                : "Excluir Usuário";
 
 
             return (
