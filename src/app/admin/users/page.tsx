@@ -16,11 +16,28 @@ export const metadata: Metadata = {
 };
 
 const prepareUserForClient = (user: User): User => {
+  const convertDate = (dateValue: any): string | undefined => {
+    if (dateValue instanceof Timestamp) {
+      return dateValue.toDate().toISOString();
+    }
+    if (dateValue instanceof Date) {
+      return dateValue.toISOString();
+    }
+    if (typeof dateValue === 'string') {
+      // Optionally, validate if it's an ISO string, but for now, assume it is.
+      // Could also attempt to parse and re-format to ensure consistency:
+      // try { return new Date(dateValue).toISOString(); } catch { return undefined; }
+      return dateValue;
+    }
+    // If it's null, undefined, or any other type, return undefined or handle as error
+    return undefined;
+  };
+
   return {
     ...user,
-    createdAt: user.createdAt instanceof Timestamp ? user.createdAt.toDate().toISOString() : (user.createdAt as any),
-    updatedAt: user.updatedAt instanceof Timestamp ? user.updatedAt.toDate().toISOString() : (user.updatedAt as any),
-  } as User;
+    createdAt: convertDate(user.createdAt),
+    updatedAt: convertDate(user.updatedAt),
+  } as User; // Keep 'as User' but the date fields are now more reliably string | undefined
 };
 
 
