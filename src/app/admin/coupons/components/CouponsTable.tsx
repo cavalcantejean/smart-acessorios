@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, startTransition } from 'react'; // useActionState removed
+import { useState, useEffect, useTransition } from 'react'; // useActionState removed, useTransition imported
 import type { Coupon } from '@/lib/types';
 // deleteCouponAction and CouponActionResult removed
 import { Button } from '@/components/ui/button';
@@ -70,7 +70,7 @@ export default function CouponsTable({ initialCoupons }: CouponsTableProps) { //
   const [couponToDelete, setCouponToDelete] = useState<Coupon | null>(null);
   const [isDeletePending, setIsDeletePending] = useState(false); // For local button loading state
   const { user: authUser, isAuthenticated } = useAuth();
-  const [isTransitioning, startApiTransition] = (React as any).useTransition(); // Renamed startTransition
+  const [isTransitioning, startApiTransition] = useTransition(); // Corrected useTransition
 
   useEffect(() => {
     setCoupons(initialCoupons);
