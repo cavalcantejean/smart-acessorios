@@ -247,14 +247,7 @@ export default function CouponForm({
               </FormItem>
             )}
           />
-        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isStaticExport}>
-          {isSubmitting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {submitButtonText}
-        </Button>
+        <SubmitButton buttonText={submitButtonText} />
       </form>
     </Form>
   );
