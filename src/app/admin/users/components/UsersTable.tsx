@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react'; // useActionState, startTransition removed
+import { useState, useEffect, useTransition } from 'react'; // useTransition added
 import type { UserFirestoreData as User } from '@/lib/types'; 
 // toggleAdminStatusAction removed
 import { Button } from '@/components/ui/button';
@@ -42,19 +42,19 @@ import { Trash2 } from 'lucide-react'; // Added Trash2 icon
 
 interface UsersTableProps {
   initialUsers: User[];
-  isStaticExport?: boolean;
+  // isStaticExport?: boolean; // Removed
 }
 
 // ToggleAdminResult and initialActionState removed
 
-export default function UsersTable({ initialUsers, isStaticExport = false }: UsersTableProps) { // isStaticExport will be removed effectively
+export default function UsersTable({ initialUsers }: UsersTableProps) { // isStaticExport removed from params
   const [users, setUsers] = useState<User[]>(initialUsers); // Will be updated by revalidation
   const [isTogglingAdmin, setIsTogglingAdmin] = useState<string | null>(null); // For local button loading state only
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isProcessingDelete, setIsProcessingDelete] = useState(false);
   const { toast } = useToast();
   const { user: currentAdminUser, isLoading: isAuthLoading, isAuthenticated } = useAuth();
-  const [isApiTransitionPending, startApiTransition] = (React as any).useTransition();
+  const [isApiTransitionPending, startApiTransition] = useTransition(); // Corrected
 
 
   useEffect(() => {
