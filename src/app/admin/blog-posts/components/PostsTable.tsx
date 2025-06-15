@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, startTransition } from 'react'; // useActionState removed
+import { useState, useEffect, useTransition } from 'react'; // useActionState removed, useTransition added directly
 import type { Post } from '@/lib/types';
 // deletePostAction and PostActionResult removed
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ export default function PostsTable({ initialPosts }: PostsTableProps) { // isSta
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
   const [isDeletePending, setIsDeletePending] = useState(false); // For local button loading state
   const { user: authUser, isAuthenticated } = useAuth();
-  const [isTransitioning, startApiTransition] = (React as any).useTransition();
+  const [isTransitioning, startApiTransition] = useTransition(); // Corrected useTransition
 
 
   useEffect(() => {
