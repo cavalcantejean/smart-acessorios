@@ -24,11 +24,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getBaseSocialLinkSettings } from "@/lib/data"; 
 import type { SettingsFormDataForClient } from "../page"; 
 import Image from "next/image"; 
+import { useFormState, useFormStatus } from "react-dom"; // Added
+import { updateSettingsAction, type SettingsActionResult } from "@/app/admin/settings/actions"; // Added
 
 interface SettingsFormProps {
-  // formAction prop removed
   initialData: SettingsFormDataForClient;
-  isStaticExport?: boolean;
+  // isStaticExport?: boolean; // Removed
 }
 
 const processImageFile = (file: File, maxWidth: number = 64, maxHeight: number = 64, quality: number = 0.8, type: 'image/png' | 'image/jpeg' = 'image/png'): Promise<string> => {
@@ -66,14 +67,30 @@ const processImageFile = (file: File, maxWidth: number = 64, maxHeight: number =
   });
 };
 
-export default function SettingsForm({ initialData, isStaticExport = true }: SettingsFormProps) {
+function SubmitButton(
+  { buttonText, isProcessingImages }:
+  { buttonText: string, isProcessingImages: boolean }
+) {
+  const { pending } = useFormStatus();
+  return (
+    <Button
+      type="submit"
+      className="w-full sm:w-auto"
+      disabled={pending || isProcessingImages}
+    >
+      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+      {buttonText}
+    </Button>
+  );
+}
+
+export default function SettingsForm({ initialData }: SettingsFormProps) { // isStaticExport removed
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false); // Removed
   const [siteLogoPreview, setSiteLogoPreview] = useState<string | null>(initialData.siteLogoUrl || null);
   const [siteFaviconPreview, setSiteFaviconPreview] = useState<string | null>(initialData.siteFaviconUrl || null);
   const [isProcessingLogo, setIsProcessingLogo] = useState(false);
   const [isProcessingFavicon, setIsProcessingFavicon] = useState(false);
-
   const [imagePreviews, setImagePreviews] = useState<Record<string, string | null>>(
     initialData.socialLinks.reduce((acc, link) => {
       acc[link.platform] = link.customImageUrl || null;
@@ -81,6 +98,8 @@ export default function SettingsForm({ initialData, isStaticExport = true }: Set
     }, {} as Record<string, string | null>)
   );
   const [isProcessingSocialImage, setIsProcessingSocialImage] = useState<Record<string, boolean>>({});
+
+  const [formState, formAction] = useFormState(updateSettingsAction, undefined);
 
   const baseSocialLinksWithIcons = getBaseSocialLinkSettings();
 
@@ -106,16 +125,74 @@ export default function SettingsForm({ initialData, isStaticExport = true }: Set
   });
   
   useEffect(() => {
-    // Reset previews if initialData changes (e.g., after a simulated save for demo)
-    setSiteLogoPreview(initialData.siteLogoUrl || null);
-    setSiteFaviconPreview(initialData.siteFaviconUrl || null);
+    // Reset previews if initialData changes (e.g. if form was reset after successful save)
+    // This might not be strictly necessary if redirecting or if formState handles reset well.
+    setSiteLogoPreview(form.getValues("siteLogoUrl") || null);
+    setSiteFaviconPreview(form.getValues("siteFaviconUrl") || null);
     const newSocialPreviews: Record<string, string | null> = {};
-    initialData.socialLinks.forEach(sl => {
+    form.getValues("socialLinks").forEach(sl => {
         newSocialPreviews[sl.platform] = sl.customImageUrl || null;
     });
     setImagePreviews(newSocialPreviews);
-  }, [initialData]);
+  }, [form, initialData]); // initialData might be removed if not re-feeding
 
+  // Effect to handle toast messages based on formState
+  useEffect(() => {
+    if (!formState) return;
+
+    if (formState.success) {
+      toast({ title: "Sucesso!", description: formState.message });
+      // Form values are typically re-set via `initialData` if the page reloads or data is re-fetched.
+      // If staying on the page, RHF's `reset` can be used with new values from `formState.settings`.
+      if (formState.settings) {
+         const newDefaultValues = {
+            ...formState.settings,
+            socialLinks: formState.settings.socialLinks.map(sl => ({
+                platform: sl.platform,
+                label: sl.label,
+                url: sl.url || '',
+                customImageUrl: sl.customImageUrl || '',
+            }))
+         };
+        form.reset(newDefaultValues as SettingsFormValues); // Update form with new saved values
+        setSiteLogoPreview(newDefaultValues.siteLogoUrl || null);
+        setSiteFaviconPreview(newDefaultValues.siteFaviconUrl || null);
+        const newSocialPreviews: Record<string, string | null> = {};
+        newDefaultValues.socialLinks.forEach(sl => {
+            newSocialPreviews[sl.platform] = sl.customImageUrl || null;
+        });
+        setImagePreviews(newSocialPreviews);
+
+      }
+    } else if (formState.error) {
+      let errorMessage = "Ocorreu um erro.";
+      if (typeof formState.error === 'string') {
+        errorMessage = formState.error;
+      } else if (typeof formState.error === 'object') {
+        const fieldErrors = Object.values(formState.error).flat();
+        errorMessage = fieldErrors[0] || "Verifique os campos do formulário.";
+      }
+      toast({ title: "Erro ao Salvar", description: errorMessage, variant: "destructive" });
+      if (typeof formState.error === 'object') {
+        for (const [fieldName, errors] of Object.entries(formState.error as any)) {
+          if (errors && (errors as string[]).length > 0) {
+            if (fieldName.startsWith("socialLinks")) { // Handle array errors
+                // Example: socialLinks.0.url -> socialLinks[0].url
+                const match = fieldName.match(/socialLinks\.(\d+)\.(\w+)/);
+                if (match) {
+                    form.setError(`socialLinks.${match[1]}.${match[2]}` as any, { type: 'server', message: (errors as string[])[0]});
+                } else {
+                     // Generic error for socialLinks array if specific index/field not parsable
+                     form.setError("socialLinks", { type: 'server', message: (errors as string[])[0] || "Erro nos links sociais." });
+                }
+            } else {
+                form.setError(fieldName as keyof SettingsFormValues, { type: 'server', message: (errors as string[])[0] });
+            }
+          }
+        }
+      }
+    }
+  }, [formState, form, toast]);
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -151,8 +228,8 @@ export default function SettingsForm({ initialData, isStaticExport = true }: Set
       try {
         const compressedDataUrl = await processImageFile(file, 64, 64, 0.8, 'image/png');
         setImagePreviews(prev => ({ ...prev, [platform]: compressedDataUrl }));
-        const currentLink = socialLinkFields[index];
-        updateSocialLinkField(index, { ...currentLink, customImageUrl: compressedDataUrl });
+        // const currentLink = socialLinkFields[index]; // Not needed if directly setting form value
+        // updateSocialLinkField(index, { ...currentLink, customImageUrl: compressedDataUrl }); // This might cause issues with RHF if not careful
         form.setValue(`socialLinks.${index}.customImageUrl`, compressedDataUrl, { shouldValidate: true });
         toast({ title: "Imagem Carregada", description: `Ícone para ${platform} atualizado.` });
       } catch (error) {
@@ -165,45 +242,37 @@ export default function SettingsForm({ initialData, isStaticExport = true }: Set
     }
   };
 
-  const handleSubmit = async (data: SettingsFormValues) => {
-    if (isStaticExport) {
-      toast({
-        title: "Funcionalidade Indisponível",
-        description: "A atualização de configurações não é suportada na exportação estática.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsSubmitting(true);
-    console.log("Settings data submitted (client-side):", data);
-    toast({ title: "Simulação de Envio", description: "Dados de configurações registrados no console." });
-    setTimeout(() => {
-      setIsSubmitting(false);
-      // Simulate data being "saved" and re-populating the form (for UI feedback)
-      // In a real scenario with client-side Firebase, you'd fetch fresh data or merge
-      form.reset(data); 
-      setSiteLogoPreview(data.siteLogoUrl || null);
-      setSiteFaviconPreview(data.siteFaviconUrl || null);
-      const newSocialPreviews: Record<string, string | null> = {};
-        data.socialLinks.forEach(sl => {
-            newSocialPreviews[sl.platform] = sl.customImageUrl || null;
-        });
-      setImagePreviews(newSocialPreviews);
-      toast({ title: "Configurações 'Salvas'", description: "As alterações foram refletidas no formulário (simulação)." });
+  // const handleSubmit = async (data: SettingsFormValues) => { ... } // Replaced by form action
 
-    }, 1000);
-  };
+  const anyImageProcessing = isProcessingLogo || isProcessingFavicon || Object.values(isProcessingSocialImage).some(v => v);
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(handleSubmit)}
+        action={formAction}
+        onSubmit={form.handleSubmit(async (data) => {
+            const formData = new FormData();
+            formData.append('siteTitle', data.siteTitle);
+            formData.append('siteDescription', data.siteDescription);
+            formData.append('siteLogoUrl', data.siteLogoUrl || ''); // Send empty string if null/undefined
+            formData.append('siteFaviconUrl', data.siteFaviconUrl || '');
+
+            data.socialLinks.forEach((link, index) => {
+                formData.append(`socialLinks[${index}].platform`, link.platform);
+                formData.append(`socialLinks[${index}].label`, link.label);
+                formData.append(`socialLinks[${index}].url`, link.url || '');
+                formData.append(`socialLinks[${index}].customImageUrl`, link.customImageUrl || '');
+            });
+            // @ts-ignore
+            await formAction(formData);
+        })}
         className="space-y-8"
       >
-        {isStaticExport && (
-           <div className="p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
-             <strong>Modo de Demonstração Estática:</strong> As modificações de dados estão desativadas.
-           </div>
+        {/* Removed isStaticExport conditional div */}
+         {formState?.error && typeof formState.error === 'string' && (
+          <div className="p-3 text-sm text-destructive bg-red-100 border border-destructive rounded-md">
+            {formState.error}
+          </div>
         )}
         <Card>
           <CardHeader>
@@ -253,10 +322,15 @@ export default function SettingsForm({ initialData, isStaticExport = true }: Set
                         accept="image/png, image/jpeg, image/svg+xml" 
                         className="cursor-pointer"
                         onChange={(e) => handleImageUpload(e, setSiteLogoPreview, setIsProcessingLogo, "siteLogoUrl", 240, 60, 'image/png')}
-                        disabled={isProcessingLogo || isStaticExport}
+                        disabled={isProcessingLogo /* || pending from useFormStatus */}
                        />
                     </FormControl>
-                     <input type="hidden" {...form.register("siteLogoUrl")} />
+                     {/* Using hidden input is not the RHF way if form.setValue is used for base64.
+                         This might be redundant or conflict if not handled carefully.
+                         It's generally better to rely on RHF's state set by form.setValue.
+                         Removing this if form.setValue is correctly populating the 'siteLogoUrl' field.
+                     */}
+                     {/* <input type="hidden" {...form.register("siteLogoUrl")} /> */}
                     {isProcessingLogo && <p className="text-xs text-muted-foreground flex items-center"><Loader2 className="mr-1 h-3 w-3 animate-spin"/> Processando logo...</p>}
                     <FormDescription>Envie a imagem do logo. Recomendado: fundo transparente (PNG), máx 240x60px.</FormDescription>
                     <FormMessage />
@@ -280,10 +354,10 @@ export default function SettingsForm({ initialData, isStaticExport = true }: Set
                         accept="image/png, image/x-icon, image/vnd.microsoft.icon" 
                         className="cursor-pointer"
                         onChange={(e) => handleImageUpload(e, setSiteFaviconPreview, setIsProcessingFavicon, "siteFaviconUrl", 64, 64, 'image/png')}
-                        disabled={isProcessingFavicon || isStaticExport}
+                        disabled={isProcessingFavicon /* || pending */}
                         />
                     </FormControl>
-                    <input type="hidden" {...form.register("siteFaviconUrl")} />
+                    {/* <input type="hidden" {...form.register("siteFaviconUrl")} /> */}
                     {isProcessingFavicon && <p className="text-xs text-muted-foreground flex items-center"><Loader2 className="mr-1 h-3 w-3 animate-spin"/> Processando favicon...</p>}
                     <FormDescription>Envie a imagem do favicon. Recomendado: PNG quadrado (32x32px ou 64x64px).</FormDescription>
                     <FormMessage />
@@ -353,28 +427,29 @@ export default function SettingsForm({ initialData, isStaticExport = true }: Set
                             accept="image/png, image/jpeg, image/svg+xml, image/gif"
                             className="cursor-pointer"
                             onChange={(e) => handleSocialImageUpload(e, index, formField.platform)}
-                            disabled={isProcessingSocialImage[formField.platform] || isStaticExport}
+                            disabled={isProcessingSocialImage[formField.platform] /* || pending */}
                           />
                         </FormControl>
                         {isProcessingSocialImage[formField.platform] && <p className="text-xs text-muted-foreground flex items-center"><Loader2 className="mr-1 h-3 w-3 animate-spin"/> Processando...</p>}
                         <FormDescription>Envie uma imagem (PNG, JPG, SVG, GIF - max 64x64px recomendado). Se não enviar, o ícone padrão será usado.</FormDescription>
-                        <input type="hidden" {...form.register(`socialLinks.${index}.customImageUrl`)} />
+                        {/* <input type="hidden" {...form.register(`socialLinks.${index}.customImageUrl`)} /> */}
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <input type="hidden" {...form.register(`socialLinks.${index}.platform`)} value={formField.platform} />
-                  <input type="hidden" {...form.register(`socialLinks.${index}.label`)} value={formField.label} />
+                  {/* platform and label are part of defaultValues and should be submitted if not changed,
+                      but RHF's `data` object in handleSubmit will include them.
+                      Hidden inputs for these might be redundant if RHF correctly includes them in `data`.
+                  */}
+                  {/* <input type="hidden" {...form.register(`socialLinks.${index}.platform`)} value={formField.platform} /> */}
+                  {/* <input type="hidden" {...form.register(`socialLinks.${index}.label`)} value={formField.label} /> */}
                 </div>
               );
             })}
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isProcessingLogo || isProcessingFavicon || Object.values(isProcessingSocialImage).some(v => v) || isStaticExport}>
-          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          Salvar Configurações
-        </Button>
+        <SubmitButton buttonText="Salvar Configurações" isProcessingImages={anyImageProcessing} />
       </form>
     </Form>
   );

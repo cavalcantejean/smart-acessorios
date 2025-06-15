@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, startTransition } from 'react'; // useActionState removed
+import { useState, useEffect, useTransition } from 'react'; // useActionState removed, useTransition added
 import type { Accessory } from '@/lib/types';
 // deleteAccessoryAction and AccessoryActionResult removed
 import { Button } from '@/components/ui/button';
@@ -54,13 +54,13 @@ const formatDate = (timestampInput: any): string => {
   return date.toLocaleDateString('pt-BR');
 };
 
-export default function AccessoriesTable({ initialAccessories, isStaticExport = false }: AccessoriesTableProps) {
+export default function AccessoriesTable({ initialAccessories }: AccessoriesTableProps) { // isStaticExport removed
   const [accessories, setAccessories] = useState<Accessory[]>(initialAccessories); // This will be updated by revalidation
   const { toast } = useToast();
   const [accessoryToDelete, setAccessoryToDelete] = useState<Accessory | null>(null);
   const { user: authUser, isAuthenticated } = useAuth(); // Added isAuthenticated
   const [isDeletePending, setIsDeletePending] = useState(false);
-  const [isTransitioning, startTransition] = (useState as any)(false); // For pending state with startTransition
+  const [isTransitioning, startTransition] = useTransition(); // Corrected useTransition
 
 
   useEffect(() => {

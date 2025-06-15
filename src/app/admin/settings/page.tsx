@@ -60,7 +60,7 @@ export default async function SiteSettingsPage() {
             <SettingsIcon className="h-8 w-8 text-primary" />
             Configurações do Site
           </h1>
-          <p className="text-muted-foreground">Gerencie as configurações gerais da plataforma. (Salvamento desativado para exportação estática).</p>
+          <p className="text-muted-foreground">Gerencie as configurações gerais da plataforma.</p>
         </div>
         <Button variant="outline" asChild size="sm">
           <Link href="/admin/dashboard">
@@ -72,7 +72,6 @@ export default async function SiteSettingsPage() {
       
       <SettingsForm 
         initialData={initialDataForForm} 
-        isStaticExport={true}
       />
     </div>
   );
