@@ -78,6 +78,7 @@ export default function PostForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false); // Removed this line
   // const { user: authUser, isAuthenticated } = useAuth(); // Server actions handle auth
 
   const [formState, formAction] = useFormState(
@@ -389,14 +390,7 @@ function SubmitButton({ buttonText }: { buttonText: string }) {
             </FormItem>
         )} />
 
-        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isProcessingImage || isStaticExport}>
-          {isSubmitting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {submitButtonText}
-        </Button>
+        <SubmitButton buttonText={submitButtonText} />
       </form>
     </Form>
   );
