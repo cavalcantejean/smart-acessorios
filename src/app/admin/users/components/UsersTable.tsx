@@ -216,18 +216,17 @@ export default function UsersTable({ initialUsers }: UsersTableProps) { // isSta
                     )}
                     <span className="sr-only sm:not-sr-only sm:ml-1">{user.isAdmin ? 'Remover Admin' : 'Tornar Admin'}</span>
                   </Button>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setUserToDelete(user)}
-                      disabled={disableDelete}
-                      title={deleteTitle}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only sm:not-sr-only sm:ml-1">Excluir</span>
-                    </Button>
-                  </AlertDialogTrigger>
+                  {/* AlertDialogTrigger asChild removed */}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setUserToDelete(user)} // This sets the state to open the dialog
+                    disabled={disableDelete}
+                    title={deleteTitle}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only sm:not-sr-only sm:ml-1">Excluir</span>
+                  </Button>
                 </TableCell>
               </TableRow>
             );
