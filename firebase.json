@@ -1,10 +1,11 @@
 {
   "hosting": {
-    "public": "out",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ]
+    // O site ID do seu Firebase Hosting (geralmente o ID do projeto)
+    "site": "smart-acessorios", 
+    // O nome do seu backend App Hosting (confirmamos que é 'smart-acessorios')
+    "apphosting": "smart-acessorios", 
+    // A pasta raiz do seu projeto no GitHub onde o App Hosting deve rodar
+    "source": "." 
+    // Você pode ter outras configs aqui, como headers, i18n, etc.
   }
 }
