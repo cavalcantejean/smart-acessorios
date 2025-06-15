@@ -37,7 +37,7 @@ export default function NewPostPage() {
         <CardContent>
           <PostForm 
             submitButtonText="Criar Post"
-            isStaticExport={true}
+            isStaticExport={false}
           />
         </CardContent>
       </Card>

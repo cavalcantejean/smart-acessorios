@@ -19,12 +19,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Calendar as CalendarIcon, Link as LinkIcon } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-// CouponActionResult type and useActionState/useFormStatus removed for static export
-import type { Coupon } from "@/lib/types";
+// import type { Coupon } from "@/lib/types"; // Not directly used if actions return typed results
 import { useRouter } from "next/navigation";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+// import { useAuth } from "@/hooks/useAuth"; // Auth check will be server-side primarily
+// Firebase client imports removed
+// import { db } from "@/lib/firebase";
+// import { doc, updateDoc, collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { useFormState, useFormStatus } from "react-dom"; // Added
+import { addCouponAction, updateCouponAction, type CouponActionResult } from "@/app/admin/coupons/actions"; // Added
 import { Calendar } from "@/components/ui/calendar";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns"; // Added isValid
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
@@ -33,22 +38,39 @@ interface CouponFormProps {
   // formAction prop removed
   initialData?: Partial<CouponFormValues & { id?: string }>;
   submitButtonText?: string;
-  isStaticExport?: boolean;
+  // isStaticExport prop removed
+}
+
+function SubmitButton({ buttonText }: { buttonText: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
+      {pending ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Save className="mr-2 h-4 w-4" />
+      )}
+      {buttonText}
+    </Button>
+  );
 }
 
 export default function CouponForm({
   initialData,
   submitButtonText = "Salvar Cupom",
-  isStaticExport = true,
 }: CouponFormProps) {
   const { toast } = useToast();
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const { user: authUser, isAuthenticated } = useAuth(); // Server actions handle auth
 
-  const defaultExpiryDate = initialData?.expiryDate 
-    ? (initialData.expiryDate.includes("T") ? initialData.expiryDate.split("T")[0] : initialData.expiryDate) 
-    : "";
+  // Prepare initial form state for useFormState
+  const [formState, formAction] = useFormState(
+    initialData?.id ? updateCouponAction.bind(null, initialData.id) : addCouponAction,
+    undefined // Initial state for formState
+  );
 
+  const parsedDate = initialData?.expiryDate ? parseISO(initialData.expiryDate) : null;
+  const validInitialDate = parsedDate && isValid(parsedDate) ? format(parsedDate, "yyyy-MM-dd") : "";
 
   const form = useForm<CouponFormValues>({
     resolver: zodResolver(CouponFormSchema),
@@ -56,37 +78,65 @@ export default function CouponForm({
       code: initialData?.code || "",
       description: initialData?.description || "",
       discount: initialData?.discount || "",
-      expiryDate: defaultExpiryDate,
+      expiryDate: validInitialDate,
       store: initialData?.store || "",
       applyUrl: initialData?.applyUrl || "",
     },
   });
 
-  const handleSubmit = async (data: CouponFormValues) => {
-    if (isStaticExport) {
-      toast({
-        title: "Funcionalidade Indisponível",
-        description: "O salvamento de cupons não é suportado na exportação estática.",
-        variant: "destructive",
-      });
-      return;
+  // Effect to handle toast messages and form reset/redirect based on formState
+  useEffect(() => {
+    if (!formState) return;
+
+    if (formState.success) {
+      toast({ title: "Sucesso!", description: formState.message });
+      if (formState.coupon && !initialData?.id) { // Successfully added new
+        form.reset({ code: "", description: "", discount: "", expiryDate: "", store: "", applyUrl: "" });
+      } else if (initialData?.id) { // Successfully updated
+        router.push("/admin/coupons");
+      }
+    } else if (formState.error) {
+      let errorMessage = "Ocorreu um erro.";
+      if (typeof formState.error === 'string') {
+        errorMessage = formState.error;
+      } else if (typeof formState.error === 'object') {
+        const fieldErrors = Object.values(formState.error).flat();
+        errorMessage = fieldErrors[0] || "Verifique os campos do formulário.";
+      }
+      toast({ title: "Erro ao Salvar", description: errorMessage, variant: "destructive" });
+      if (typeof formState.error === 'object') {
+        for (const [fieldName, errors] of Object.entries(formState.error)) {
+          if (errors && errors.length > 0) {
+            form.setError(fieldName as keyof CouponFormValues, { type: 'server', message: errors[0] });
+          }
+        }
+      }
     }
-    setIsSubmitting(true);
-    console.log("Coupon data submitted (client-side):", data);
-    toast({ title: "Simulação de Envio", description: "Dados do cupom registrados no console." });
-    setTimeout(() => {
-      setIsSubmitting(false);
-      // router.push('/admin/coupons');
-    }, 1000);
-  };
+  }, [formState, form, router, toast, initialData?.id]);
+
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-        {isStaticExport && (
-           <div className="p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
-             <strong>Modo de Demonstração Estática:</strong> As modificações de dados estão desativadas.
-           </div>
+      <form
+        action={formAction}
+        onSubmit={form.handleSubmit(async (data) => {
+          const formData = new FormData();
+          for (const key in data) {
+            const value = (data as any)[key];
+            if (value !== undefined && value !== null) {
+               formData.append(key, String(value));
+            }
+          }
+          // @ts-ignore
+          await formAction(formData);
+        })}
+        className="space-y-8"
+      >
+        {/* isStaticExport message div removed */}
+         {formState?.error && typeof formState.error === 'string' && (
+          <div className="p-3 text-sm text-destructive bg-red-100 border border-destructive rounded-md">
+            {formState.error}
+          </div>
         )}
         <FormField
           control={form.control}

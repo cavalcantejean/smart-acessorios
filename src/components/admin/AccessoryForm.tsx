@@ -24,15 +24,17 @@ import { useEffect, useState, useRef } from "react";
 // AccessoryActionResult type and useActionState/useFormStatus removed as server actions are disabled for static export
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useAuth } from "@/hooks/useAuth";
-import { db } from "@/lib/firebase"; // Added
-import { doc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"; // Added
+import { useAuth } from "@/hooks/useAuth"; // Will be removed or used only for initial auth check if needed
+// Client-side Firebase imports removed:
+// import { db } from "@/lib/firebase";
+// import { doc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useFormState, useFormStatus } from "react-dom"; // Added
+import { addAccessoryAction, updateAccessoryAction, type AccessoryActionResult } from "@/app/admin/accessories/actions"; // Added
 
 interface AccessoryFormProps {
-  // formAction prop removed as Server Actions are not used for static export
-  initialData?: Partial<AccessoryFormValues & { id?: string }>; // Added id to initialData
+  initialData?: Partial<AccessoryFormValues & { id?: string }>;
   submitButtonText?: string;
-  isStaticExport?: boolean; // Flag to indicate static export mode
+  // isStaticExport prop is no longer needed
 }
 
 const processImageFile = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.7): Promise<string> => {
@@ -96,28 +98,36 @@ const isLikelyDataURL = (string: string | null | undefined): boolean => {
 export default function AccessoryForm({
   initialData,
   submitButtonText = "Salvar Acessório",
-  isStaticExport = false, // Default to false, enabling form submissions
 }: AccessoryFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imageUrl || null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); // Local submitting state
-  
+  // const [isSubmitting, setIsSubmitting] = useState(false); // Replaced by useFormStatus
+
+  // useAuth might still be used for an initial client-side check if desired,
+  // but actual authorization for the action happens on the server.
   const { user: authUser, isAuthenticated } = useAuth();
 
+  const [formState, formAction] = useFormState(
+    initialData?.id ? updateAccessoryAction.bind(null, initialData.id) : addAccessoryAction,
+    undefined // Initial state for formState
+  );
 
   const form = useForm<AccessoryFormValues>({
     resolver: zodResolver(AccessoryFormSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+      ...initialData,
+      price: String(initialData.price || ""), // Ensure price is a string for the input field
+    } : {
       name: "",
       shortDescription: "",
       fullDescription: "",
-      imageUrl: "",
+      imageUrl: "", // This will be populated by handleImageUpload or initialData
       imageHint: "",
       affiliateLink: "",
-      price: "",
+      price: "", // Expects string e.g. "29,99" or "29.99"
       category: "",
       isDeal: false,
       aiSummary: "",
@@ -128,9 +138,45 @@ export default function AccessoryForm({
   useEffect(() => {
     if (initialData?.imageUrl) {
       setImagePreview(initialData.imageUrl);
+      // No need to form.setValue for imageUrl here if it's part of defaultValues
+      // and processImageFile sets it directly if a new one is uploaded.
     }
   }, [initialData?.imageUrl]);
 
+  // Effect to handle toast messages and form reset/redirect based on formState
+  useEffect(() => {
+    if (formState?.success) {
+      toast({ title: "Sucesso!", description: formState.message });
+      if (formState.accessory && !initialData?.id) { // Successfully added new
+        form.reset();
+        setImagePreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        // Optional: redirect to edit page: router.push(`/admin/accessories/${formState.accessory.id}/edit`);
+      } else if (initialData?.id) { // Successfully updated
+        router.push("/admin/accessories");
+      }
+    } else if (formState?.error) {
+      let errorMessage = "Ocorreu um erro.";
+      if (typeof formState.error === 'string') {
+        errorMessage = formState.error;
+      } else if (typeof formState.error === 'object') {
+        // Display first field error or a generic message
+        const fieldErrors = Object.values(formState.error).flat();
+        errorMessage = fieldErrors[0] || "Verifique os campos do formulário.";
+      }
+      toast({ title: "Erro ao Salvar", description: errorMessage, variant: "destructive" });
+      // Populate form errors if field-specific errors are available
+      if (typeof formState.error === 'object') {
+        for (const [fieldName, errors] of Object.entries(formState.error)) {
+          if (errors && errors.length > 0) {
+            form.setError(fieldName as keyof AccessoryFormValues, { type: 'server', message: errors[0] });
+          }
+        }
+      }
+    }
+  }, [formState, form, router, toast, initialData?.id]);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -144,101 +190,92 @@ export default function AccessoryForm({
       } catch (error) {
         console.error("Error processing image:", error);
         toast({ title: "Erro de Imagem", description: "Falha ao processar imagem.", variant: "destructive" });
-        setImagePreview(initialData?.imageUrl || null); 
-        form.setValue("imageUrl", initialData?.imageUrl || "", { shouldValidate: true });
+        setImagePreview(initialData?.imageUrl || null);
+        // form.setValue("imageUrl", initialData?.imageUrl || "", { shouldValidate: true }); // Ensure this is correct if image processing fails
+        // If image processing fails, the form's "imageUrl" should ideally revert to the initialData.imageUrl or be empty if no initialData.
+        // The current processFormData in actions.ts will use the "imageUrl" field from FormData.
+        // If processImageFile fails, we should ensure "imageUrl" field is correctly set to the previous value.
+        // The form.setValue to initialData.imageUrl on error is good.
+        form.setValue("imageUrl", initialData?.imageUrl || form.getValues("imageUrl") || "", { shouldValidate: true });
+
       } finally {
         setIsProcessingImage(false);
       }
     }
   };
 
-  const handleSubmit = async (data: AccessoryFormValues) => {
-    if (isStaticExport) {
-      toast({
-        title: "Funcionalidade Indisponível",
-        description: "O salvamento de dados não é suportado na exportação estática. Esta ação é apenas demonstrativa.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!isAuthenticated || !authUser?.id) {
-      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador para realizar esta ação.", variant: "destructive" });
-      return;
-    }
-    
-    setIsSubmitting(true);
-
-    // Firestore rules should ensure only authenticated admins can write to "acessorios"
-    // e.g., allow write: if request.auth != null && request.auth.token.admin == true;
-    
-    const priceString = data.price?.replace(",", ".") || "0";
-    const priceNumber = parseFloat(priceString);
-
-    if (isNaN(priceNumber)) {
-      toast({ title: "Erro de Validação", description: "O preço inserido não é um número válido.", variant: "destructive" });
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      if (initialData?.id) {
-        // Update existing accessory
-        const dataToUpdate: Partial<AccessoryFormValues & { updatedAt: any }> = {
-          ...data,
-          price: priceNumber, // Store price as a number
-          imageUrl: imagePreview || data.imageUrl || "", // Ensure imagePreview is used if available
-          updatedAt: serverTimestamp(),
-        };
-        // Remove id from dataToUpdate to prevent it from being written to the document data
-        delete (dataToUpdate as any).id;
-
-        await updateDoc(doc(db, "acessorios", initialData.id), dataToUpdate);
-        toast({ title: "Sucesso!", description: "Acessório atualizado com sucesso." });
-        router.push("/admin/accessories");
-      } else {
-        // Add new accessory
-        const dataToAdd: AccessoryFormValues & { createdAt: any; updatedAt: any } = {
-          ...data,
-          price: priceNumber, // Store price as a number
-          imageUrl: imagePreview || data.imageUrl || "", // Ensure imagePreview is used if available
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-        await addDoc(collection(db, "acessorios"), dataToAdd);
-        toast({ title: "Sucesso!", description: "Novo acessório adicionado com sucesso." });
-        form.reset(); // Reset form for new entry
-        setImagePreview(null); // Clear image preview
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ""; // Clear file input
-        }
-        // Consider redirecting or allowing another entry: router.push("/admin/accessories");
-      }
-    } catch (error) {
-      console.error("Error saving accessory:", error);
-      toast({
-        title: "Erro ao Salvar",
-        description: `Ocorreu um erro: ${error instanceof Error ? error.message : String(error)}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // The handleSubmit function provided by react-hook-form will now pass data to the formAction
+  // No separate handleSubmit function is strictly needed unless for pre-processing before formAction is called,
+  // but standard HTML form submission with Server Actions handles FormData directly.
   
   const displayableImagePreview = imagePreview && (isValidHttpUrl(imagePreview) || isLikelyDataURL(imagePreview)) ? imagePreview : null;
+
+  // Component to handle submit button pending state
+  function SubmitButton({ buttonText }: { buttonText: string }) {
+    const { pending } = useFormStatus();
+    return (
+      <Button type="submit" className="w-full sm:w-auto" disabled={pending || isProcessingImage}>
+        {pending ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Save className="mr-2 h-4 w-4" />
+        )}
+        {buttonText}
+      </Button>
+    );
+  }
 
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(handleSubmit)} // Changed to local handleSubmit
+        // The `action` prop is bound via useFormState.
+        // RHF's handleSubmit will be used to trigger the submission process.
+        // It will first validate, then run the function passed to it.
+        // Inside that function, we manually create FormData and call the server action.
+        onSubmit={form.handleSubmit(async (data) => {
+          // Create FormData from RHF's validated data
+          const formData = new FormData();
+          for (const key in data) {
+            const value = (data as any)[key];
+            if (value !== undefined && value !== null) {
+              if (typeof value === 'boolean') {
+                formData.append(key, value ? 'true' : 'false');
+              } else if (value instanceof FileList) {
+                  // This case should not happen here as image is base64 string.
+                  // If it were a file, you'd append fileList[0]
+              } else {
+                formData.append(key, String(value));
+              }
+            }
+          }
+          // Ensure imageUrl (potentially base64 from imagePreview) is included if not already in `data`
+          // or if it needs to be explicitly taken from state.
+          // form.getValues("imageUrl") should reflect the latest value set by handleImageUpload or initial.
+          const currentImageUrl = form.getValues("imageUrl");
+          if (currentImageUrl) {
+            formData.set("imageUrl", currentImageUrl);
+          } else if (imagePreview) {
+            // Fallback if imageUrl field wasn't updated by RHF for some reason
+            // but preview exists (e.g. pasted URL not yet in form state fully)
+            formData.set("imageUrl", imagePreview);
+          }
+
+
+          // Directly call the formAction (obtained from useFormState)
+          // This will trigger the server action.
+          // @ts-ignore
+          await formAction(formData);
+        })}
         className="space-y-8"
       >
-        {isStaticExport && (
-           <div className="p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
-             <strong>Modo de Demonstração Estática:</strong> As modificações de dados estão desativadas.
-           </div>
+        {/* Removed isStaticExport related div */}
+        {/* Display general form errors from server action if they exist and are not field specific */}
+        {formState?.error && typeof formState.error === 'string' && (
+          <div className="p-3 text-sm text-destructive bg-red-100 border border-destructive rounded-md">
+            {formState.error}
+          </div>
         )}
+
         <FormField
           control={form.control}
           name="name"
@@ -317,16 +354,16 @@ export default function AccessoryForm({
                       ref={fileInputRef}
                       onChange={handleImageUpload}
                       className="cursor-pointer"
-                      disabled={isProcessingImage}
+                      disabled={isProcessingImage} // || pending from useFormStatus
                     />
                   </FormControl>
                   <FormDescription>Selecione um arquivo de imagem (ex: JPG, PNG). Ele será redimensionado e comprimido.</FormDescription>
                   {isProcessingImage && <p className="text-sm text-muted-foreground flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Processando imagem...</p>}
-                  <FormMessage />
+                  {/* FormMessage for file input can be tricky, usually handled by overall form error or specific validation message */}
                 </FormItem>
                 <FormField
                   control={form.control}
-                  name="imageUrl"
+                  name="imageUrl" // This field will store the base64 string or external URL
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-sm font-normal text-muted-foreground">Ou Cole a URL da Imagem</FormLabel>
@@ -338,11 +375,11 @@ export default function AccessoryForm({
                           value={field.value || ""}
                           onChange={(e) => {
                             field.onChange(e);
-                            setImagePreview(e.target.value);
+                            setImagePreview(e.target.value); // Update preview when URL is pasted
                           }}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage /> {/* Shows validation messages for imageUrl field */}
                     </FormItem>
                   )}
                 />
@@ -363,7 +400,7 @@ export default function AccessoryForm({
             )}
           </div>
            <p className="text-xs text-muted-foreground">
-            Nota: As imagens enviadas são convertidas para um formato de dados (base64) e armazenadas nos dados mock. Para aplicações reais, use um serviço de armazenamento de arquivos.
+            Nota: As imagens enviadas são convertidas para um formato de dados (base64) e armazenadas. Para produção, considere um serviço de upload dedicado.
           </p>
         </div>
 
@@ -398,12 +435,13 @@ export default function AccessoryForm({
           />
           <FormField
             control={form.control}
-            name="price"
+            name="price" // Field name should match schema
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço (Ex: 29,99 ou 29.99)</FormLabel>
+                <FormLabel>Preço (Ex: 29,99)</FormLabel>
                 <FormControl>
-                  <Input placeholder="29,99" {...field} value={field.value || ""}/>
+                  {/* Input type="text" is better for price to allow comma, then parse */}
+                  <Input placeholder="29,99" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -437,9 +475,9 @@ export default function AccessoryForm({
                       id="isDealSwitch"
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      name={field.name}
-                      ref={field.ref}
-                      onBlur={field.onBlur}
+                      // name={field.name} // RHF handles name via control
+                      // ref={field.ref} // RHF handles ref
+                      onBlur={field.onBlur} // RHF handles blur
                     />
                     <FormLabel htmlFor="isDealSwitch" className="cursor-pointer">
                       {field.value ? "Sim, é uma oferta" : "Não é uma oferta"}
@@ -468,14 +506,7 @@ export default function AccessoryForm({
           )}
         />
         
-        <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting || isProcessingImage || isStaticExport}>
-          {isSubmitting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {submitButtonText}
-        </Button>
+        <SubmitButton buttonText={submitButtonText} />
       </form>
     </Form>
   );

@@ -62,7 +62,7 @@ export default async function ManageBlogPostsPage() {
         </CardHeader>
         <CardContent>
           {posts.length > 0 ? (
-            <PostsTable initialPosts={posts} isStaticExport={true} />
+            <PostsTable initialPosts={posts} isStaticExport={false} />
           ) : (
             <div className="text-center py-10">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />

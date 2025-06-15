@@ -62,7 +62,7 @@ export default async function ManageCouponsPage() {
         </CardHeader>
         <CardContent>
           {coupons.length > 0 ? (
-            <CouponsTable initialCoupons={coupons} isStaticExport={true} />
+            <CouponsTable initialCoupons={coupons} isStaticExport={false} />
           ) : (
             <div className="text-center py-10">
               <TicketPercent className="mx-auto h-12 w-12 text-muted-foreground mb-4" />

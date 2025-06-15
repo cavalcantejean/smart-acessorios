@@ -84,7 +84,7 @@ export default async function EditCouponPage({ params }: { params: { id: string 
             <CouponForm
               initialData={initialDataForForm}
               submitButtonText="Salvar Alterações"
-              isStaticExport={true}
+              isStaticExport={false}
             />
         </CardContent>
       </Card>

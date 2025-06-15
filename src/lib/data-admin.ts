@@ -128,6 +128,71 @@ export async function toggleUserAdminStatus(userId: string): Promise<UserFiresto
   }
 }
 
+export async function deleteUserCompletely(userIdToDelete: string, currentAdminId: string): Promise<{ success: boolean; message: string }> {
+  if (!adminDb || !adminAuth) {
+    const errorMsg = "Firebase Admin SDK não inicializado. Operação de exclusão abortada.";
+    console.error(errorMsg);
+    return { success: false, message: errorMsg };
+  }
+
+  if (userIdToDelete === currentAdminId) {
+    return { success: false, message: 'Administradores não podem excluir suas próprias contas.' };
+  }
+
+  // Optional: Add a check here if the user to delete is the last admin.
+  // This would involve querying all users, filtering for admins, and checking count.
+  // For simplicity, this check is often primarily client-side or handled by more complex backend logic/rules.
+  // Example (conceptual, needs full implementation if used):
+  // const allUsers = await adminAuth.listUsers();
+  // const adminUsers = allUsers.users.filter(u => u.customClaims?.admin);
+  // if (adminUsers.length === 1 && adminUsers[0].uid === userIdToDelete) {
+  //   return { success: false, message: 'Não é possível excluir o último administrador do sistema.' };
+  // }
+
+
+  try {
+    // 1. Delete Firebase Authentication record
+    await adminAuth.deleteUser(userIdToDelete);
+    console.log(`Usuário ${userIdToDelete} excluído da Autenticação Firebase.`);
+
+    // 2. Delete Firestore user document
+    const userDocRef = adminDb.collection('usuarios').doc(userIdToDelete);
+    await userDocRef.delete();
+    console.log(`Documento do usuário ${userIdToDelete} excluído do Firestore.`);
+
+    return { success: true, message: 'Usuário excluído com sucesso da autenticação e do banco de dados.' };
+
+  } catch (error: any) {
+    console.error(`Falha ao excluir o usuário ${userIdToDelete}:`, error);
+
+    // More specific error messages based on Firebase error codes if desired
+    let userMessage = 'Ocorreu um erro ao excluir o usuário.';
+    if (error.code === 'auth/user-not-found') {
+      userMessage = 'Usuário não encontrado na Autenticação Firebase. O registro no banco de dados pode ter sido removido se existente.';
+      // Attempt to delete Firestore doc anyway if auth user not found, as it might be an orphaned record
+      try {
+        const userDocRef = adminDb.collection('usuarios').doc(userIdToDelete);
+        const docSnap = await userDocRef.get();
+        if (docSnap.exists) {
+          await userDocRef.delete();
+          console.log(`Documento órfão do usuário ${userIdToDelete} excluído do Firestore.`);
+        }
+      } catch (dbError) {
+        console.error(`Erro ao tentar excluir documento órfão ${userIdToDelete} do Firestore:`, dbError);
+      }
+    } else if (error.code === 'permission-denied') { // Or other relevant codes
+        userMessage = 'Permissão negada para excluir o usuário. Verifique as configurações do Firebase Admin SDK.';
+    }
+    // Check if it's a Firestore error after Auth deletion succeeded (less likely to be caught here if Auth fails first)
+    else if (error.message && error.message.includes("Firestore")) {
+         userMessage = 'Usuário excluído da autenticação, mas ocorreu um erro ao excluir os dados do Firestore.';
+    }
+
+    return { success: false, message: userMessage };
+  }
+}
+
+
 // --- Accessory Management (Admin SDK) ---
 export async function addAccessoryWithAdmin(accessoryData: Omit<Accessory, 'id' | 'createdAt' | 'updatedAt'> & { isDeal?: boolean }): Promise<Accessory> {
   if (!adminDb) {

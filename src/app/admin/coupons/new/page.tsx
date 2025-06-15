@@ -40,7 +40,7 @@ export default function NewCouponPage() {
         <CardContent>
           <CouponForm 
             submitButtonText="Criar Cupom"
-            isStaticExport={true}
+            isStaticExport={false}
           />
         </CardContent>
       </Card>

@@ -93,7 +93,7 @@ export default async function EditPostPage({ params }: { params: { id: string } 
             <PostForm
               initialData={initialDataForForm}
               submitButtonText="Salvar Alterações"
-              isStaticExport={true}
+              isStaticExport={false}
             />
         </CardContent>
       </Card>

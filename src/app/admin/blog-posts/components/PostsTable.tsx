@@ -29,14 +29,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
-import { Timestamp } from 'firebase/firestore';
-
-interface PostsTableProps {
-  initialPosts: Post[];
-  isStaticExport?: boolean;
-}
-
-// initialActionState removed
+import { Timestamp } from 'firebase/firestore'; // doc, deleteDoc, db removed
+import { useAuth } from '@/hooks/useAuth';
+// import { db } from '@/lib/firebase'; // Removed db
+import { deletePostAction, type PostActionResult } from '@/app/admin/blog-posts/actions'; // Added
 
 const formatDate = (dateInput: any): string => {
   if (!dateInput) return 'N/A';
@@ -53,42 +49,54 @@ const formatDate = (dateInput: any): string => {
   return date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-export default function PostsTable({ initialPosts, isStaticExport = true }: PostsTableProps) {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+export default function PostsTable({ initialPosts }: PostsTableProps) { // isStaticExport removed
+  const [posts, setPosts] = useState<Post[]>(initialPosts); // Will be updated by revalidation
   const { toast } = useToast();
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
-  const [isDeletePending, setIsDeletePending] = useState(false);
+  const [isDeletePending, setIsDeletePending] = useState(false); // For local button loading state
+  const { user: authUser, isAuthenticated } = useAuth();
+  const [isTransitioning, startApiTransition] = (React as any).useTransition();
+
 
   useEffect(() => {
     setPosts(initialPosts);
   }, [initialPosts]);
 
-  const handleDeleteConfirm = () => {
-    if (isStaticExport) {
-      toast({ title: "Funcionalidade Indisponível", description: "Exclusão não suportada na exportação estática.", variant: "destructive" });
+  const handleDeleteConfirm = async () => {
+    // isStaticExport check removed
+    if (!isAuthenticated || !authUser?.id) {
+      toast({ title: "Não autenticado", description: "Você precisa estar logado como administrador para excluir.", variant: "destructive" });
       setPostToDelete(null);
       return;
     }
-    if (postToDelete) {
-      setIsDeletePending(true);
-      // Client-side Firebase logic would go here
-      console.log(`Simulating delete for post ${postToDelete.id}`);
-      setTimeout(() => {
-        setPosts(prevPosts => prevPosts.filter(p => p.id !== postToDelete.id));
-        toast({ title: "Sucesso (Simulado)!", description: `Post "${postToDelete.title}" excluído.` });
-        setIsDeletePending(false);
-        setPostToDelete(null);
-      }, 1000);
+
+    if (!postToDelete) {
+      toast({ title: "Erro Interno", description: "Nenhum post selecionado para exclusão.", variant: "destructive" });
+      return;
     }
+
+    setIsDeletePending(true);
+    startApiTransition(async () => {
+      // Pass slug if available for more specific revalidation, though actions.ts doesn't use it currently
+      const result: Omit<PostActionResult, 'post' | 'slug'> = await deletePostAction(postToDelete.id);
+      if (result.success) {
+        toast({ title: "Sucesso!", description: result.message });
+        // Data revalidation is handled by revalidatePath in the server action.
+      } else {
+        toast({
+          title: "Erro ao Excluir",
+          description: result.message || "Ocorreu um erro desconhecido.",
+          variant: "destructive",
+        });
+      }
+      setIsDeletePending(false);
+      setPostToDelete(null);
+    });
   };
 
   return (
     <AlertDialog open={!!postToDelete} onOpenChange={(isOpen) => { if (!isOpen) setPostToDelete(null); }}>
-      {isStaticExport && (
-        <div className="p-3 mb-4 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md">
-            <strong>Modo de Demonstração Estática:</strong> Ações de exclusão estão desativadas.
-        </div>
-      )}
+      {/* isStaticExport message div removed */}
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -142,10 +150,10 @@ export default function PostsTable({ initialPosts, isStaticExport = true }: Post
                       variant="destructive"
                       size="icon"
                       onClick={() => setPostToDelete(post)}
-                      disabled={isDeletePending && postToDelete?.id === post.id || isStaticExport}
+                      disabled={isDeletePending || isTransitioning}
                       title="Excluir Post"
                     >
-                      {isDeletePending && postToDelete?.id === post.id ? (
+                      {(isDeletePending && postToDelete?.id === post.id) || (isTransitioning && postToDelete?.id === post.id) ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4" />
@@ -172,10 +180,10 @@ export default function PostsTable({ initialPosts, isStaticExport = true }: Post
               <AlertDialogCancel disabled={isDeletePending}>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
-                disabled={isDeletePending || isStaticExport}
+                disabled={isDeletePending || isTransitioning || !isAuthenticated}
                 className="bg-destructive hover:bg-destructive/90"
               >
-                {isDeletePending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isDeletePending || isTransitioning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Excluir
               </AlertDialogAction>
             </AlertDialogFooter>
