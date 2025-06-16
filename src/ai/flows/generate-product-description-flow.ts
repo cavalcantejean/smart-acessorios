@@ -54,7 +54,7 @@ const generateProductDescriptionFlow = ai.defineFlow(
     inputSchema: GenerateDescriptionInputSchema,
     outputSchema: GenerateDescriptionOutputSchema,
   },
-  async (input) => {
+  async (input: GenerateDescriptionInput) => {
     console.log("[GENKIT_FLOW_SERVER] generateProductDescriptionFlow INICIADO com input:", input);
     try {
       console.log("[GENKIT_FLOW_SERVER] Chamando o prompt Genkit...");
