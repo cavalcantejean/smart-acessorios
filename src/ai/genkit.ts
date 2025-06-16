@@ -11,7 +11,7 @@ try {
     plugins: [
       googleAI() 
     ],
-    defaultModel: 'googleai/gemini-2.0-flash', // Corrected: 'model' to 'defaultModel'
+    // defaultModel: 'googleai/gemini-2.0-flash', // Corrected: 'model' to 'defaultModel'
   } as GenkitConfig); // Added type assertion for clarity
   console.log("[Genkit] AI instance initialized successfully.");
 } catch (error) {

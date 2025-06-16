@@ -58,7 +58,7 @@ const generateProductDescriptionFlow = ai.defineFlow(
     console.log("[GENKIT_FLOW_SERVER] generateProductDescriptionFlow INICIADO com input:", input);
     try {
       console.log("[GENKIT_FLOW_SERVER] Chamando o prompt Genkit...");
-      const response = await prompt(input);
+      const response = await prompt(input, { model: 'gemini-pro' });
       const output = response.output;
       console.log("[GENKIT_FLOW_SERVER] Resposta do prompt Genkit:", output);
 
