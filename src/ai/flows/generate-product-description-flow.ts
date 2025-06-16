@@ -88,8 +88,3 @@ const generateProductDescriptionFlow = ai.defineFlow(
     }
   }
 );
-
-// Content of this file is commented out as it's not used by any active Server Action
-// due to incompatibility with `output: 'export'`.
-// If this flow is needed, it should be deployed as a Firebase Cloud Function or similar
-// and called from the client-side.
