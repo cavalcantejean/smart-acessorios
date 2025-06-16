@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Upload } from "lucide-react"; 
+import { Loader2, Save, Upload, Info } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 // import type { Accessory } from "@/lib/types"; // Accessory type not directly used here
 // AccessoryActionResult type and useActionState/useFormStatus removed as server actions are disabled for static export
@@ -28,8 +28,8 @@ import { useAuth } from "@/hooks/useAuth"; // Will be removed or used only for i
 // Client-side Firebase imports removed:
 // import { db } from "@/lib/firebase";
 // import { doc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { useFormState, useFormStatus } from "react-dom"; // Added
-import { addAccessoryAction, updateAccessoryAction, type AccessoryActionResult } from "@/app/admin/accessories/actions"; // Added
+import { useFormState as useActionFormState, useFormState, useFormStatus } from "react-dom"; // Added useActionFormState
+import { addAccessoryAction, updateAccessoryAction, type AccessoryActionResult, generateDescriptionAction } from "@/app/admin/accessories/actions"; // Added generateDescriptionAction
 
 interface AccessoryFormProps {
   initialData?: Partial<AccessoryFormValues & { id?: string }>;
@@ -115,6 +115,10 @@ export default function AccessoryForm({
     undefined // Initial state for formState
   );
 
+  // AI Description State
+  const [aiDescState, aiDescAction] = useActionFormState(generateDescriptionAction, undefined);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+
   const form = useForm<AccessoryFormValues>({
     resolver: zodResolver(AccessoryFormSchema),
     defaultValues: initialData ? {
@@ -178,6 +182,17 @@ export default function AccessoryForm({
     }
   }, [formState, form, router, toast, initialData?.id]);
 
+  // Effect to handle AI description results
+  useEffect(() => {
+    if (aiDescState?.success && aiDescState.description) {
+      form.setValue("fullDescription", aiDescState.description, { shouldValidate: true });
+      toast({ title: "Sucesso!", description: "Descrição gerada por IA e inserida no campo 'Descrição Completa'." });
+    } else if (aiDescState?.error) {
+      toast({ title: "Erro ao Gerar Descrição", description: aiDescState.error, variant: "destructive" });
+    }
+    if (aiDescState) setIsGeneratingDescription(false); // Reset loading state when aiDescState changes
+  }, [aiDescState, form, toast]);
+
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -207,6 +222,27 @@ export default function AccessoryForm({
   // The handleSubmit function provided by react-hook-form will now pass data to the formAction
   // No separate handleSubmit function is strictly needed unless for pre-processing before formAction is called,
   // but standard HTML form submission with Server Actions handles FormData directly.
+
+  const handleGenerateDescription = async () => {
+    const productName = form.getValues("name");
+    const shortDesc = form.getValues("shortDescription");
+    const category = form.getValues("category");
+
+    if (!productName && !shortDesc) {
+      toast({
+        title: "Faltam Informações",
+        description: "Forneça pelo menos o nome ou a descrição curta para gerar a descrição completa.",
+        variant: "warning",
+      });
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    const formData = new FormData();
+    formData.append("productInfo", `Nome: ${productName}, Categoria: ${category}, Detalhes: ${shortDesc}`);
+    // @ts-ignore
+    aiDescAction(formData);
+  };
   
   const displayableImagePreview = imagePreview && (isValidHttpUrl(imagePreview) || isLikelyDataURL(imagePreview)) ? imagePreview : null;
 
@@ -313,6 +349,25 @@ export default function AccessoryForm({
               <FormControl>
                 <Textarea placeholder="Descrição detalhada do produto (aparece na página do acessório)" {...field} rows={5} />
               </FormControl>
+              {/* Add button here */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateDescription}
+                disabled={isGeneratingDescription || !form.watch('name') && !form.watch('shortDescription')}
+                className="mt-2"
+              >
+                {isGeneratingDescription ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Info className="mr-2 h-4 w-4" />
+                )}
+                Gerar Descrição com IA
+              </Button>
+              <FormDescription>
+                Clique para gerar uma descrição completa usando Inteligência Artificial com base no nome, categoria e descrição curta.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

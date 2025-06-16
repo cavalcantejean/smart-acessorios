@@ -10,6 +10,7 @@ import {
 import type { Accessory } from '@/lib/types';
 // Timestamp import might not be needed if data-admin handles all date conversions.
 // For now, AccessoryFormSchema expects strings for dates, so conversion happens there or in component.
+import { generateProductDescription, GenerateDescriptionInputSchema, GenerateDescriptionOutputSchema } from '@/ai/flows/generate-product-description-flow';
 
 // Helper type for Server Action responses
 export interface AccessoryActionResult {
@@ -26,10 +27,10 @@ const processFormData = (formData: FormData): Record<string, any> => {
     if (key === 'isDeal') {
       data[key] = value === 'on' || value === 'true';
     } else if (key === 'price') {
-      // Convert price from "29,99" to number 29.99 for validation
-      const priceStr = String(value).replace(',', '.');
-      const priceNum = parseFloat(priceStr);
-      data[key] = isNaN(priceNum) ? undefined : priceNum; // let schema handle if undefined
+      // Keep price as a string. Schema will validate it.
+      // The schema expects a string like "29,99" or "29.99".
+      // data-admin functions will handle final conversion to "xx.yy" for DB.
+      data[key] = String(value);
     } else {
       data[key] = value;
     }
@@ -80,6 +81,60 @@ export async function addAccessoryAction(
       success: false,
       message: `Falha ao adicionar acessório: ${e.message || 'Erro desconhecido do servidor.'}`,
       error: e.message || 'Erro desconhecido do servidor.',
+    };
+  }
+}
+
+export async function generateDescriptionAction(
+  prevState: any, // Can be more specific if we define a state type
+  formData: FormData
+): Promise<{ success: boolean; description?: string; error?: string }> {
+
+  const rawData = {
+    productInfo: formData.get('productInfo')
+  };
+
+  const validatedInput = GenerateDescriptionInputSchema.safeParse(rawData);
+
+  if (!validatedInput.success) {
+    console.error("Validation Error (Generate Description Input):", validatedInput.error.flatten().fieldErrors);
+    return {
+      success: false,
+      error: "Informações inválidas para gerar descrição: " + validatedInput.error.flatten().fieldErrors.productInfo?.join(', '),
+    };
+  }
+
+  try {
+    // Ensure the AI flow is initialized if it's not already (e.g. by calling ai.init() in genkit.ts or similar)
+    // For now, assuming it's initialized elsewhere or Genkit handles it.
+    console.log("[Action:generateDescriptionAction] Calling generateProductDescription with input:", validatedInput.data);
+    const result: GenerateDescriptionOutputSchema = await generateProductDescription(validatedInput.data);
+    console.log("[Action:generateDescriptionAction] Received result from flow:", result);
+
+    if (result && result.generatedDescription) {
+      return {
+        success: true,
+        description: result.generatedDescription,
+      };
+    } else {
+      return {
+        success: false,
+        error: "A IA não conseguiu gerar uma descrição válida.",
+      };
+    }
+  } catch (e: any) {
+    console.error("Error in generateDescriptionAction:", e);
+    let errorMessage = "Falha ao gerar descrição com IA.";
+    if (e.message) {
+        errorMessage += ` Detalhe: ${e.message}`;
+    }
+    // Check if the error is from Genkit/AI flow specifically
+    if (e.cause && typeof e.cause === 'string' && e.cause.includes('configureApiKey')) {
+        errorMessage = "Erro de configuração da API Genkit. Verifique a chave de API.";
+    }
+    return {
+      success: false,
+      error: errorMessage,
     };
   }
 }
