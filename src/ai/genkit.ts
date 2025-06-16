@@ -1,7 +1,7 @@
 
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import type { GenkitConfig, PluginProvider, ModelReference, RetrieverReference, TelemetryConfig, DotPromptConfig } from 'genkit';
+import type { ModelReference, RetrieverReference, TelemetryConfig, PromptConfig } from 'genkit';
 
 
 let aiInstance: any; 
@@ -12,7 +12,7 @@ try {
       googleAI() 
     ],
     // defaultModel: 'googleai/gemini-2.0-flash', // Corrected: 'model' to 'defaultModel'
-  } as GenkitConfig); // Added type assertion for clarity
+  }); // Added type assertion for clarity
   console.log("[Genkit] AI instance initialized successfully.");
 } catch (error) {
   console.error("CRITICAL: Genkit AI instance initialization failed:", error);
