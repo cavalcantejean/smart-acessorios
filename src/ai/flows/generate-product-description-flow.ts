@@ -1,5 +1,3 @@
-
-'use server'; // This directive is not strictly necessary for Genkit flows if not directly exposed as Server Actions
 /**
  * @fileOverview An AI agent that generates product descriptions.
  * This flow is intended to be called from a server environment (e.g., Firebase Cloud Function)
