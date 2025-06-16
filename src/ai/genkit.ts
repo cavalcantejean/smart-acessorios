@@ -17,7 +17,7 @@ try {
 } catch (error) {
   console.error("CRITICAL: Genkit AI instance initialization failed:", error);
   
-  const errorMessage = "Genkit AI not initialized due to a startup error. Check server logs for details.";
+  const errorMessage = "Genkit AI not initialized. This is often due to a missing or invalid API key (e.g., GOOGLE_API_KEY). Check server logs and environment variable configuration.";
   
   aiInstance = {
     defineFlow: (config: any, flowFn: any) => {
