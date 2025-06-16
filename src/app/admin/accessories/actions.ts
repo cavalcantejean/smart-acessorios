@@ -10,7 +10,8 @@ import {
 import type { Accessory } from '@/lib/types';
 // Timestamp import might not be needed if data-admin handles all date conversions.
 // For now, AccessoryFormSchema expects strings for dates, so conversion happens there or in component.
-import { generateProductDescription, GenerateDescriptionInputSchema, GenerateDescriptionOutputSchema } from '@/ai/flows/generate-product-description-flow';
+import { generateProductDescription } from '@/ai/flows/generate-product-description-flow';
+import { GenerateDescriptionInputSchema, type GenerateDescriptionOutput } from '@/ai/flows/ai_schemas';
 
 // Helper type for Server Action responses
 export interface AccessoryActionResult {
@@ -108,7 +109,7 @@ export async function generateDescriptionAction(
     // Ensure the AI flow is initialized if it's not already (e.g. by calling ai.init() in genkit.ts or similar)
     // For now, assuming it's initialized elsewhere or Genkit handles it.
     console.log("[Action:generateDescriptionAction] Calling generateProductDescription with input:", validatedInput.data);
-    const result: GenerateDescriptionOutputSchema = await generateProductDescription(validatedInput.data);
+    const result: GenerateDescriptionOutput = await generateProductDescription(validatedInput.data);
     console.log("[Action:generateDescriptionAction] Received result from flow:", result);
 
     if (result && result.generatedDescription) {
