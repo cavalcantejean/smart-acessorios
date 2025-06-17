@@ -1,6 +1,6 @@
 
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting, SiteSettingsForClient } from './types';
-import { db } from './firebase';
+import { db } from './firebase-client';
 import {
   collection,
   doc,

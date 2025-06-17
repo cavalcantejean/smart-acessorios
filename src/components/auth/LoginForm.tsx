@@ -21,7 +21,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react"; // Removed useActionState and startTransition
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase-client';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Separator } from "@/components/ui/separator";
 

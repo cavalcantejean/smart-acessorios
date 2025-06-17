@@ -21,7 +21,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react"; // Removed useActionState, startTransition
 import { useRouter } from "next/navigation";
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase-client';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const registerFormSchema = z.object({
