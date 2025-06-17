@@ -11,6 +11,7 @@ const nextConfig = {
     ppr: false, // Explicitly disable Partial Prerendering
     // asyncWebAssembly: true, // Removed: Not a recognized option or handled differently now
   },
+  serverComponentsExternalPackages: ['firebase-admin'],
   images: {
     unoptimized: true, // Disable Image Optimization API for static export
     remotePatterns: [
@@ -34,7 +35,18 @@ const nextConfig = {
       }
     ],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => { // Add webpack to params if needed for version checks or specific plugins, though not strictly for experiments
+  // Initialize experiments if it doesn't exist
+  if (!config.experiments) {
+    config.experiments = {};
+  }
+
+  // Enable WebAssembly experiments
+  config.experiments.asyncWebAssembly = true;
+  // For older Webpack 5 versions, layers was also needed for some WASM setups,
+  // but asyncWebAssembly is the primary flag. Next.js might handle layers internally.
+  // config.experiments.layers = true;
+
     if (!config.resolve) {
       config.resolve = {};
     }
