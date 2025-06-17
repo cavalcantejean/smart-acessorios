@@ -11,7 +11,6 @@ const nextConfig = {
     ppr: false, // Explicitly disable Partial Prerendering
     // asyncWebAssembly: true, // Removed: Not a recognized option or handled differently now
   },
-  serverComponentsExternalPackages: ['firebase-admin'], // Added this line
   images: {
     unoptimized: true, // Disable Image Optimization API for static export
     remotePatterns: [
