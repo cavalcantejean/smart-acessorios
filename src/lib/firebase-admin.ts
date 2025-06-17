@@ -1,100 +1,65 @@
+// lib/firebase-admin.ts
 
 import admin from 'firebase-admin';
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
-import type { Auth as AdminAuth } from 'firebase-admin/auth';
+import { getApps } from 'firebase-admin/app'; // Correct import for getApps
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore'; // Keep type import if needed elsewhere, though adminDb below is typed by inference
+import type { Auth as AdminAuth } from 'firebase-admin/auth'; // Keep type import if needed elsewhere
 
-// Diagnostic logging for Firebase Admin SDK environment variables
-console.log("Firebase Admin SDK Env Check:");
-console.log(` - GOOGLE_APPLICATION_CREDENTIALS: ${process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'Set' : 'Not Set'}`);
-console.log(` - NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'Not Set'}`);
-console.log(` - FIREBASE_CLIENT_EMAIL: ${process.env.FIREBASE_CLIENT_EMAIL ? 'Set (ending with ' + String(process.env.FIREBASE_CLIENT_EMAIL).slice(-10) + ')' : 'Not Set'}`);
-// Avoid logging the full private key. Just check if it's set and maybe its length if needed.
-console.log(` - FIREBASE_PRIVATE_KEY: ${process.env.FIREBASE_PRIVATE_KEY ? 'Set (Length: ' + process.env.FIREBASE_PRIVATE_KEY.length + ')' : 'Not Set'}`);
-console.log("------------------------------------");
+// Construct serviceAccount from environment variables
+// These are expected to be set in the Cloud Run environment (e.g., via secrets)
+const serviceAccount = {
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  // Ensure private key newlines are correctly formatted
+  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+};
 
-// Variables de ambiente para configuração do Firebase Admin SDK
-const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKeyInput = process.env.FIREBASE_PRIVATE_KEY;
+let adminDb: AdminFirestore;
+let adminAuth: AdminAuth; // Optional: if you also export adminAuth
 
-let adminApp: admin.app.App | undefined = undefined;
-let adminDb: AdminFirestore | undefined = undefined;
-let adminAuth: AdminAuth | undefined = undefined;
-
-function initializeAdminServices(appInstance: admin.app.App) {
+// Check if Firebase Admin SDK has already been initialized
+// This is crucial for serverless environments to avoid re-initialization errors
+if (getApps().length === 0) {
+  console.log('Initializing Firebase Admin SDK with service account...');
   try {
-    adminDb = appInstance.firestore();
-    console.log("Firebase Admin SDK: Firestore service initialized from app instance.");
-  } catch (e) {
-    console.error("Firebase Admin SDK: Failed to initialize Firestore service from app instance:", e);
-    adminDb = undefined;
-  }
-  try {
-    adminAuth = appInstance.auth();
-    console.log("Firebase Admin SDK: Auth service initialized from app instance.");
-  } catch (e) {
-    console.error("Firebase Admin SDK: Failed to initialize Auth service from app instance:", e);
-    adminAuth = undefined;
-  }
-}
-
-if (!admin.apps.length) {
-  console.log("Firebase Admin SDK: No apps initialized, attempting new initialization.");
-  try {
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      console.log("Firebase Admin SDK: Attempting initialization with GOOGLE_APPLICATION_CREDENTIALS.");
-      adminApp = admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        projectId: projectId, // projectId can be sourced from GOOGLE_APPLICATION_CREDENTIALS as well
-      });
-    } else if (projectId && clientEmail && privateKeyInput) {
-      console.log("Firebase Admin SDK: Attempting initialization with individual environment variables.");
-      const privateKey = privateKeyInput.replace(/\\n/g, '\n');
-      adminApp = admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: projectId,
-          clientEmail: clientEmail,
-          privateKey: privateKey,
-        }),
-      });
-    } else {
-      console.warn(
-        "Firebase Admin SDK: Credentials not fully provided for new initialization. Missing GOOGLE_APPLICATION_CREDENTIALS or individual credential env vars (FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID)."
-      );
-      adminApp = undefined; 
-    }
-  } catch (e) {
-    console.error("CRITICAL: Firebase Admin SDK initialization failed during admin.initializeApp():", e);
-    adminApp = undefined;
-  }
-
-  if (adminApp) {
-    initializeAdminServices(adminApp);
-    console.log("Firebase Admin SDK: New app initialized successfully and services configured.");
-  } else {
-    console.warn("Firebase Admin SDK: 'adminApp' could not be initialized. Services (adminDb, adminAuth) will be undefined.");
-    adminDb = undefined; 
-    adminAuth = undefined;
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount), // Type assertion if serviceAccount doesn't perfectly match
+      // projectId: serviceAccount.projectId, // projectId can also be specified here if not inferred
+    });
+    console.log('Firebase Admin SDK initialized successfully.');
+  } catch (error: any) {
+    console.error('Firebase Admin SDK initialization error:', error);
+    // If initialization fails, adminDb and adminAuth will remain undefined or an error should be handled
+    // Depending on how critical this is, you might want to throw the error
+    // or ensure adminDb/adminAuth are handled as potentially undefined elsewhere.
+    // For now, if it fails, subsequent calls will fail when they try to use adminDb.
   }
 } else {
-  console.log("Firebase Admin SDK: App already initialized. Getting existing app instance.");
-  try {
-    adminApp = admin.app(); 
-    if (adminApp) {
-      initializeAdminServices(adminApp);
-      console.log("Firebase Admin SDK: Using existing app instance and services configured.");
-    } else {
-      console.warn("Firebase Admin SDK: admin.app() returned an invalid instance despite admin.apps.length > 0. Services will be undefined.");
-      adminDb = undefined;
-      adminAuth = undefined;
-    }
-  } catch (e) {
-    console.error("CRITICAL: Firebase Admin SDK failed to get existing app with admin.app():", e);
-    adminApp = undefined;
-    adminDb = undefined;
-    adminAuth = undefined;
-  }
+  console.log('Firebase Admin SDK already initialized. Using existing app.');
+  // If already initialized, get the default app.
+  // This branch might not be strictly necessary if initializeApp handles it,
+  // but getApps().length === 0 is the primary guard.
+  // admin.app(); // This line gets the default app, already done by subsequent service calls if not specified.
 }
 
-export { adminApp, adminDb, adminAuth };
-    
+// Export the Firestore instance
+// It's generally safer to get the service from the specific app instance,
+// though admin.firestore() often defaults to the initialized app.
+try {
+  adminDb = admin.firestore();
+} catch (error) {
+  console.error('Failed to get Firestore instance:', error);
+  // @ts-ignore
+  adminDb = undefined; // Explicitly set to undefined on error
+}
+
+// Optional: Export Auth instance similarly if used
+try {
+  adminAuth = admin.auth();
+} catch (error) {
+  console.error('Failed to get Auth instance:', error);
+  // @ts-ignore
+  adminAuth = undefined; // Explicitly set to undefined on error
+}
+
+export { adminDb, adminAuth }; // Export adminAuth as well if it's used elsewhere
