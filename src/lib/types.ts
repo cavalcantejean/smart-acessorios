@@ -15,6 +15,7 @@ export interface Accessory {
   aiSummary?: string;
   isDeal?: boolean;
   embedHtml?: string;
+  slug?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
