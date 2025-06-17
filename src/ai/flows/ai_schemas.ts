@@ -14,4 +14,8 @@ export const GenerateDescriptionOutputSchema = z.object({
     .string()
     .describe('The AI-generated product description.'),
 });
+<<<<<<< HEAD
 export type GenerateDescriptionOutput = z.infer<typeof GenerateDescriptionOutputSchema>;
+=======
+export type GenerateDescriptionOutput = z.infer<typeof GenerateDescriptionOutputSchema>;
+>>>>>>> master

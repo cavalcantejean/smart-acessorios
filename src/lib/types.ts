@@ -15,7 +15,6 @@ export interface Accessory {
   aiSummary?: string;
   isDeal?: boolean;
   embedHtml?: string;
-  slug?: string; // Add this line
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
