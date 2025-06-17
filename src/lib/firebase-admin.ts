@@ -3,6 +3,15 @@ import admin from 'firebase-admin';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { Auth as AdminAuth } from 'firebase-admin/auth';
 
+// Diagnostic logging for Firebase Admin SDK environment variables
+console.log("Firebase Admin SDK Env Check:");
+console.log(` - GOOGLE_APPLICATION_CREDENTIALS: ${process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'Set' : 'Not Set'}`);
+console.log(` - NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'Not Set'}`);
+console.log(` - FIREBASE_CLIENT_EMAIL: ${process.env.FIREBASE_CLIENT_EMAIL ? 'Set (ending with ' + String(process.env.FIREBASE_CLIENT_EMAIL).slice(-10) + ')' : 'Not Set'}`);
+// Avoid logging the full private key. Just check if it's set and maybe its length if needed.
+console.log(` - FIREBASE_PRIVATE_KEY: ${process.env.FIREBASE_PRIVATE_KEY ? 'Set (Length: ' + process.env.FIREBASE_PRIVATE_KEY.length + ')' : 'Not Set'}`);
+console.log("------------------------------------");
+
 // Variables de ambiente para configuração do Firebase Admin SDK
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
