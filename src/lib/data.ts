@@ -21,15 +21,13 @@ import {
   runTransaction
 } from 'firebase/firestore';
 // Removed: import { getSiteSettingsAdmin } from './data-admin'; 
-// import type { ComponentType } from 'react';
-// import {
-//   Facebook, Instagram, Twitter, Youtube, Mail, HelpCircle,
-//   MessageSquare, Send, MessageCircle as DiscordIconLucide, Ghost, AtSign, PlaySquare, Film
-// } from 'lucide-react';
-// import PinterestIcon from '@/components/icons/PinterestIcon';
-
+// import type { ComponentType } from 'react'; // No longer needed here
+// Lucide-react icons and PinterestIcon removed as they were only for getBaseSocialLinkSettings
 
 // --- Helper Functions for Firestore ---
+// convertTimestampToISO and convertTimestampToStringForDisplay might be used by other functions.
+// For now, they are kept. If they are specific only to moved items, they could also be moved.
+// Let's assume they are general helpers for now.
 const convertTimestampToISO = (timestamp: Timestamp | undefined): string | undefined => {
   return timestamp ? timestamp.toDate().toISOString() : undefined;
 };
@@ -37,7 +35,6 @@ const convertTimestampToISO = (timestamp: Timestamp | undefined): string | undef
 const convertTimestampToStringForDisplay = (timestamp: Timestamp | undefined): string => {
   return timestamp ? timestamp.toDate().toLocaleDateString('pt-BR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) : 'N/A';
 };
-
 
 // --- User Management (Firestore - Client SDK for reads) ---
 export async function getUserById(id: string): Promise<UserFirestoreData | undefined> {

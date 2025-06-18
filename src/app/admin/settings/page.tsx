@@ -1,6 +1,6 @@
 
 import { getSiteSettingsAdmin } from '@/lib/data-admin';
-import { getBaseSocialLinkSettings } from '@/lib/data';
+import { getBaseSocialLinkSettings } from '@/lib/site-utils';
 import type { SiteSettings, SocialLinkSetting } from '@/lib/types'; 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
