@@ -1,6 +1,6 @@
 
 import type { ComponentType } from 'react';
-import type { Timestamp } from 'firebase/firestore';
+// import type { Timestamp } from 'firebase/firestore'; // No longer needed
 
 export interface Accessory {
   id: string;
@@ -16,8 +16,8 @@ export interface Accessory {
   isDeal?: boolean;
   embedHtml?: string;
   slug?: string; // Add this line
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface Coupon {
@@ -25,11 +25,11 @@ export interface Coupon {
   code: string;
   description: string;
   discount: string;
-  expiryDate?: Timestamp;
+  expiryDate?: Date | string;
   store?: string;
   applyUrl?: string;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface Testimonial {
@@ -49,8 +49,8 @@ export interface UserFirestoreData {
   avatarUrl?: string;
   avatarHint?: string;
   bio?: string;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface AuthUser {
@@ -73,10 +73,10 @@ export interface Post {
   authorAvatarHint?: string;
   category?: string;
   tags: string[];
-  publishedAt: Timestamp;
+  publishedAt?: Date | string;
   embedHtml?: string;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 // Analytics Types

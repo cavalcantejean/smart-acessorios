@@ -157,16 +157,52 @@ export async function getCoupons(): Promise<Coupon[]> {
     const allCoupons = couponsSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Coupon));
 
     return allCoupons.filter(coupon => {
-      if (!coupon.expiryDate) return true;
-      const expiryDate = coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate() : new Date(coupon.expiryDate as any);
-      return expiryDate >= today.toDate();
+      if (!coupon.expiryDate) return true; // No expiry date means it's always valid from this perspective
+      let expiryJsDate: Date;
+      if (typeof coupon.expiryDate === 'string') {
+        expiryJsDate = new Date(coupon.expiryDate);
+      } else if (coupon.expiryDate instanceof Date) {
+        expiryJsDate = coupon.expiryDate;
+      } else {
+        // Handle cases where expiryDate might be an actual client Timestamp if data is mixed
+        // This case should ideally not be hit if data is consistently Date or string
+        // For safety, if it's a Timestamp object (from firebase/firestore)
+        // @ts-ignore
+        if (coupon.expiryDate && typeof coupon.expiryDate.toDate === 'function') {
+          // @ts-ignore
+          expiryJsDate = coupon.expiryDate.toDate();
+        } else {
+          // If it's truly undefined or an unexpected type, treat as invalid or always expired
+          // For filter: return false (expired) or handle as per requirements
+          return false; // Example: treat unparseable dates as expired
+        }
+      }
+      return expiryJsDate >= today.toDate();
     }).sort((a,b) => {
         if (!a.expiryDate && !b.expiryDate) return 0;
-        if (!a.expiryDate) return 1;
+        if (!a.expiryDate) return 1; // Place items with no expiry date last (or first if -1)
         if (!b.expiryDate) return -1;
-        const dateA = a.expiryDate instanceof Timestamp ? a.expiryDate.toMillis() : new Date(a.expiryDate as any).getTime();
-        const dateB = b.expiryDate instanceof Timestamp ? b.expiryDate.toMillis() : new Date(b.expiryDate as any).getTime();
-        return dateA - dateB;
+
+        let dateAValue: number;
+        if (typeof a.expiryDate === 'string') {
+          dateAValue = new Date(a.expiryDate).getTime();
+        } else if (a.expiryDate instanceof Date) {
+          dateAValue = a.expiryDate.getTime();
+        } else { // Fallback for undefined or other types, place non-expiring last
+          // @ts-ignore
+          dateAValue = a.expiryDate && typeof a.expiryDate.toDate === 'function' ? a.expiryDate.toDate().getTime() : Infinity;
+        }
+
+        let dateBValue: number;
+        if (typeof b.expiryDate === 'string') {
+          dateBValue = new Date(b.expiryDate).getTime();
+        } else if (b.expiryDate instanceof Date) {
+          dateBValue = b.expiryDate.getTime();
+        } else { // Fallback for undefined or other types
+          // @ts-ignore
+          dateBValue = b.expiryDate && typeof b.expiryDate.toDate === 'function' ? b.expiryDate.toDate().getTime() : Infinity;
+        }
+        return dateAValue - dateBValue;
     });
   } catch (error) {
     console.error("Error fetching coupons from Firestore:", error);
