@@ -6,16 +6,25 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import AccessoryDetailsClientWrapper from './components/AccessoryDetailsClientWrapper';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 import type { Metadata } from 'next';
 
 // Helper to prepare accessory data for client components
 const prepareAccessoryForClient = (accessory: Accessory): any => {
+  const convertToISO = (dateField: Date | string | undefined): string | undefined => {
+    if (!dateField) return undefined;
+    if (typeof dateField === 'string') return dateField; // Assume already ISO string
+    if (dateField instanceof Date) return dateField.toISOString();
+    // @ts-ignore (covers old client Timestamp if it sneaks in)
+    if (dateField.toDate && typeof dateField.toDate === 'function') return dateField.toDate().toISOString();
+    return String(dateField); // Fallback, might not be ideal
+  };
   return {
     ...accessory,
-    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : (accessory.createdAt as any),
-    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : (accessory.updatedAt as any),
-    // comments mapping removed
+    createdAt: convertToISO(accessory.createdAt),
+    updatedAt: convertToISO(accessory.updatedAt),
+    // comments field was removed from Accessory type as per previous logs, ensure this is consistent
+    // If comments are still part of Accessory type and have timestamps, they need similar conversion.
   };
 };
 

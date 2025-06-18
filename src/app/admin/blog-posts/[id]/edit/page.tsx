@@ -7,7 +7,7 @@ import { ArrowLeft, AlertTriangle, FileText } from 'lucide-react';
 import type { Metadata } from 'next';
 import PostForm from '@/components/admin/PostForm';
 import type { Post } from '@/lib/types';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed if logic below is updated
 
 export async function generateStaticParams() {
   const posts = await getAllPostsAdmin();
@@ -49,13 +49,15 @@ export default async function EditPostPage({ params }: { params: { id: string } 
 
   let publishedAtString = "";
   if (post.publishedAt) {
-    if (post.publishedAt instanceof Timestamp) {
-      publishedAtString = post.publishedAt.toDate().toISOString().split('T')[0];
-    } else if (typeof post.publishedAt === 'string') { 
-      publishedAtString = new Date(post.publishedAt).toISOString().split('T')[0];
-    } else if (typeof post.publishedAt === 'object' && 'seconds' in post.publishedAt && 'nanoseconds' in post.publishedAt) {
-      publishedAtString = new Timestamp((post.publishedAt as any).seconds, (post.publishedAt as any).nanoseconds).toDate().toISOString().split('T')[0];
+    if (typeof post.publishedAt === 'string') {
+      // Attempt to parse if it's a full ISO string, then take date part
+      try {
+        publishedAtString = new Date(post.publishedAt).toISOString().split('T')[0];
+      } catch (e) { /* ignore if not a valid date string */ }
+    } else if (post.publishedAt instanceof Date) {
+      publishedAtString = post.publishedAt.toISOString().split('T')[0];
     }
+    // The old duck-typing for Timestamp might not be needed if types are now Date | string
   }
 
   const initialDataForForm = {
