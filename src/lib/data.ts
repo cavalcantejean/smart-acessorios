@@ -71,10 +71,11 @@ export async function getAllUsers(): Promise<UserFirestoreData[]> {
 }
 
 // --- Accessory Management (Client SDK for reads and user-initiated writes) ---
-const accessoriesClientCollection = collection(db, "acessorios");
+// const accessoriesClientCollection = collection(db, "acessorios"); // Moved into functions
 
 export async function getAllAccessories(): Promise<Accessory[]> {
   if (!db) { console.error("Firestore client db instance not available in getAllAccessories."); return []; }
+  const accessoriesClientCollection = collection(db, "acessorios");
   try {
     const accessoriesSnapshot = await getDocs(query(accessoriesClientCollection, orderBy("createdAt", "desc")));
     return accessoriesSnapshot.docs.map(docSnap => ({
@@ -112,6 +113,7 @@ export async function getUniqueCategories(): Promise<string[]> {
 
 export async function getDailyDeals(): Promise<Accessory[]> {
   if (!db) { console.error("Firestore client db instance not available in getDailyDeals."); return []; }
+  const accessoriesClientCollection = collection(db, "acessorios");
   let deals: Accessory[] = [];
   try {
     const dealsQuery = query(accessoriesClientCollection, where("isDeal", "==", true), orderBy("createdAt", "desc"), limit(6));
@@ -145,10 +147,11 @@ export async function getDailyDeals(): Promise<Accessory[]> {
 }
 
 // --- Coupon Management (Client SDK for reads) ---
-const couponsClientCollection = collection(db, "cupons");
+// const couponsClientCollection = collection(db, "cupons"); // Moved into functions
 
 export async function getCoupons(): Promise<Coupon[]> {
   if (!db) { console.error("Firestore client db instance not available in getCoupons."); return []; }
+  const couponsClientCollection = collection(db, "cupons");
   try {
     const today = Timestamp.now();
     const q = query(couponsClientCollection, orderBy("expiryDate", "asc"));
@@ -226,10 +229,11 @@ export async function getCouponById(id: string): Promise<Coupon | undefined> {
 }
 
 // --- Post Management (Client SDK for reads) ---
-const postsClientCollection = collection(db, "posts");
+// const postsClientCollection = collection(db, "posts"); // Moved into functions
 
 export async function getAllPosts(): Promise<Post[]> {
   if (!db) { console.error("Firestore client db instance not available in getAllPosts."); return []; }
+  const postsClientCollection = collection(db, "posts");
   try {
     const postsSnapshot = await getDocs(query(postsClientCollection, orderBy("publishedAt", "desc")));
     return postsSnapshot.docs.map(docSnap => ({
@@ -260,6 +264,7 @@ export async function getPostById(id: string): Promise<Post | undefined> {
 
 export async function getPostBySlug(slug: string): Promise<Post | undefined> {
   if (!db) { console.error("Firestore client db instance not available in getPostBySlug."); return undefined; }
+  const postsClientCollection = collection(db, "posts");
   try {
     const q = query(postsClientCollection, where("slug", "==", slug), limit(1));
     const postSnapshot = await getDocs(q);
@@ -276,6 +281,7 @@ export async function getPostBySlug(slug: string): Promise<Post | undefined> {
 
 export async function getLatestPosts(count: number): Promise<Post[]> {
   if (!db) { console.error("Firestore client db instance not available in getLatestPosts."); return []; }
+  const postsClientCollection = collection(db, "posts");
   try {
     const q = query(postsClientCollection, orderBy("publishedAt", "desc"), limit(count));
     const postsSnapshot = await getDocs(q);
