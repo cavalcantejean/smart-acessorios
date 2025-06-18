@@ -1,10 +1,10 @@
 
-import { getDailyDeals } from '@/lib/data'; // Now async
-import type { Accessory, Comment } from '@/lib/types';
+import { getDailyDealsAdmin } from '@/lib/data-admin'; // Now async
+import type { Accessory } from '@/lib/types'; // Comment removed
 import AccessoryCard from '@/components/AccessoryCard';
 import { Tag } from 'lucide-react';
 import type { Metadata } from 'next';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 
 export const metadata: Metadata = {
   title: 'Ofertas do Dia | SmartAcessorios',
@@ -13,19 +13,23 @@ export const metadata: Metadata = {
 
 // Helper to prepare accessory for client (convert Timestamps to strings)
 const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
+  const convertToISO = (dateField: Date | string | undefined): string | undefined => {
+    if (!dateField) return undefined;
+    if (typeof dateField === 'string') return dateField; // Assume already ISO string
+    if (dateField instanceof Date) return dateField.toISOString();
+    // Fallback for any other unexpected type
+    return String(dateField);
+  };
   return {
     ...accessory,
-    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : (accessory.createdAt as any),
-    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : (accessory.updatedAt as any),
-    comments: (accessory.comments || []).map(comment => ({
-      ...comment,
-      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : (comment.createdAt as any),
-    })),
-  } as Accessory; // Cast to ensure type compatibility
+    createdAt: convertToISO(accessory.createdAt),
+    updatedAt: convertToISO(accessory.updatedAt),
+    // comments field is no longer part of Accessory type, so remove mapping
+  };
 };
 
 export default async function DealsPage() {
-  const rawDeals: Accessory[] = await getDailyDeals(); // Await async call
+  const rawDeals: Accessory[] = await getDailyDealsAdmin(); // Await async call
   const dailyDeals = rawDeals.map(prepareAccessoryForClient);
 
   return (
