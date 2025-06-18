@@ -1,23 +1,23 @@
 
-import { getUserById, getAllUsers } from '@/lib/data'; // Now async, added getAllUsers
+import { getUserByIdAdmin, getAllUsersAdmin } from '@/lib/data-admin'; // Now async, added getAllUsersAdmin
 import type { UserFirestoreData as User } from '@/lib/types'; // Use UserFirestoreData as User
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import UserProfileClientView from './components/UserProfileClientView';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 import type { Metadata } from 'next';
 
 export async function generateStaticParams() {
-  const users = await getAllUsers();
+  const users = await getAllUsersAdmin();
   return users.map((user) => ({
     id: user.id,
   }));
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const user = await getUserById(params.id); // Await async call
+  const user = await getUserByIdAdmin(params.id); // Await async call
   if (!user) {
     return {
       title: 'Perfil Não Encontrado',
@@ -36,7 +36,7 @@ interface ClientSafeUserForPage extends Omit<User, 'createdAt' | 'updatedAt'> {
 }
 
 export default async function UserProfilePage({ params }: { params: { id: string } }) {
-  const profileUserRaw: User | undefined = await getUserById(params.id); // Await async call
+  const profileUserRaw: User | undefined = await getUserByIdAdmin(params.id); // Await async call
 
   if (!profileUserRaw) {
     return (
@@ -61,10 +61,18 @@ export default async function UserProfilePage({ params }: { params: { id: string
   }
 
   // Prepare user data for client (convert Timestamps to strings)
+  const convertToISO = (dateField: Date | string | undefined): string | undefined => {
+    if (!dateField) return undefined;
+    if (typeof dateField === 'string') return dateField; // Assume already ISO string
+    if (dateField instanceof Date) return dateField.toISOString();
+    // Fallback for any other unexpected type
+    return String(dateField);
+  };
+
   const profileUser: ClientSafeUserForPage = {
     ...profileUserRaw,
-    createdAt: profileUserRaw.createdAt instanceof Timestamp ? profileUserRaw.createdAt.toDate().toISOString() : (profileUserRaw.createdAt as any),
-    updatedAt: profileUserRaw.updatedAt instanceof Timestamp ? profileUserRaw.updatedAt.toDate().toISOString() : (profileUserRaw.updatedAt as any),
+    createdAt: convertToISO(profileUserRaw.createdAt),
+    updatedAt: convertToISO(profileUserRaw.updatedAt),
   };
 
   return <UserProfileClientView profileUser={profileUser as any} />;
