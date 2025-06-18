@@ -509,6 +509,72 @@ export async function deleteCoupon(couponId: string): Promise<boolean> {
   }
 }
 
+export async function getAllCouponsAdmin(): Promise<Coupon[]> {
+  if (!adminDb) {
+    console.error("Firebase Admin SDK (adminDb) is not initialized in getAllCouponsAdmin. Returning empty array.");
+    return [];
+  }
+  try {
+    const couponsCollectionRef = adminDb.collection('cupons');
+    // Consider adding orderBy if needed, e.g., orderBy("expiryDate", "asc")
+    const couponsSnapshot = await couponsCollectionRef.orderBy("createdAt", "desc").get(); // Or order by code, etc.
+
+    return couponsSnapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        code: data.code,
+        description: data.description,
+        discount: data.discount,
+        store: data.store,
+        applyUrl: data.applyUrl,
+        // Convert Firestore Timestamps to JS Date objects
+        expiryDate: data.expiryDate ? (data.expiryDate as admin.firestore.Timestamp).toDate() : undefined,
+        createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+        updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+      } as Coupon; // Type assertion
+    });
+  } catch (error) {
+    console.error("Error fetching all coupons with Admin SDK:", error);
+    return [];
+  }
+}
+
+export async function getCouponByIdAdmin(id: string): Promise<Coupon | null> {
+  if (!adminDb) {
+    console.error(`Firebase Admin SDK (adminDb) is not initialized in getCouponByIdAdmin for id: ${id}. Returning null.`);
+    return null;
+  }
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    console.error('getCouponByIdAdmin: Invalid ID provided.');
+    return null;
+  }
+  try {
+    const couponDocRef = adminDb.collection('cupons').doc(id);
+    const couponDocSnap = await couponDocRef.get();
+    if (couponDocSnap.exists) {
+      const data = couponDocSnap.data();
+      if (data) {
+        return {
+          id: couponDocSnap.id,
+          code: data.code,
+          description: data.description,
+          discount: data.discount,
+          store: data.store,
+          applyUrl: data.applyUrl,
+          expiryDate: data.expiryDate ? (data.expiryDate as admin.firestore.Timestamp).toDate() : undefined,
+          createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+          updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+        } as Coupon; // Type assertion
+      }
+    }
+    return null; // Document not found or data is undefined
+  } catch (error) {
+    console.error(`Error fetching coupon ${id} with Admin SDK:`, error);
+    return null;
+  }
+}
+
 // --- Post Management (Admin SDK) ---
 export async function addPost(postData: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>): Promise<Post> {
   if (!adminDb) {

@@ -1,5 +1,5 @@
 
-import { getCouponById, getCoupons } from '@/lib/data'; 
+import { getCouponByIdAdmin, getAllCouponsAdmin } from '@/lib/data-admin';
 import type { Coupon } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,17 +7,17 @@ import Link from 'next/link';
 import { ArrowLeft, AlertTriangle, TicketPercent } from 'lucide-react';
 import type { Metadata } from 'next';
 import CouponForm from '../../components/CouponForm';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 
 export async function generateStaticParams() {
-  const coupons = await getCoupons();
+  const coupons = await getAllCouponsAdmin();
   return coupons.map((coupon) => ({
     id: coupon.id,
   }));
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const coupon = await getCouponById(params.id); 
+  const coupon = await getCouponByIdAdmin(params.id);
   if (!coupon) {
     return { title: 'Cupom Não Encontrado | Admin' };
   }
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditCouponPage({ params }: { params: { id: string } }) {
-  const coupon = await getCouponById(params.id); 
+  const coupon = await getCouponByIdAdmin(params.id);
 
   if (!coupon) {
     return (
@@ -49,9 +49,12 @@ export default async function EditCouponPage({ params }: { params: { id: string 
 
   const initialDataForForm = {
     ...coupon,
-    expiryDate: coupon.expiryDate instanceof Timestamp
-                 ? coupon.expiryDate.toDate().toISOString().split('T')[0]
-                 : (typeof coupon.expiryDate === 'string' ? coupon.expiryDate.split('T')[0] : ""),
+    expiryDate: coupon.expiryDate
+                ? (typeof coupon.expiryDate === 'string'
+                    ? coupon.expiryDate.split('T')[0]
+                    : (coupon.expiryDate instanceof Date ? coupon.expiryDate.toISOString().split('T')[0] : "")
+                  )
+                : "",
     store: coupon.store || "",
   };
 
