@@ -2,7 +2,7 @@
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting, AnalyticsData as AnalyticsDataTypeFromTypes } from './types'; // Renamed imported AnalyticsData
 import admin from 'firebase-admin';
 import { adminDb, adminAuth } from './firebase-admin';
-import { defaultSiteSettings as importedDefaultSiteSettings } from './data';
+import { defaultSiteSettings as importedDefaultSiteSettings } from './site-utils';
 
 // PendingCommentDisplayWithISOStringDate type removed as comments are removed
 

@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/hooks/useAuth';
 import { getSiteSettingsAdmin } from '@/lib/data-admin'; 
-import { getBaseSocialLinkSettings } from '@/lib/data'; 
+import { getBaseSocialLinkSettings } from '@/lib/site-utils';
 import type { SiteSettingsForClient, SocialLinkSetting, SerializableSocialLinkSetting } from '@/lib/types'; 
 import NavigationProgress from '@/components/NavigationProgress';
 import { Suspense } from 'react';

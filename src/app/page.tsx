@@ -1,7 +1,8 @@
 
 "use client";
 import React, { useState, useEffect } from 'react';
-import { getAllAccessories, getDailyDeals, getCoupons, getTestimonials, getUniqueCategories, getLatestPosts } from '@/lib/data'; 
+import { getAllAccessories, getDailyDeals, getCoupons, getUniqueCategories, getLatestPosts } from '@/lib/data';
+import { getTestimonials } from '@/lib/site-utils';
 import AccessoryCard from '@/components/AccessoryCard';
 import CouponCard from '@/components/CouponCard';
 import TestimonialCard from '@/components/TestimonialCard';
