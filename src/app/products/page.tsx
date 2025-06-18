@@ -1,10 +1,10 @@
 
-import { getAllAccessories } from '@/lib/data'; 
+import { getAllAccessoriesAdmin } from '@/lib/data-admin';
 import type { Accessory } from '@/lib/types'; // Comment type removed
 import AccessoryCard from '@/components/AccessoryCard';
 import { ShoppingBag } from 'lucide-react';
 import type { Metadata } from 'next';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 
 export const metadata: Metadata = {
   title: 'Todos os Produtos | SmartAcessorios',
@@ -12,17 +12,23 @@ export const metadata: Metadata = {
 };
 
 const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
+  const convertToISO = (dateField: Date | string | undefined): string | undefined => {
+    if (!dateField) return undefined;
+    if (typeof dateField === 'string') return dateField; // Assume already ISO string
+    if (dateField instanceof Date) return dateField.toISOString();
+    // Fallback for any other unexpected type
+    return String(dateField);
+  };
   return {
     ...accessory,
-    createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : (accessory.createdAt as any),
-    updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : (accessory.updatedAt as any),
-    // comments mapping removed
-  } as Accessory; 
+    createdAt: convertToISO(accessory.createdAt),
+    updatedAt: convertToISO(accessory.updatedAt),
+  };
 };
 
 
 export default async function ProductsPage() {
-  const rawAccessories: Accessory[] = await getAllAccessories(); 
+  const rawAccessories: Accessory[] = await getAllAccessoriesAdmin();
   const allAccessories = rawAccessories.map(prepareAccessoryForClient);
 
 
