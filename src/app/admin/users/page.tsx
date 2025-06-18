@@ -1,5 +1,5 @@
 
-import { getAllUsers } from '@/lib/data'; 
+import { getAllUsersAdmin } from '@/lib/data-admin';
 import type { UserFirestoreData as User } from '@/lib/types'; 
 import UsersTable from './components/UsersTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, UsersIcon } from 'lucide-react';
 import type { Metadata } from 'next';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 
 
 export const metadata: Metadata = {
@@ -16,33 +16,23 @@ export const metadata: Metadata = {
 };
 
 const prepareUserForClient = (user: User): User => {
-  const convertDate = (dateValue: any): string | undefined => {
-    if (dateValue instanceof Timestamp) {
-      return dateValue.toDate().toISOString();
-    }
-    if (dateValue instanceof Date) {
-      return dateValue.toISOString();
-    }
-    if (typeof dateValue === 'string') {
-      // Optionally, validate if it's an ISO string, but for now, assume it is.
-      // Could also attempt to parse and re-format to ensure consistency:
-      // try { return new Date(dateValue).toISOString(); } catch { return undefined; }
-      return dateValue;
-    }
-    // If it's null, undefined, or any other type, return undefined or handle as error
-    return undefined;
+  const convertToISO = (dateField: Date | string | undefined): string | undefined => {
+    if (!dateField) return undefined;
+    if (typeof dateField === 'string') return dateField; // Assume already ISO string
+    if (dateField instanceof Date) return dateField.toISOString();
+    // Fallback for any other unexpected type, though ideally types from data-admin are just Date
+    return String(dateField);
   };
-
   return {
     ...user,
-    createdAt: convertDate(user.createdAt),
-    updatedAt: convertDate(user.updatedAt),
-  } as User; // Keep 'as User' but the date fields are now more reliably string | undefined
+    createdAt: convertToISO(user.createdAt),
+    updatedAt: convertToISO(user.updatedAt),
+  };
 };
 
 
 export default async function ManageUsersPage() {
-  const rawUsers: User[] = await getAllUsers(); 
+  const rawUsers: User[] = await getAllUsersAdmin();
   const users = rawUsers.map(prepareUserForClient);
 
 
