@@ -1,4 +1,3 @@
-
 import type { Accessory, Coupon, Testimonial, UserFirestoreData, Post, SiteSettings, SocialLinkSetting, AnalyticsData as AnalyticsDataTypeFromTypes } from './types'; // Renamed imported AnalyticsData
 import admin from 'firebase-admin';
 import { adminDb, adminAuth } from './firebase-admin';
@@ -303,11 +302,15 @@ export async function updateCoupon(couponId: string, couponData: Partial<Omit<Co
   const couponDocRef = adminDb.collection("cupons").doc(couponId);
   try {
     const updateData: Record<string, any> = { ...couponData, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
-    if (couponData.expiryDate === "") {
+
+    // FIX: Cast expiryDate to 'any' for the string comparison.
+    if (couponData.expiryDate as any === "") {
         updateData.expiryDate = null;
     } else if (couponData.expiryDate) {
+        // This part correctly handles converting a valid date string/object to a Timestamp.
         updateData.expiryDate = admin.firestore.Timestamp.fromDate(new Date(couponData.expiryDate as any));
     }
+
     if (couponData.store === "") updateData.store = null;
     if (couponData.applyUrl === "") updateData.applyUrl = null;
 
@@ -500,5 +503,3 @@ export async function getAnalyticsData(): Promise<AnalyticsDataTypeFromTypes> { 
     return defaultAnalyticsData; // Return the correctly typed default data
   }
 }
-
-    
