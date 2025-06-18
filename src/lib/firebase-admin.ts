@@ -1,54 +1,67 @@
 // src/lib/firebase-admin.ts
 import admin from 'firebase-admin';
-import { getApps } from 'firebase-admin/app'; // Correct import for getApps for Admin SDK
+import { getApps } from 'firebase-admin/app';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { Auth as AdminAuth } from 'firebase-admin/auth';
-
-// These environment variables are server-side only and should be set in your
-// Cloud Run service environment (e.g., via secrets).
-// DO NOT prefix them with NEXT_PUBLIC_.
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID, // Or NEXT_PUBLIC_FIREBASE_PROJECT_ID if that's what's set for admin
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
 
 let adminDb: AdminFirestore;
 let adminAuth: AdminAuth;
 
-// Check if Firebase Admin SDK has already been initialized
 if (getApps().length === 0) {
-  // Check if all necessary service account details are present
-  if (serviceAccount.projectId && serviceAccount.clientEmail && serviceAccount.privateKey) {
-    console.log('Initializing Firebase Admin SDK with service account...');
-    try {
+  console.log("Firebase Admin SDK: Attempting initialization...");
+  try {
+    const gac = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    const projectId = process.env.APP_ADMIN_PROJECT_ID;
+    const clientEmail = process.env.APP_ADMIN_CLIENT_EMAIL;
+    const privateKeyInput = process.env.APP_ADMIN_PRIVATE_KEY;
+
+    if (gac && gac.trim() !== '') {
+      console.log("Firebase Admin SDK: Initializing with GOOGLE_APPLICATION_CREDENTIALS.");
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+        credential: admin.credential.applicationDefault(),
+        // Optionally, specify projectId if it's not in the GAC file or you want to override
+        // projectId: projectId || "your-default-project-id-if-any",
       });
-      console.log('Firebase Admin SDK initialized successfully.');
-    } catch (error: any) {
-      console.error('Firebase Admin SDK initialization error:', error.message);
-      console.error('Service Account details used (check if they are correctly loaded by the environment):');
-      console.error(` - projectId: ${serviceAccount.projectId ? 'Set' : 'NOT SET'}`);
-      console.error(` - clientEmail: ${serviceAccount.clientEmail ? 'Set' : 'NOT SET'}`);
-      console.error(` - privateKey: ${serviceAccount.privateKey ? 'Set (length: ' + serviceAccount.privateKey.length + ')' : 'NOT SET'}`);
-      // To avoid making adminDb/adminAuth undefined and then having runtime errors,
-      // it might be better to throw here or ensure the app cannot proceed without admin services.
-      // However, for now, matching the user's proposed structure.
+    } else if (projectId && clientEmail && privateKeyInput) {
+      console.log("Firebase Admin SDK: Initializing with APP_ADMIN_ prefixed environment variables.");
+      const privateKey = privateKeyInput.replace(/\\n/g, '\n'); // Correctly replace literal \n with newline
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          privateKey: privateKey,
+        }),
+      });
+    } else {
+      console.warn(
+        "Firebase Admin SDK: Credentials not fully provided. Need either GOOGLE_APPLICATION_CREDENTIALS or all of APP_ADMIN_PROJECT_ID, APP_ADMIN_CLIENT_EMAIL, APP_ADMIN_PRIVATE_KEY. SDK will not be initialized."
+      );
+      // Leave adminApp uninitialized, subsequent db/auth calls will fail if this path is taken.
     }
-  } else {
-    console.warn('Firebase Admin SDK: Missing required service account environment variables (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY). SDK will not be initialized.');
+
+    if (admin.apps.length > 0 && admin.apps[0]) { // Check if initialization was successful
+        console.log('Firebase Admin SDK initialized successfully.');
+    } else {
+        // This else block might not be reached if initializeApp throws an error for bad creds,
+        // but it's a fallback if it somehow completes without creating an app.
+        console.error('Firebase Admin SDK: admin.initializeApp was called but no app was created. Check credentials and logs.');
+    }
+
+  } catch (error: any) {
+    console.error('CRITICAL: Firebase Admin SDK initialization failed:', error.message);
+    console.error('Details:', error);
+    console.error('Make sure GOOGLE_APPLICATION_CREDENTIALS is set correctly in your environment, or all APP_ADMIN_PROJECT_ID, APP_ADMIN_CLIENT_EMAIL, and APP_ADMIN_PRIVATE_KEY are correctly set.');
   }
 } else {
   console.log('Firebase Admin SDK already initialized. Using existing app.');
 }
 
-// Get Firestore and Auth instances, regardless of whether it was just initialized or already existed.
-// It's important that these calls happen *after* initializeApp if it runs.
+// Get Firestore and Auth instances
+// These will throw if initializeApp failed and no app is available.
 try {
   adminDb = admin.firestore();
 } catch (error) {
-  console.error('Failed to get Firestore instance for Admin SDK:', error);
+  console.error('Failed to get Firestore instance for Admin SDK (adminDb):', error);
   // @ts-ignore
   adminDb = undefined;
 }
@@ -56,9 +69,17 @@ try {
 try {
   adminAuth = admin.auth();
 } catch (error) {
-  console.error('Failed to get Auth instance for Admin SDK:', error);
+  console.error('Failed to get Auth instance for Admin SDK (adminAuth):', error);
   // @ts-ignore
   adminAuth = undefined;
 }
 
 export { adminDb, adminAuth };
+
+// Remove or comment out old constants if they are no longer used by other logic in this file
+// const convertAdminTimestampToISO = ...
+// const convertAdminTimestampToStringForDisplay = ...
+// (Keep them if other exported functions from this file - not shown in current context - use them)
+// For now, assuming only the initialization block and exports are relevant to this change.
+// The functions like getSiteSettingsAdmin, getAllPostsAdmin, etc., that were in data-admin.ts
+// are NOT being moved here. This file is just for initializing and exporting adminDb/adminAuth.
