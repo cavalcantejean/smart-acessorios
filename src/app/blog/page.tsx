@@ -1,10 +1,10 @@
 
-import { getAllPosts } from '@/lib/data'; // Now async
+import { getAllPostsAdmin } from '@/lib/data-admin'; // Now async
 import type { Post } from '@/lib/types';
 import BlogPostCard from '@/components/BlogPostCard';
 import { BookOpenText } from 'lucide-react';
 import type { Metadata } from 'next';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 
 export const metadata: Metadata = {
   title: 'Blog | SmartAcessorios',
@@ -13,17 +13,24 @@ export const metadata: Metadata = {
 
 // Helper to prepare post for client (convert Timestamps to strings)
 const preparePostForClient = (post: Post): Post => {
+  const convertToISO = (dateField: Date | string | undefined): string | undefined => {
+    if (!dateField) return undefined;
+    if (typeof dateField === 'string') return dateField; // Assume already ISO string
+    if (dateField instanceof Date) return dateField.toISOString();
+    // Fallback for any other unexpected type
+    return String(dateField);
+  };
   return {
     ...post,
-    publishedAt: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : (post.publishedAt as any),
-    createdAt: post.createdAt instanceof Timestamp ? post.createdAt.toDate().toISOString() : (post.createdAt as any),
-    updatedAt: post.updatedAt instanceof Timestamp ? post.updatedAt.toDate().toISOString() : (post.updatedAt as any),
-  } as Post; // Cast to ensure type compatibility
+    publishedAt: convertToISO(post.publishedAt),
+    createdAt: convertToISO(post.createdAt),
+    updatedAt: convertToISO(post.updatedAt),
+  };
 };
 
 
 export default async function BlogPage() {
-  const rawPosts: Post[] = await getAllPosts(); // Await async call
+  const rawPosts: Post[] = await getAllPostsAdmin(); // Await async call
   const posts = rawPosts.map(preparePostForClient);
 
   return (

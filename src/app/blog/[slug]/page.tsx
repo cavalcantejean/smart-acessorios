@@ -1,10 +1,10 @@
 
-import { getPostBySlug, getAllPosts } from '@/lib/data';
+import { getPostBySlugAdmin, getAllPostsAdmin } from '@/lib/data-admin';
 import type { Post } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, BookOpenText } from 'lucide-react';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 import type { Metadata } from 'next';
 import BlogPostClientView from './components/BlogPostClientView'; // New client component
 
@@ -14,7 +14,7 @@ interface PostPageProps {
 
 // generateStaticParams is required for static export of dynamic routes
 export async function generateStaticParams() {
-  const posts = await getAllPosts();
+  const posts = await getAllPostsAdmin();
   return posts.map((post) => ({
     slug: post.slug,
   }));
@@ -22,7 +22,7 @@ export async function generateStaticParams() {
 
 // generateMetadata for dynamic metadata
 export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  const post = await getPostBySlug(params.slug);
+  const post = await getPostBySlugAdmin(params.slug);
   if (!post) {
     return {
       title: 'Artigo Não Encontrado',
@@ -36,7 +36,11 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       title: post.title,
       description: post.excerpt,
       type: 'article',
-      publishedTime: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : post.publishedAt,
+      publishedTime: post.publishedAt
+                           ? (typeof post.publishedAt === 'string'
+                               ? post.publishedAt
+                               : (post.publishedAt instanceof Date ? post.publishedAt.toISOString() : undefined))
+                           : undefined,
       authors: [post.authorName],
       images: post.imageUrl ? [{ url: post.imageUrl }] : [],
     },
@@ -50,18 +54,24 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 }
 
 // Helper to prepare post data for client components (convert Timestamps to strings)
-const preparePostForClient = (post: Post): any => {
+const preparePostForClient = (post: Post): any => { // Consider more specific return type if possible
+  const convertToISO = (dateField: Date | string | undefined): string | undefined => {
+    if (!dateField) return undefined;
+    if (typeof dateField === 'string') return dateField; // Assume already ISO string
+    if (dateField instanceof Date) return dateField.toISOString();
+    return String(dateField); // Fallback
+  };
   return {
     ...post,
-    publishedAt: post.publishedAt instanceof Timestamp ? post.publishedAt.toDate().toISOString() : (post.publishedAt as any),
-    createdAt: post.createdAt instanceof Timestamp ? post.createdAt.toDate().toISOString() : (post.createdAt as any),
-    updatedAt: post.updatedAt instanceof Timestamp ? post.updatedAt.toDate().toISOString() : (post.updatedAt as any),
+    publishedAt: convertToISO(post.publishedAt),
+    createdAt: convertToISO(post.createdAt),
+    updatedAt: convertToISO(post.updatedAt),
   };
 };
 
 
 export default async function PostPage({ params }: PostPageProps) {
-  const postData = await getPostBySlug(params.slug);
+  const postData = await getPostBySlugAdmin(params.slug);
 
   if (!postData) {
     return (
