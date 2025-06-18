@@ -264,8 +264,71 @@ export async function updateSiteSettingsAdmin(newSettings: Partial<SiteSettings>
   }
 }
 
-
 // --- User Management (Admin SDK) ---
+export async function getAllUsersAdmin(): Promise<UserFirestoreData[]> {
+  if (!adminDb) {
+    console.error("Firebase Admin SDK (adminDb) is not initialized in getAllUsersAdmin. Returning empty array.");
+    return [];
+  }
+  try {
+    const usersCollectionRef = adminDb.collection('usuarios');
+    const usersSnapshot = await usersCollectionRef.orderBy("name", "asc").get(); // Example ordering
+
+    return usersSnapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        name: data.name,
+        email: data.email,
+        isAdmin: data.isAdmin || false,
+        avatarUrl: data.avatarUrl,
+        avatarHint: data.avatarHint,
+        bio: data.bio,
+        createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+        updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+      } as UserFirestoreData;
+    });
+  } catch (error) {
+    console.error("Error fetching all users with Admin SDK:", error);
+    return [];
+  }
+}
+
+export async function getUserByIdAdmin(id: string): Promise<UserFirestoreData | null> {
+  if (!adminDb) {
+    console.error(`Firebase Admin SDK (adminDb) is not initialized in getUserByIdAdmin for id: ${id}. Returning null.`);
+    return null;
+  }
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    console.error('getUserByIdAdmin: Invalid ID provided.');
+    return null;
+  }
+  try {
+    const userDocRef = adminDb.collection('usuarios').doc(id);
+    const userDocSnap = await userDocRef.get();
+    if (userDocSnap.exists) {
+      const data = userDocSnap.data();
+      if (data) {
+        return {
+          id: userDocSnap.id,
+          name: data.name,
+          email: data.email,
+          isAdmin: data.isAdmin || false,
+          avatarUrl: data.avatarUrl,
+          avatarHint: data.avatarHint,
+          bio: data.bio,
+          createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+          updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+        } as UserFirestoreData;
+      }
+    }
+    return null; // Document not found or data is undefined
+  } catch (error) {
+    console.error(`Error fetching user ${id} with Admin SDK:`, error);
+    return null;
+  }
+}
+
 export async function toggleUserAdminStatus(userId: string): Promise<UserFirestoreData | null> {
   if (!adminDb || !adminAuth) { 
     console.error("Firebase Admin SDK (adminDb or adminAuth) is not initialized in toggleUserAdminStatus. Operation aborted."); 
