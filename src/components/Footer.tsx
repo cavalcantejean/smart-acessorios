@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image, { type StaticImageData } from 'next/image';
 import type { SiteSettingsForClient, SocialLinkSetting } from '@/lib/types'; // Use SiteSettingsForClient
 import React from 'react';
-import { getBaseSocialLinkSettings } from '@/lib/data'; 
+import { getBaseSocialLinkSettings } from '@/lib/site-utils';
 
 // Import Lucide icons that will be used as fallbacks or defaults
 import {

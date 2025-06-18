@@ -21,7 +21,7 @@ import { Loader2, Save, Upload, Image as ImageIcon, Settings2 } from "lucide-rea
 import { useEffect, useState, useRef } from "react";
 // SettingsActionResult and related hooks removed for static export
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getBaseSocialLinkSettings } from "@/lib/data"; 
+import { getBaseSocialLinkSettings } from "@/lib/site-utils";
 import type { SettingsFormDataForClient } from "../page"; 
 import Image from "next/image"; 
 import { useFormState, useFormStatus } from "react-dom"; // Added
