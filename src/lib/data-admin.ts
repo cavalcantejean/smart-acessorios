@@ -67,6 +67,173 @@ export async function getSiteSettingsAdmin(): Promise<SiteSettings> {
   }
 }
 
+export async function getAllPostsAdmin(): Promise<Post[]> {
+  if (!adminDb) {
+    console.error("Firebase Admin SDK (adminDb) is not initialized in getAllPostsAdmin. Returning empty array.");
+    return [];
+  }
+  try {
+    const postsCollectionRef = adminDb.collection('posts');
+    // Consider adding orderBy if needed, e.g., orderBy("publishedAt", "desc")
+    const postsSnapshot = await postsCollectionRef.orderBy("publishedAt", "desc").get();
+
+    return postsSnapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        slug: data.slug,
+        title: data.title,
+        excerpt: data.excerpt,
+        content: data.content,
+        imageUrl: data.imageUrl,
+        imageHint: data.imageHint,
+        authorName: data.authorName,
+        authorAvatarUrl: data.authorAvatarUrl,
+        authorAvatarHint: data.authorAvatarHint,
+        category: data.category,
+        tags: data.tags || [],
+        embedHtml: data.embedHtml,
+        // Convert Firestore Timestamps to JS Date objects for consistency with Accessory type handling
+        publishedAt: data.publishedAt ? (data.publishedAt as admin.firestore.Timestamp).toDate() : undefined,
+        createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+        updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+      } as Post; // Type assertion
+    });
+  } catch (error) {
+    console.error("Error fetching all posts with Admin SDK:", error);
+    return [];
+  }
+}
+
+export async function getPostByIdAdmin(id: string): Promise<Post | null> {
+  if (!adminDb) {
+    console.error(`Firebase Admin SDK (adminDb) is not initialized in getPostByIdAdmin for id: ${id}. Returning null.`);
+    return null;
+  }
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    console.error('getPostByIdAdmin: Invalid ID provided.');
+    return null;
+  }
+  try {
+    const postDocRef = adminDb.collection('posts').doc(id);
+    const postDocSnap = await postDocRef.get();
+    if (postDocSnap.exists) {
+      const data = postDocSnap.data();
+      if (data) {
+        return {
+          id: postDocSnap.id,
+          slug: data.slug,
+          title: data.title,
+          excerpt: data.excerpt,
+          content: data.content,
+          imageUrl: data.imageUrl,
+          imageHint: data.imageHint,
+          authorName: data.authorName,
+          authorAvatarUrl: data.authorAvatarUrl,
+          authorAvatarHint: data.authorAvatarHint,
+          category: data.category,
+          tags: data.tags || [],
+          embedHtml: data.embedHtml,
+          publishedAt: data.publishedAt ? (data.publishedAt as admin.firestore.Timestamp).toDate() : undefined,
+          createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+          updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+        } as Post; // Type assertion
+      }
+    }
+    return null; // Document not found or data is undefined
+  } catch (error) {
+    console.error(`Error fetching post ${id} with Admin SDK:`, error);
+    return null;
+  }
+}
+
+export async function getAllAccessoriesAdmin(): Promise<Accessory[]> {
+  if (!adminDb) {
+    console.error("Firebase Admin SDK (adminDb) is not initialized in getAllAccessoriesAdmin. Returning empty array.");
+    return [];
+  }
+  try {
+    const accessoriesCollectionRef = adminDb.collection('acessorios');
+    // Consider adding orderBy if needed, e.g., orderBy("createdAt", "desc")
+    const accessoriesSnapshot = await accessoriesCollectionRef.orderBy("createdAt", "desc").get();
+
+    return accessoriesSnapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        // Ensure all fields from the Accessory type are mapped
+        name: data.name,
+        imageUrl: data.imageUrl,
+        imageHint: data.imageHint,
+        shortDescription: data.shortDescription,
+        fullDescription: data.fullDescription,
+        affiliateLink: data.affiliateLink,
+        price: data.price,
+        category: data.category,
+        aiSummary: data.aiSummary,
+        isDeal: data.isDeal,
+        embedHtml: data.embedHtml,
+        slug: data.slug,
+        // Timestamps need to be converted for consistent Accessory type if not already stored as such.
+        // However, for admin functions, returning the raw Firestore Timestamp might be acceptable
+        // if the consumer (Server Component) handles it or serializes it.
+        // For now, let's assume direct mapping or that data matches Accessory type.
+        // If Accessory type expects Date or string, conversion is needed here.
+        // For simplicity, this example assumes direct mapping after data() call.
+        // If Accessory type has Timestamps from 'firebase/firestore' (client), convert here.
+        // If Accessory type expects admin Timestamps, this is fine.
+        // The type 'Accessory' uses client Timestamps. Let's convert.
+        createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+        updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+      } as Accessory; // Type assertion might be needed if timestamp conversion isn't perfect for the type
+    });
+  } catch (error) {
+    console.error("Error fetching all accessories with Admin SDK:", error);
+    return [];
+  }
+}
+
+export async function getAccessoryByIdAdmin(id: string): Promise<Accessory | null> {
+  if (!adminDb) {
+    console.error(`Firebase Admin SDK (adminDb) is not initialized in getAccessoryByIdAdmin for id: ${id}. Returning null.`);
+    return null;
+  }
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    console.error('getAccessoryByIdAdmin: Invalid ID provided.');
+    return null;
+  }
+  try {
+    const accessoryDocRef = adminDb.collection('acessorios').doc(id);
+    const accessoryDocSnap = await accessoryDocRef.get();
+    if (accessoryDocSnap.exists) {
+      const data = accessoryDocSnap.data();
+      if (data) {
+        return {
+          id: accessoryDocSnap.id,
+          name: data.name,
+          imageUrl: data.imageUrl,
+          imageHint: data.imageHint,
+          shortDescription: data.shortDescription,
+          fullDescription: data.fullDescription,
+          affiliateLink: data.affiliateLink,
+          price: data.price,
+          category: data.category,
+          aiSummary: data.aiSummary,
+          isDeal: data.isDeal,
+          embedHtml: data.embedHtml,
+          slug: data.slug,
+          createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+          updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+        } as Accessory;
+      }
+    }
+    return null; // Document not found or data is undefined
+  } catch (error) {
+    console.error(`Error fetching accessory ${id} with Admin SDK:`, error);
+    return null;
+  }
+}
+
 export async function updateSiteSettingsAdmin(newSettings: Partial<SiteSettings>): Promise<SiteSettings> {
   if (!adminDb) {
     console.error("Firebase Admin SDK (adminDb) is not initialized in updateSiteSettingsAdmin. Operation aborted.");

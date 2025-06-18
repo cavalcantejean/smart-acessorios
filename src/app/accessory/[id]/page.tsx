@@ -1,5 +1,5 @@
 
-import { getAccessoryById, getAllAccessories } from '@/lib/data'; 
+import { getAccessoryByIdAdmin, getAllAccessoriesAdmin } from '@/lib/data-admin';
 import type { Accessory } from '@/lib/types'; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Link from 'next/link';
@@ -24,7 +24,7 @@ interface AccessoryPageProps {
 }
 
 export async function generateStaticParams() {
-  const accessories = await getAllAccessories();
+  const accessories = await getAllAccessoriesAdmin();
   return accessories.map((accessory) => ({
     id: accessory.id,
   }));
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
     console.error('[generateMetadata] Error: id is falsy or not a valid string. Value:', id);
     return { title: 'Acessório Inválido (Metadata)' };
   }
-  const accessory = await getAccessoryById(id);
+  const accessory = await getAccessoryByIdAdmin(id);
   if (!accessory) {
     console.error('[generateMetadata] Error: Accessory not found for ID:', id);
     return { title: 'Acessório Não Encontrado (Metadata)' };
@@ -82,7 +82,7 @@ export default async function AccessoryDetailPage({ params }: AccessoryPageProps
     );
   }
 
-  const accessoryData = await getAccessoryById(id);
+  const accessoryData = await getAccessoryByIdAdmin(id);
 
   if (!accessoryData) {
     console.error('[AccessoryDetailPage] Error: Accessory not found for ID:', id);
