@@ -1,5 +1,5 @@
 
-import { getAccessoryById, getAllAccessories } from '@/lib/data'; 
+import { getAccessoryByIdAdmin, getAllAccessoriesAdmin } from '@/lib/data-admin';
 import type { Accessory } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,17 +7,17 @@ import Link from 'next/link';
 import { ArrowLeft, Construction, AlertTriangle } from 'lucide-react';
 import type { Metadata } from 'next';
 import AccessoryForm from '@/components/admin/AccessoryForm';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 
 export async function generateStaticParams() {
-  const accessories = await getAllAccessories();
+  const accessories = await getAllAccessoriesAdmin();
   return accessories.map((accessory) => ({
     id: accessory.id,
   }));
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const accessory = await getAccessoryById(params.id); 
+  const accessory = await getAccessoryByIdAdmin(params.id);
   if (!accessory) {
     return { title: 'Acessório Não Encontrado | Admin' };
   }
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditAccessoryPage({ params }: { params: { id: string } }) {
-  const accessory = await getAccessoryById(params.id); 
+  const accessory = await getAccessoryByIdAdmin(params.id);
 
   if (!accessory) {
     return (
