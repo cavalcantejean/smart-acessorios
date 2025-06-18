@@ -1,5 +1,5 @@
 
-import { getPostById, getAllPosts } from '@/lib/data'; 
+import { getPostByIdAdmin, getAllPostsAdmin } from '@/lib/data-admin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -10,14 +10,14 @@ import type { Post } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 
 export async function generateStaticParams() {
-  const posts = await getAllPosts();
+  const posts = await getAllPostsAdmin();
   return posts.map((post) => ({
     id: post.id,
   }));
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const post = await getPostById(params.id); 
+  const post = await getPostByIdAdmin(params.id);
   if (!post) {
     return { title: 'Post Não Encontrado | Admin' };
   }
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 export default async function EditPostPage({ params }: { params: { id: string } }) {
-  const post = await getPostById(params.id); 
+  const post = await getPostByIdAdmin(params.id);
 
   if (!post) {
     return (
