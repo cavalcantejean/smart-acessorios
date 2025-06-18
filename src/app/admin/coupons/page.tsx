@@ -1,5 +1,5 @@
 
-import { getCoupons } from '@/lib/data'; 
+import { getAllCouponsAdmin } from '@/lib/data-admin';
 import type { Coupon } from '@/lib/types';
 import CouponsTable from './components/CouponsTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, TicketPercent, PlusCircle } from 'lucide-react';
 import type { Metadata } from 'next';
-import { Timestamp } from 'firebase/firestore';
+// import { Timestamp } from 'firebase/firestore'; // No longer needed
 
 export const metadata: Metadata = {
   title: 'Gerenciar Cupons | Admin SmartAcessorios',
@@ -15,16 +15,23 @@ export const metadata: Metadata = {
 };
 
 const prepareCouponForClient = (coupon: Coupon): Coupon => {
+  const convertToISO = (dateField: Date | string | undefined): string | undefined => {
+    if (!dateField) return undefined;
+    if (typeof dateField === 'string') return dateField; // Assume already ISO string
+    if (dateField instanceof Date) return dateField.toISOString();
+    // Fallback for any other unexpected type
+    return String(dateField);
+  };
   return {
     ...coupon,
-    expiryDate: coupon.expiryDate instanceof Timestamp ? coupon.expiryDate.toDate().toISOString() : (coupon.expiryDate as any),
-    createdAt: coupon.createdAt instanceof Timestamp ? coupon.createdAt.toDate().toISOString() : (coupon.createdAt as any),
-    updatedAt: coupon.updatedAt instanceof Timestamp ? coupon.updatedAt.toDate().toISOString() : (coupon.updatedAt as any),
-  } as Coupon; 
+    expiryDate: convertToISO(coupon.expiryDate),
+    createdAt: convertToISO(coupon.createdAt),
+    updatedAt: convertToISO(coupon.updatedAt),
+  };
 };
 
 export default async function ManageCouponsPage() {
-  const rawCoupons: Coupon[] = await getCoupons(); 
+  const rawCoupons: Coupon[] = await getAllCouponsAdmin();
   const coupons = rawCoupons.map(prepareCouponForClient);
 
   return (
