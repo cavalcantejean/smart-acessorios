@@ -279,6 +279,80 @@ export async function getAccessoryByIdAdmin(id: string): Promise<Accessory | nul
   }
 }
 
+export async function getDailyDealsAdmin(): Promise<Accessory[]> {
+  if (!adminDb) {
+    console.error("Firebase Admin SDK (adminDb) is not initialized in getDailyDealsAdmin. Returning empty array.");
+    return [];
+  }
+  try {
+    const accessoriesCollectionRef = adminDb.collection('acessorios');
+    // Query for deals, order by creation date, limit if necessary
+    const dealsQuery = accessoriesCollectionRef
+      .where("isDeal", "==", true)
+      .orderBy("createdAt", "desc");
+      // .limit(6); // Optional: if you want to limit the number of deals fetched by admin too
+
+    const dealsSnapshot = await dealsQuery.get();
+
+    let deals = dealsSnapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        name: data.name,
+        imageUrl: data.imageUrl,
+        imageHint: data.imageHint,
+        shortDescription: data.shortDescription,
+        fullDescription: data.fullDescription,
+        affiliateLink: data.affiliateLink,
+        price: data.price,
+        category: data.category,
+        aiSummary: data.aiSummary,
+        isDeal: data.isDeal,
+        embedHtml: data.embedHtml,
+        slug: data.slug,
+        createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+        updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+      } as Accessory;
+    });
+
+    // Fallback logic similar to the client-side getDailyDeals if no specific deals are found
+    if (deals.length === 0) {
+      console.log("No specific deals found with Admin SDK, attempting fallback query for latest accessories.");
+      const fallbackQuery = accessoriesCollectionRef
+        .orderBy("createdAt", "desc")
+        .limit(2); // Match client-side fallback limit
+      const fallbackSnapshot = await fallbackQuery.get();
+      deals = fallbackSnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          name: data.name,
+          imageUrl: data.imageUrl,
+          imageHint: data.imageHint,
+          shortDescription: data.shortDescription,
+          fullDescription: data.fullDescription,
+          affiliateLink: data.affiliateLink,
+          price: data.price,
+          category: data.category,
+          aiSummary: data.aiSummary,
+          isDeal: data.isDeal, // This will be false or undefined for these fallback items
+          embedHtml: data.embedHtml,
+          slug: data.slug,
+          createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+          updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+        } as Accessory;
+      });
+    }
+    return deals;
+  } catch (error: any) {
+    console.error("Error fetching daily deals with Admin SDK:", error);
+    if (error.message && error.message.includes('requires an index')) {
+         console.error("INDEX REQUIRED: The query for daily deals (isDeal == true, orderBy createdAt desc) needs a composite index in Firestore. Please create it.");
+    }
+    return []; // Return empty array on error
+  }
+}
+
 export async function updateSiteSettingsAdmin(newSettings: Partial<SiteSettings>): Promise<SiteSettings> {
   if (!adminDb) {
     console.error("Firebase Admin SDK (adminDb) is not initialized in updateSiteSettingsAdmin. Operation aborted.");
