@@ -147,6 +147,51 @@ export async function getPostByIdAdmin(id: string): Promise<Post | null> {
   }
 }
 
+export async function getPostBySlugAdmin(slug: string): Promise<Post | null> {
+  if (!adminDb) {
+    console.error(`Firebase Admin SDK (adminDb) is not initialized in getPostBySlugAdmin for slug: ${slug}. Returning null.`);
+    return null;
+  }
+  if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+    console.error('getPostBySlugAdmin: Invalid slug provided.');
+    return null;
+  }
+  try {
+    const postsCollectionRef = adminDb.collection('posts');
+    const querySnapshot = await postsCollectionRef.where("slug", "==", slug).limit(1).get();
+
+    if (!querySnapshot.empty) {
+      const postDocSnap = querySnapshot.docs[0];
+      const data = postDocSnap.data();
+      if (data) {
+        return {
+          id: postDocSnap.id,
+          slug: data.slug,
+          title: data.title,
+          excerpt: data.excerpt,
+          content: data.content,
+          imageUrl: data.imageUrl,
+          imageHint: data.imageHint,
+          authorName: data.authorName,
+          authorAvatarUrl: data.authorAvatarUrl,
+          authorAvatarHint: data.authorAvatarHint,
+          category: data.category,
+          tags: data.tags || [],
+          embedHtml: data.embedHtml,
+          // Convert Firestore Timestamps to JS Date objects
+          publishedAt: data.publishedAt ? (data.publishedAt as admin.firestore.Timestamp).toDate() : undefined,
+          createdAt: data.createdAt ? (data.createdAt as admin.firestore.Timestamp).toDate() : undefined,
+          updatedAt: data.updatedAt ? (data.updatedAt as admin.firestore.Timestamp).toDate() : undefined,
+        } as Post; // Type assertion
+      }
+    }
+    return null; // Document not found or data is undefined
+  } catch (error) {
+    console.error(`Error fetching post by slug ${slug} with Admin SDK:`, error);
+    return null;
+  }
+}
+
 export async function getAllAccessoriesAdmin(): Promise<Accessory[]> {
   if (!adminDb) {
     console.error("Firebase Admin SDK (adminDb) is not initialized in getAllAccessoriesAdmin. Returning empty array.");
