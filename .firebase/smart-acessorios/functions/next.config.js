@@ -38,7 +38,11 @@ var nextConfig = {
       }
     ]
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
+    if (!config.experiments) {
+      config.experiments = {};
+    }
+    config.experiments.asyncWebAssembly = true;
     if (!config.resolve) {
       config.resolve = {};
     }

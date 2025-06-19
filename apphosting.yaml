@@ -5,3 +5,54 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
+
+env:
+  - variable: GOOGLE_API_KEY
+  - value: AIzaSyAriA-B03o5VPISbNtCr95vAOhjUyFp3os
+
+  - variable: APP_ADMIN_CLIENT_ID
+  - value: 106391971811568221364
+
+  - variable: APP_ADMIN_PRIVATE_KEY
+  - value: 84760ea14d851d51a50d7f7134fc23ed89746a05
+
+  - variable: APP_ADMIN_AUTH_URI
+  - value: https://accounts.google.com/o/oauth2/auth
+  - availability: [BUILD, RUNTIME]
+
+  - variable: APP_ADMIN_TOKEN_URI
+  - value: https://oauth2.googleapis.com/token
+  - availability: [BUILD, RUNTIME]
+
+  - variable: APP_ADMIN_AUTH_PROVIDER_X509_CERT_URL
+  - value: https://www.googleapis.com/oauth2/v1/certs
+  - availability: [BUILD, RUNTIME]
+
+  - variable: APP_ADMIN_CLIENT_X509_CERT_URL
+  - value: https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40smart-acessorios.iam.gserviceaccount.com
+  - availability: [BUILD, RUNTIME]
+
+  - variable: APP_ADMIN_UNIVERSE_DOMAIN
+  - value: googleapis.com
+  - availability: [BUILD, RUNTIME]
+
+  - variable: GOOGLE_APPLICATION_CREDENTIALS
+  - value: AIzaSyAriA-B03o5VPISbNtCr95vAOhjUyFp3os
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  - value: smart-acessorios
+  - availability: [BUILD, RUNTIME]
+
+  - variable: APP_ADMIN_CLIENT_EMAIL
+  - value: firebase-adminsdk-fbsvc@smart-acessorios.iam.gserviceaccount.com
+  - availability: [BUILD, RUNTIME]
+
+  - variable: APP_ADMIN_PRIVATE_KEY
+  - value: -----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDIxo5n0mVcfpQQ\nhF42UNn+gAXVEs2/MOL+X3vG4CnZTH4sCWLxHaQOIMe0s1B12uTmXUw46EgD25mP\nzimUO3ZOTkwkDU5WKlNndy7FbOle1b4Aa0M5NpOMcG1dnjs7xe3HU6ZGLlvzHYGJ\ncMI5reU7iSjGV94kH7ZMOSyFiLFqP7+hC1ldLBUmTV6wOKFLuBh4BFfhHLF8n8E6\n8FI5fm2NMDy8E03gImMO5eksb659Qdts+38uFvYURYV1R+2NE0uUIdWVx1ODxotz\n5qjf05Tkh0UJ4uOgJ/Arz4w8S6vHO8xh2MWaZErFZAvdfZd8hvbppvd5F0e9VynB\nFcd6UAO3AgMBAAECggEAA/ddhieIi785uunNLVLY5keD1fsScsh1yNinX/0QVpPw\nRNEap0YSoO9819EDBzuqcfKTODyTz5+y9OhPDKKav7Pu78y403Lv8DH74TfkPv9c\noDLTl88ViHIKzGKn1j0evrqkT5adh7v5fHbsdKnpcWJQRTrPJJ+LwQ26whiP3gLD\nYRl95vTKuzV5PDabF9oFr21bul8A20AL21t/j0GvSLQR/xPqwAHg4NBWrGChTkZl\nNkpgg/GokRDOxN7wiFTSeHSO3xRay/2OO7HYBiGNQHBNGfj/tUTxsSi4JJ51OmHC\nlh00bz8aFN1jlQXxvwbZiAgCmaraDi27tfm2wizKQQKBgQD7StNdPrzjt5YYjBvg\nZrJYcQ1NL/KLB0P/V+8uu/9PUTs7+9kU91ub1QHh2SiO8eunYSthsTMADbIQf2fz\nmFYdYaZ4UslYuOKexQsy0Dvn684vm1KPtJb8qXYyyyejXSJTU7kLYVSc3wVdK+te\nBTPXZjpDeS5rp0mSEynDYP6FuQKBgQDMiXUVmpsm4vFzro7JG+dj/e0wteXBTNeV\nctGiBdGqBYKS+qRfrh9zpTe0qaCxjo9AkMWKtJ3+c3QdoB2n17vV4w2OopW7cwbQ\nOciIyOMzTQvT3J20fkm1ZnP72MQ6V1Esn28brr0ow+/c4ce5Z+pYayDHtHvD5ACQ\nWtr/YBCM7wKBgQDBGx0V2LJa46dqMbDyXrjKkgXAvQnLoMe2HyLkbP+jOi8kx0Jo\nhDVXqPaLUc+DGZEXzOoDZqJkdiHR37ZIUVZLudCtQiEMFve/Pnh+kdqXPHPzzY5C\ndGpauvbjzY4mUdmg4wOeJStaaV+725ZBaAoQirRXSXZMr/8vS56aT50HsQKBgDXi\nDG9JkJAY/0TbepAugrHL5l2LveBDjxO28NT/NXHWC8UOtJjkNTLxFpDIkyXTiZeX\nzAKzfF/ZKIDZepaJ9djt/NdTq6B7OBNI9bRbP8d3B6OjngQ7tM1OFUYGoANCl4bq\n5Ylkaj7AB4OoE0abwpfSeQtDV8uOWDuvQ7w9IX8PAoGBAOcuA0MTGncgBZPoxfES\nCnsuwezMkohzRo9T+N1xBiGCTe7IkrZdCohQJUjKS4ndQreJ7zPJ9F6Mrm7EAdp7\ns2DMCGshmoC40Im4Q1kJmKmsMpoLHyszX93RX6cCO9sIJXJ7DcpFU+Yo6z+TNByC\nnCoBh/HT8nnNAqvrinINkZRF\n-----END PRIVATE KEY-----\n
+
+  - variable: APP_ADMIN_TYPE
+  - value: "service_account"
+  - availability: [BUILD, RUNTIME]
+
+
+
