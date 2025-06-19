@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, ShoppingBag, Heart, LogIn, UserPlus, LayoutDashboard, ChevronRight, LogOut, Tag, Ticket, BookOpenText, UserCircle, Home } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getUniqueCategories } from '@/lib/data';
+import { getUniqueCategories } from '@/lib/firebase-data-client';
 import { useEffect, useState } from 'react';
 import { Separator } from '@/components/ui/separator';
 import { usePathname } from 'next/navigation';

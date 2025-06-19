@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { User, Heart, Settings, LogOut, Loader2, Lock, ExternalLinkIcon } from 'lucide-react'; 
-import { getUserById } from '@/lib/data';
+import { getUserById } from '@/lib/firebase-data-client';
 import type { UserFirestoreData as FullUserType } from '@/lib/types';
 import { Timestamp } from 'firebase/firestore';
 
