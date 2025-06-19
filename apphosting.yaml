@@ -18,12 +18,12 @@ env:
   # Chave de API pública para o SDK do lado do cliente do Firebase.
   # Esta chave é pública e segura para estar aqui, desde que esteja restrita no Google Cloud Console.
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY # Nome corrigido para seguir o padrão Next.js
-    value: "AIzaSyAriA-B03o5VPISbNtCr95vAOhjUyFp3os"
+    value: "AIzaSyA9aAfqBDR1EoNTlP32uGT_sjDy5QYwLos"
     availability: [BUILD, RUNTIME]
 
   # ID do projeto, também público.
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: "smart-acessorios"
+    value: "smartastico"
     availability: [BUILD, RUNTIME]
 
 # Se você precisar de outras variáveis NEXT_PUBLIC_..., adicione-as aqui
