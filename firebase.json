@@ -1,8 +1,8 @@
 {
   "hosting": {
     "source": ".",
-    "site": "smart-acessorios",
-    "apphosting": "smart-acessorios", 
+    "site": "smartastico",
+    "apphosting": "smartastico", 
     "ignore": [
       "firebase.json",
       "**/.*",
