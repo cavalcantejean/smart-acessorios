@@ -64,6 +64,7 @@ export async function generateMetadata({ params }: AccessoryPageProps): Promise<
 }
 
 export default async function AccessoryDetailPage({ params }: AccessoryPageProps) {
+  console.log('--- RENDERIZANDO: src/app/accessory/[id]/page.tsx no SERVIDOR ---');
   const id = params.id; 
   console.log('[AccessoryDetailPage] Extracted id:', id);
 

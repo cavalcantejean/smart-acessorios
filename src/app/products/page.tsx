@@ -28,6 +28,7 @@ const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
 
 
 export default async function ProductsPage() {
+  console.log('--- RENDERIZANDO: src/app/products/page.tsx no SERVIDOR ---');
   const rawAccessories: Accessory[] = await getAllAccessoriesAdmin();
   const allAccessories = rawAccessories.map(prepareAccessoryForClient);
 

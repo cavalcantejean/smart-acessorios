@@ -29,6 +29,7 @@ const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
 };
 
 export default async function DealsPage() {
+  console.log('--- RENDERIZANDO: src/app/deals/page.tsx no SERVIDOR ---');
   const rawDeals: Accessory[] = await getDailyDealsAdmin(); // Await async call
   const dailyDeals = rawDeals.map(prepareAccessoryForClient);
 

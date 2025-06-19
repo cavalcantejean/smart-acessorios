@@ -30,6 +30,7 @@ export interface SettingsFormDataForClient {
 }
 
 export default async function SiteSettingsPage() {
+  console.log('--- RENDERIZANDO: src/app/admin/settings/page.tsx no SERVIDOR ---');
   const currentAdminSettings = await getSiteSettingsAdmin(); 
   const baseSocialLinks = getBaseSocialLinkSettings(); 
   

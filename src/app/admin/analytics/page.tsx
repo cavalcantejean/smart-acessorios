@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AnalyticsPage() {
+  console.log('--- RENDERIZANDO: src/app/admin/analytics/page.tsx no SERVIDOR ---');
   // For static export, we cannot reliably use firebase-admin during build.
   // Data will be placeholder or fetched client-side in a dynamic deployment.
   const analyticsData: AnalyticsData = {

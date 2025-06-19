@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default function NewAccessoryPage() {
+  console.log('--- RENDERIZANDO: src/app/admin/accessories/new/page.tsx no SERVIDOR ---');
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
