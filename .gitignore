@@ -10,6 +10,9 @@ serviceAccountKey.json
 out/
 build/
 
+# Ignorar a pasta de segredos e tudo dentro dela
+.secrets/
+
 # Node
 node_modules/
 npm-debug.log*

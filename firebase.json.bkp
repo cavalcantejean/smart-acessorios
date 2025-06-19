@@ -1,0 +1,15 @@
+{
+  "hosting": {
+    "source": ".",
+    "site": "smartastico",
+    "apphosting": "smartastico", 
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "frameworksBackend": {
+      "region": "us-west1"
+    }
+  }
+}
