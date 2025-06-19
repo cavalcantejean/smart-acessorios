@@ -30,6 +30,7 @@ const prepareCouponForClient = (coupon: Coupon): Coupon => {
 };
 
 export default async function CouponsPage() {
+  console.log('--- RENDERIZANDO: src/app/coupons/page.tsx no SERVIDOR ---');
   const rawCoupons: Coupon[] = await getAllCouponsAdmin(); // Await async call
   const promotionalCoupons = rawCoupons.map(prepareCouponForClient);
 

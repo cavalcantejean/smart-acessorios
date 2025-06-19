@@ -88,6 +88,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  console.log('--- RENDERIZANDO: src/app/layout.tsx no SERVIDOR ---');
   const adminSettings = await getSiteSettingsAdmin();
   const baseSocialLinks = getBaseSocialLinkSettings();
 

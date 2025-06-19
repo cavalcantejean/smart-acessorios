@@ -14,6 +14,7 @@ export const metadata: Metadata = {
 // ClientReadyPendingCommentDisplay and related types/functions removed as comment system is disabled for static export.
 
 export default async function ModerationPage() {
+  console.log('--- RENDERIZANDO: src/app/admin/moderation/page.tsx no SERVIDOR ---');
   let fetchError: string | null = "A funcionalidade de moderação de comentários não está disponível com a exportação estática do site. Para moderar comentários, uma configuração de servidor dinâmico é necessária.";
 
   return (

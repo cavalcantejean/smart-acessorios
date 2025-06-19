@@ -36,6 +36,7 @@ interface ClientSafeUserForPage extends Omit<User, 'createdAt' | 'updatedAt'> {
 }
 
 export default async function UserProfilePage({ params }: { params: { id: string } }) {
+  console.log('--- RENDERIZANDO: src/app/profile/[id]/page.tsx no SERVIDOR ---');
   const profileUserRaw: User | undefined = await getUserByIdAdmin(params.id); // Await async call
 
   if (!profileUserRaw) {

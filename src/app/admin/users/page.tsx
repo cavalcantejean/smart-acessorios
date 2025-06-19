@@ -32,6 +32,7 @@ const prepareUserForClient = (user: User): User => {
 
 
 export default async function ManageUsersPage() {
+  console.log('--- RENDERIZANDO: src/app/admin/users/page.tsx no SERVIDOR ---');
   const rawUsers: User[] = await getAllUsersAdmin();
   const users = rawUsers.map(prepareUserForClient);
 

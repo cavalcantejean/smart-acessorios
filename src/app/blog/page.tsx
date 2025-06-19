@@ -30,6 +30,7 @@ const preparePostForClient = (post: Post): Post => {
 
 
 export default async function BlogPage() {
+  console.log('--- RENDERIZANDO: src/app/blog/page.tsx no SERVIDOR ---');
   const rawPosts: Post[] = await getAllPostsAdmin(); // Await async call
   const posts = rawPosts.map(preparePostForClient);
 
