@@ -5,7 +5,7 @@ import { Inter } from 'next/font/google';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/hooks/useAuth';
+import ClientProviders from '@/components/ClientProviders';
 import { getSiteSettingsAdmin } from '@/lib/data-admin'; 
 import { getBaseSocialLinkSettings } from '@/lib/site-utils';
 import type { SiteSettingsForClient, SocialLinkSetting, SerializableSocialLinkSetting } from '@/lib/types'; 
@@ -122,7 +122,7 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
       <body className="font-body antialiased flex flex-col min-h-screen">
-        <AuthProvider>
+        <ClientProviders>
           <Suspense fallback={null}>
             <NavigationProgress />
           </Suspense>
@@ -132,7 +132,7 @@ export default async function RootLayout({
           </main>
           <Footer siteSettings={settingsForClient} />
           <Toaster />
-        </AuthProvider>
+        </ClientProviders>
       </body>
     </html>
   );
