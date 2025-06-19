@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getAllAccessories } from '@/lib/data';
+import { getAllAccessories } from '@/lib/firebase-data-client';
 import type { Accessory } from '@/lib/types';
 import AccessoryCard from '@/components/AccessoryCard';
 import { useFavorites } from '@/hooks/useFavorites';
