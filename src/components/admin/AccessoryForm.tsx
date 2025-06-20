@@ -232,7 +232,7 @@ export default function AccessoryForm({
       toast({
         title: "Faltam Informações",
         description: "Forneça pelo menos o nome ou a descrição curta para gerar a descrição completa.",
-        variant: "warning",
+        variant: "default",
       });
       return;
     }
