@@ -43,45 +43,50 @@ export async function addAccessoryAction(
   prevState: AccessoryActionResult | undefined,
   formData: FormData
 ): Promise<AccessoryActionResult> {
-  // Note: Authentication/Authorization should ideally be enforced within data-admin functions
-  // or via a middleware pattern for Server Actions if available/applicable.
+  try { // Outermost try
+    const rawData = processFormData(formData);
+    const validatedFields = AccessoryFormSchema.safeParse(rawData);
 
-  const rawData = processFormData(formData);
-  const validatedFields = AccessoryFormSchema.safeParse(rawData);
+    if (!validatedFields.success) {
+      console.error("Validation Error (Add Accessory):", validatedFields.error.flatten().fieldErrors);
+      return {
+        success: false,
+        error: validatedFields.error.flatten().fieldErrors,
+        message: "Erro de validação. Verifique os campos do acessório.",
+      };
+    }
 
-  if (!validatedFields.success) {
-    console.error("Validation Error (Add Accessory):", validatedFields.error.flatten().fieldErrors);
+    // Inner try for the main logic (already exists, which is good)
+    try {
+      const dataForAdminFn = {
+          ...validatedFields.data,
+          price: String(validatedFields.data.price), // Convert price back to string for data-admin
+      };
+
+      const newAccessory = await addAccessoryWithAdmin(dataForAdminFn as Omit<Accessory, 'id' | 'createdAt' | 'updatedAt'>); // Type assertion
+
+      revalidatePath('/admin/accessories');
+      revalidatePath('/accessories'); // Public listing page
+
+      return {
+        success: true,
+        message: 'Acessório adicionado com sucesso!',
+        accessory: newAccessory,
+      };
+    } catch (e: any) { // Inner catch for logic errors
+      console.error("Error in addAccessoryAction logic:", e);
+      return {
+        success: false,
+        message: `Falha ao adicionar acessório: ${e.message || 'Erro desconhecido do servidor.'}`,
+        error: e.message || 'Erro desconhecido do servidor.',
+      };
+    }
+  } catch (e: any) { // Outermost catch for any unexpected errors
+    console.error("Critical error in addAccessoryAction:", e);
     return {
       success: false,
-      error: validatedFields.error.flatten().fieldErrors,
-      message: "Erro de validação. Verifique os campos do acessório.",
-    };
-  }
-
-  try {
-    // addAccessoryWithAdmin from data-admin.ts should handle `createdAt` and `updatedAt`
-    // It also expects price as a string "xx.yy"
-    const dataForAdminFn = {
-        ...validatedFields.data,
-        price: String(validatedFields.data.price), // Convert price back to string for data-admin
-    };
-
-    const newAccessory = await addAccessoryWithAdmin(dataForAdminFn as Omit<Accessory, 'id' | 'createdAt' | 'updatedAt'>); // Type assertion
-
-    revalidatePath('/admin/accessories');
-    revalidatePath('/accessories'); // Public listing page
-
-    return {
-      success: true,
-      message: 'Acessório adicionado com sucesso!',
-      accessory: newAccessory,
-    };
-  } catch (e: any) {
-    console.error("Error in addAccessoryAction:", e);
-    return {
-      success: false,
-      message: `Falha ao adicionar acessório: ${e.message || 'Erro desconhecido do servidor.'}`,
-      error: e.message || 'Erro desconhecido do servidor.',
+      message: `Ocorreu um erro crítico no servidor: ${e.message || 'Erro desconhecido.'}`,
+      error: e.message || 'Erro crítico desconhecido.',
     };
   }
 }
