@@ -1,16 +1,12 @@
-// src/components/ClientProviders.tsx
 "use client";
 
-import React from 'react';
 import { AuthProvider } from '@/hooks/useAuth';
+// Se você tiver outros provedores de contexto (como para um tema), importe-os aqui também.
 
-interface ClientProvidersProps {
-  children: React.ReactNode;
-}
-
-export default function ClientProviders({ children }: ClientProvidersProps) {
+export default function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
+      {/* Se tiver outros provedores, eles podem envolver os filhos aqui também */}
       {children}
     </AuthProvider>
   );

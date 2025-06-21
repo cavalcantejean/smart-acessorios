@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { useState, useEffect, useRef, startTransition } from 'react';
 import type { Accessory } from '@/lib/types';

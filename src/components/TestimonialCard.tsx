@@ -1,6 +1,3 @@
-
-"use client";
-
 import type { Testimonial } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Quote } from 'lucide-react';

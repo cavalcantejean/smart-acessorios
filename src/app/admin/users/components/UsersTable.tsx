@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { useState, useEffect, useTransition } from 'react'; // useTransition added
 import type { UserFirestoreData as User } from '@/lib/types'; 

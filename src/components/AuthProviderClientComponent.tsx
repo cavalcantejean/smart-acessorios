@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import React, { type ReactNode } from 'react'; // Ensure React is imported for JSX
 import { useAuth, type AuthContextType } from '@/hooks/useAuth';

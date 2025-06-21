@@ -30,10 +30,10 @@ export default function MobileNav({ siteLogoUrl, siteTitle }: MobileNavProps) {
   const currentLogoSrc = siteLogoUrl && siteLogoUrl.startsWith('data:image') ? siteLogoUrl : logoSrc;
   const logoAltText = siteTitle ? `${siteTitle} Logo` : "SmartAcessorios Logo";
 
-  useEffect(() => {
-    // This can still fetch categories, as it doesn't affect initial mismatched render
-    setCategories(getUniqueCategories());
-  }, []);
+  // useEffect(() => {
+  //   // This can still fetch categories, as it doesn't affect initial mismatched render
+  //   setCategories(getUniqueCategories());
+  // }, []);
 
   const handleLinkClick = () => setIsOpen(false);
   const handleLogoutClick = () => {
@@ -128,9 +128,9 @@ export default function MobileNav({ siteLogoUrl, siteTitle }: MobileNavProps) {
             <>
               <Separator className="my-3" />
               <Link href={`/profile/${user.id}`} className={navLinkClasses(`/profile/${user.id}`)} onClick={handleLinkClick}>
-                <div className="flex items-center gap-2">
+                {/* <div className="flex items-center gap-2">
                   <UserCircle className="h-5 w-5" /> Meu Perfil ({user.name.split(' ')[0]})
-                </div>
+                </div> */}
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </Link>
                <Link href="/dashboard" className={navLinkClasses("/dashboard")} onClick={handleLinkClick}>

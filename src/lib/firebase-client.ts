@@ -46,7 +46,7 @@ if (typeof window !== 'undefined') { // Ensure this only runs on the client
   db = undefined;
   // @ts-ignore
   analytics = undefined;
-  console.warn("Firebase client SDK (firebase-client.ts) is being imported on the server. This is generally not recommended. Ensure it's only used in client components or 'use client' modules.");
+  console.warn("Firebase client SDK (firebase-client.ts) is being imported on the server. This is generally not recommended. Ensure it's only used in client components or 'use server' modules.");
 }
 
 export { app, auth, db, analytics }; // Export db as well

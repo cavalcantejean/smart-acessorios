@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { useState, useEffect } from 'react';
 import type { UserFirestoreData as User, Accessory } from '@/lib/types';
@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, UserCircle, Loader2, ExternalLinkIcon } from 'lucide-react';
 import { AuthProviderClientComponent } from '@/components/AuthProviderClientComponent';
 // Removed badge related imports: Award, getBadgeById, ShadBadge, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
-import { getUserById } from '@/lib/data';
+// import { getUserById } from '@/lib/data';
 import { Separator } from '@/components/ui/separator';
 import { Timestamp } from 'firebase/firestore';
 

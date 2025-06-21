@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, ShoppingBag } from 'lucide-react'; // MessageSquare removed

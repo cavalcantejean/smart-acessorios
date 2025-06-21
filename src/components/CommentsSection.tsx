@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";

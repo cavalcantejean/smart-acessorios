@@ -1,6 +1,3 @@
-
-"use client";
-
 import Link from 'next/link';
 import Image, { type StaticImageData } from 'next/image';
 import type { SiteSettingsForClient, SocialLinkSetting } from '@/lib/types'; // Use SiteSettingsForClient

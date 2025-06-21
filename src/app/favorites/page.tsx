@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { useEffect, useState } from 'react';
 import { getAllAccessories } from '@/lib/firebase-data-client';
@@ -18,10 +18,10 @@ const prepareAccessoryForClient = (accessory: Accessory): Accessory => {
     ...accessory,
     createdAt: accessory.createdAt instanceof Timestamp ? accessory.createdAt.toDate().toISOString() : accessory.createdAt as any,
     updatedAt: accessory.updatedAt instanceof Timestamp ? accessory.updatedAt.toDate().toISOString() : accessory.updatedAt as any,
-    comments: (accessory.comments || []).map(comment => ({
-      ...comment,
-      createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : comment.createdAt as any,
-    })),
+    // comments: (accessory.comments || []).map(comment => ({
+    //   ...comment,
+    //   createdAt: comment.createdAt instanceof Timestamp ? comment.createdAt.toDate().toISOString() : comment.createdAt as any,
+    // })),
   };
 };
 

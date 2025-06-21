@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 // This component is largely unused due to the removal of the comment system
 // for static export compatibility. It's kept as a placeholder.

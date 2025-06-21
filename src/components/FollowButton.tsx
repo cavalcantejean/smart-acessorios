@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';

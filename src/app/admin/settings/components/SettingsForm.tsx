@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -22,7 +22,7 @@ import { useEffect, useState, useRef } from "react";
 // SettingsActionResult and related hooks removed for static export
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBaseSocialLinkSettings } from "@/lib/site-utils";
-import type { SettingsFormDataForClient } from "../page"; 
+import type { SettingsFormDataForClient } from "@/lib/types"; // <-- CORRIGIDO 
 import Image from "next/image"; 
 import { useFormState, useFormStatus } from "react-dom"; // Added
 import { updateSettingsAction, type SettingsActionResult } from "@/app/admin/settings/actions"; // Added
@@ -170,7 +170,7 @@ export default function SettingsForm({ initialData }: SettingsFormProps) { // is
         errorMessage = formState.error;
       } else if (typeof formState.error === 'object') {
         const fieldErrors = Object.values(formState.error).flat();
-        errorMessage = fieldErrors[0] || "Verifique os campos do formulário.";
+        // errorMessage = fieldErrors[0] || "Verifique os campos do formulário.";
       }
       toast({ title: "Erro ao Salvar", description: errorMessage, variant: "destructive" });
       if (typeof formState.error === 'object') {

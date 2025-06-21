@@ -11,6 +11,7 @@ import { getBaseSocialLinkSettings } from '@/lib/site-utils';
 import type { SiteSettingsForClient, SocialLinkSetting, SerializableSocialLinkSetting } from '@/lib/types'; 
 import NavigationProgress from '@/components/NavigationProgress';
 import { Suspense } from 'react';
+import { AuthProvider } from '@/hooks/useAuth'; 
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 

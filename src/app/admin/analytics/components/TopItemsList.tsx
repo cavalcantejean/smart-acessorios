@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import type { TopAccessoryInfo } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

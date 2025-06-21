@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import type { CategoryCount } from '@/lib/types';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';

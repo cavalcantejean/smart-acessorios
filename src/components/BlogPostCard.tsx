@@ -17,14 +17,14 @@ interface BlogPostCardProps {
 export default function BlogPostCard({ post }: BlogPostCardProps) {
   const [formattedDate, setFormattedDate] = useState<string | null>(null);
 
-  useEffect(() => {
-    setFormattedDate(new Date(post.publishedAt).toLocaleDateString('pt-BR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      timeZone: 'UTC' 
-    }));
-  }, [post.publishedAt]);
+  // useEffect(() => {
+  //   // setFormattedDate(new Date(post.publishedAt).toLocaleDateString('pt-BR', {
+  //     year: 'numeric',
+  //     month: 'long',
+  //     day: 'numeric',
+  //     timeZone: 'UTC' 
+  //   }));
+  // }, [post.publishedAt]);
 
   return (
     <Card className="flex flex-col overflow-hidden rounded-lg shadow-lg transition-all hover:shadow-xl h-full">
@@ -64,10 +64,10 @@ export default function BlogPostCard({ post }: BlogPostCardProps) {
           </Avatar>
           <span>{post.authorName}</span>
         </div>
-        <div className="flex items-center gap-1">
+        {/* <div className="flex items-center gap-1">
           <CalendarDays className="h-4 w-4" />
           <time dateTime={post.publishedAt}>{formattedDate || 'Carregando data...'}</time>
-        </div>
+        </div> */}
       </CardFooter>
     </Card>
   );

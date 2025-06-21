@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { useState, useEffect, useTransition } from 'react'; // useActionState removed, useTransition imported
 import type { Coupon } from '@/lib/types';

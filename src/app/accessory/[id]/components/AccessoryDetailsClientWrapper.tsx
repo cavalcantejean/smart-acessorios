@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 import { useFavorites } from '@/hooks/useFavorites';
 import type { Accessory } from '@/lib/types';
 import AccessoryDetailsClient from './AccessoryDetailsClient';

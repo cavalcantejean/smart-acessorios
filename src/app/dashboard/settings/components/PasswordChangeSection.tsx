@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';

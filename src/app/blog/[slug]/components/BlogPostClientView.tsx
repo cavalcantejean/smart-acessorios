@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import type { Post } from '@/lib/types';
 import Image from 'next/image';

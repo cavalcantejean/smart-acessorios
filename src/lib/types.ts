@@ -129,3 +129,18 @@ export interface SerializableSocialLinkSetting {
 export interface SiteSettingsForClient extends Omit<SiteSettings, 'socialLinks'> {
   socialLinks: SerializableSocialLinkSetting[]; 
 }
+
+export interface SerializableSocialLink {
+  platform: string;
+  label: string;
+  url: string | null;
+  customImageUrl: string | null;
+}
+
+export interface SettingsFormDataForClient {
+  siteTitle: string;
+  siteDescription:string;
+  siteLogoUrl: string | null;
+  siteFaviconUrl: string | null;
+  socialLinks: SerializableSocialLink[];
+}

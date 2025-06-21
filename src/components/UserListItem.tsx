@@ -1,5 +1,5 @@
 
-"use client";
+"use server";
 
 import type { User } from '@/lib/types';
 import Image from 'next/image';

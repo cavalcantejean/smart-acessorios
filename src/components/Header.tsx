@@ -1,5 +1,4 @@
-
-"use client"; 
+"use client"
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,7 +23,7 @@ function AuthDependentLinks() {
         <>
           <Link href={`/profile/${user.id}`} className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
             <UserCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">{user.name.split(' ')[0]}</span>
+            <span className="hidden sm:inline">{(user.name ?? 'Usuário').split(' ')[0]}</span>
             <span className="sm:hidden">Perfil</span>
           </Link>
           <Link href="/favorites" className="flex items-center gap-1 transition-colors hover:text-accent-foreground/80 p-1 sm:p-2">
