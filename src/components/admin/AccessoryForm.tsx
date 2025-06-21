@@ -152,12 +152,8 @@ export default function AccessoryForm({
     if (formState?.success) {
       toast({ title: "Sucesso!", description: formState.message });
       if (formState.accessory && !initialData?.id) { // Successfully added new
-        form.reset();
-        setImagePreview(null);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-        // Optional: redirect to edit page: router.push(`/admin/accessories/${formState.accessory.id}/edit`);
+        // Instead of resetting, redirect to the accessories list page
+        router.push("/admin/accessories");
       } else if (initialData?.id) { // Successfully updated
         router.push("/admin/accessories");
       }
