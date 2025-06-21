@@ -78,7 +78,6 @@ export default async function EditAccessoryPage({ params }: { params: { id: stri
            <AccessoryForm
               initialData={initialDataForForm as any} 
               submitButtonText="Salvar Alterações"
-              isStaticExport={false}
             />
         </CardContent>
       </Card>
